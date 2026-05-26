@@ -232,6 +232,10 @@ struct SettingsContentView: View {
   @State private var overageInfo: OverageInfoResponse?
   @State private var isLoadingOverage: Bool = false
   @State private var showOverageExplainer: Bool = false
+  @State private var fairUseStatus: FairUseStatusResponse?
+  @State private var isLoadingFairUse: Bool = false
+  @State private var paywallStatus: PaywallStatusResponse?
+  @State private var isLoadingPaywall: Bool = false
   @State private var fallbackPlanCatalog: [SubscriptionPlanOption] = []
   @State private var activeCheckoutPriceId: String?
   @State private var selectedPlanIdForCheckout: String?
@@ -2077,6 +2081,8 @@ struct SettingsContentView: View {
 
       overageCard
 
+      fairUseStatusCard
+
       byokPromoCard
     }
     .sheet(isPresented: $showOverageExplainer) {
@@ -2207,6 +2213,173 @@ struct SettingsContentView: View {
         .foregroundColor(emphasized ? OmiColors.warning : OmiColors.textSecondary)
         .monospacedDigit()
     }
+  }
+
+  // MARK: - Fair Use Status Card
+
+  @ViewBuilder
+  private var fairUseStatusCard: some View {
+    if let status = fairUseStatus {
+      settingsCard(settingId: "planusage.fairuse") {
+        VStack(alignment: .leading, spacing: 12) {
+          // Header
+          HStack(spacing: 10) {
+            Image(systemName: fairUseStageIcon(status.stage))
+              .scaledFont(size: 18)
+              .foregroundColor(fairUseStageColor(status.stage))
+            Text("Speech Usage & Fair Use")
+              .scaledFont(size: 14, weight: .semibold)
+              .foregroundColor(OmiColors.textPrimary)
+            Spacer()
+            // Stage badge
+            if status.stage != "none" {
+              Text(status.stage.capitalized)
+                .scaledFont(size: 11, weight: .bold)
+                .foregroundColor(fairUseStageColor(status.stage))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(
+                  Capsule().fill(fairUseStageColor(status.stage).opacity(0.15))
+                )
+            } else {
+              Text("Normal")
+                .scaledFont(size: 11, weight: .bold)
+                .foregroundColor(OmiColors.success)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(OmiColors.success.opacity(0.15)))
+            }
+          }
+
+          // Paywall banner
+          if let pw = paywallStatus, pw.paywalled {
+            HStack(spacing: 8) {
+              Image(systemName: "lock.fill")
+                .scaledFont(size: 12)
+                .foregroundColor(OmiColors.error)
+              Text("Desktop trial expired — upgrade to restore access.")
+                .scaledFont(size: 12)
+                .foregroundColor(OmiColors.error)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 8).fill(OmiColors.error.opacity(0.10)))
+          }
+
+          Divider().overlay(OmiColors.backgroundQuaternary)
+
+          // Rolling window usage rows
+          fairUseSpeechRow(
+            label: "Today",
+            used: status.speechHoursToday,
+            limit: status.limits.dailyHours,
+            pct: status.usagePct.daily
+          )
+          fairUseSpeechRow(
+            label: "Last 3 days",
+            used: status.speechHours3day,
+            limit: status.limits.threeDayHours,
+            pct: status.usagePct.threeDay
+          )
+          fairUseSpeechRow(
+            label: "Last 7 days",
+            used: status.speechHoursWeekly,
+            limit: status.limits.weeklyHours,
+            pct: status.usagePct.weekly
+          )
+
+          // Status message from backend
+          if status.stage != "none" {
+            Divider().overlay(OmiColors.backgroundQuaternary)
+            Text(status.message)
+              .scaledFont(size: 12)
+              .foregroundColor(OmiColors.textSecondary)
+              .fixedSize(horizontal: false, vertical: true)
+
+            if !status.caseRef.isEmpty {
+              HStack(spacing: 4) {
+                Text("Case ref:")
+                  .scaledFont(size: 11)
+                  .foregroundColor(OmiColors.textTertiary)
+                Text(status.caseRef)
+                  .scaledFont(size: 11, weight: .semibold)
+                  .foregroundColor(OmiColors.textSecondary)
+                  .textSelection(.enabled)
+              }
+            }
+          }
+
+          // Refresh button
+          HStack {
+            Spacer()
+            Button(action: { loadFairUseStatus(); loadPaywallStatus() }) {
+              HStack(spacing: 4) {
+                Image(systemName: "arrow.clockwise")
+                  .scaledFont(size: 11)
+                Text("Refresh")
+                  .scaledFont(size: 11)
+              }
+              .foregroundColor(OmiColors.textTertiary)
+            }
+            .buttonStyle(.plain)
+            .disabled(isLoadingFairUse)
+          }
+        }
+      }
+    } else if isLoadingFairUse {
+      settingsCard(settingId: "planusage.fairuse") {
+        HStack {
+          ProgressView().controlSize(.small)
+          Text("Loading speech usage\u{2026}")
+            .scaledFont(size: 13)
+            .foregroundColor(OmiColors.textTertiary)
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func fairUseSpeechRow(label: String, used: Double, limit: Double, pct: Double) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      HStack {
+        Text(label)
+          .scaledFont(size: 12, weight: .medium)
+          .foregroundColor(OmiColors.textSecondary)
+        Spacer()
+        Text(String(format: "%.1f / %.0f hrs", used, limit))
+          .scaledFont(size: 12)
+          .foregroundColor(fairUsePctColor(pct))
+          .monospacedDigit()
+      }
+      ProgressView(value: min(pct / 100.0, 1.0))
+        .progressViewStyle(LinearProgressViewStyle(tint: fairUsePctColor(pct)))
+        .frame(height: 4)
+    }
+  }
+
+  private func fairUseStageIcon(_ stage: String) -> String {
+    switch stage {
+    case "warning":  return "exclamationmark.triangle.fill"
+    case "throttle": return "gauge.with.needle"
+    case "restrict": return "hand.raised.fill"
+    default:         return "waveform"
+    }
+  }
+
+  private func fairUseStageColor(_ stage: String) -> Color {
+    switch stage {
+    case "warning":  return OmiColors.warning
+    case "throttle": return Color.orange
+    case "restrict": return OmiColors.error
+    default:         return OmiColors.success
+    }
+  }
+
+  private func fairUsePctColor(_ pct: Double) -> Color {
+    if pct >= 90 { return OmiColors.error }
+    if pct >= 70 { return OmiColors.warning }
+    return OmiColors.success
   }
 
   @ViewBuilder
@@ -7320,6 +7493,8 @@ struct SettingsContentView: View {
     }
     loadChatUsageQuota()
     loadOverageInfo()
+    loadFairUseStatus()
+    loadPaywallStatus()
   }
 
   private func loadChatUsageQuota() {
@@ -7348,6 +7523,44 @@ struct SettingsContentView: View {
         logError("Failed to load overage info", error: error)
         await MainActor.run {
           isLoadingOverage = false
+        }
+      }
+    }
+  }
+
+  private func loadFairUseStatus() {
+    guard !isLoadingFairUse else { return }
+    isLoadingFairUse = true
+    Task {
+      do {
+        let status = try await APIClient.shared.getFairUseStatus()
+        await MainActor.run {
+          fairUseStatus = status
+          isLoadingFairUse = false
+        }
+      } catch {
+        logError("Failed to load fair-use status", error: error)
+        await MainActor.run {
+          isLoadingFairUse = false
+        }
+      }
+    }
+  }
+
+  private func loadPaywallStatus() {
+    guard !isLoadingPaywall else { return }
+    isLoadingPaywall = true
+    Task {
+      do {
+        let status = try await APIClient.shared.getPaywallStatus()
+        await MainActor.run {
+          paywallStatus = status
+          isLoadingPaywall = false
+        }
+      } catch {
+        logError("Failed to load paywall status", error: error)
+        await MainActor.run {
+          isLoadingPaywall = false
         }
       }
     }

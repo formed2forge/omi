@@ -3970,6 +3970,58 @@ struct TrialMetadataResponse: Codable {
   }
 }
 
+// MARK: - Fair Use Status
+
+/// Fair-use enforcement status from `/v1/fair-use/status`
+struct FairUseStatusResponse: Decodable {
+  let stage: String
+  let caseRef: String
+  let speechHoursToday: Double
+  let speechHours3day: Double
+  let speechHoursWeekly: Double
+  let limits: FairUseLimits
+  let usagePct: FairUsagePercents
+  let message: String
+
+  struct FairUseLimits: Decodable {
+    let dailyHours: Double
+    let threeDayHours: Double
+    let weeklyHours: Double
+    enum CodingKeys: String, CodingKey {
+      case dailyHours = "daily_hours"
+      case threeDayHours = "three_day_hours"
+      case weeklyHours = "weekly_hours"
+    }
+  }
+
+  struct FairUsagePercents: Decodable {
+    let daily: Double
+    let threeDay: Double
+    let weekly: Double
+    enum CodingKeys: String, CodingKey {
+      case daily
+      case threeDay = "three_day"
+      case weekly
+    }
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case stage
+    case caseRef = "case_ref"
+    case speechHoursToday = "speech_hours_today"
+    case speechHours3day = "speech_hours_3day"
+    case speechHoursWeekly = "speech_hours_weekly"
+    case limits
+    case usagePct = "usage_pct"
+    case message
+  }
+}
+
+/// Paywall status from `/v1/users/me/paywall`
+struct PaywallStatusResponse: Decodable {
+  let paywalled: Bool
+}
+
 /// User profile response
 struct UserProfileResponse: Codable {
   let uid: String
@@ -4604,6 +4656,14 @@ extension APIClient {
 
   func getOverageInfo() async throws -> OverageInfoResponse {
     return try await get("v1/payments/overage-info")
+  }
+
+  func getFairUseStatus() async throws -> FairUseStatusResponse {
+    return try await get("v1/fair-use/status")
+  }
+
+  func getPaywallStatus() async throws -> PaywallStatusResponse {
+    return try await get("v1/users/me/paywall")
   }
 
   func createCheckoutSession(priceId: String, promotionCode: String? = nil) async throws
