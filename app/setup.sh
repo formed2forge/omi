@@ -70,6 +70,15 @@ function generate_ios_custom_config() {
   SUFFIX=$(generate_device_suffix)
   CUSTOM_BUNDLE="com.friend-app-with-wearable.ios12-${SUFFIX}"
   echo APP_BUNDLE_IDENTIFIER=${CUSTOM_BUNDLE} >> "ios/Flutter/Custom.xcconfig"
+
+  # Developer team ID for iOS signing (required for automatic signing from CLI)
+  if [ -z "${DEVELOPMENT_TEAM:-}" ]; then
+    echo ""
+    echo "Apple Developer Team ID required for iOS signing."
+    echo "Find it at: developer.apple.com/account → Membership → Team ID"
+    read -rp "Enter your Team ID (10 chars, e.g. ABC1234567): " DEVELOPMENT_TEAM
+  fi
+  echo "DEVELOPMENT_TEAM=${DEVELOPMENT_TEAM}" >> "ios/Flutter/Custom.xcconfig"
 }
 
 ######################################
