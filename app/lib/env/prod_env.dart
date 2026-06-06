@@ -17,6 +17,10 @@ final class ProdEnv implements EnvFields {
   final String? posthogApiKey = _ProdEnv.posthogApiKey;
 
   @override
+  @EnviedField(varName: 'POSTHOG_HOST', obfuscate: true)
+  final String? posthogHost = _ProdEnv.posthogHost;
+
+  @override
   @EnviedField(varName: 'API_BASE_URL', obfuscate: true)
   final String? apiBaseUrl = _ProdEnv.apiBaseUrl;
 

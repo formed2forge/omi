@@ -27,7 +27,10 @@ class AnalyticsManager {
   static Future<void> init() async {
     _initStarted = true;
     if (_adapter == null && Env.posthogApiKey != null) {
-      _adapter = PostHogAnalyticsAdapter(apiKey: Env.posthogApiKey!);
+      _adapter = PostHogAnalyticsAdapter(
+        apiKey: Env.posthogApiKey!,
+        host: Env.posthogHost ?? 'https://us.i.posthog.com',
+      );
     }
     final adapter = _adapter;
     if (adapter == null) return;
