@@ -38,19 +38,6 @@ cp .env.example .env
 pnpm run dev
 ```
 
-This directory is pnpm-managed — running `npm install` instead will corrupt
-`package.json`/`pnpm-lock.yaml`/`pnpm-workspace.yaml` (npm doesn't understand
-pnpm-workspace semantics) and leave a stray, untracked `package-lock.json`
-behind. If you see unexplained diffs in those three files with no matching
-commit, this is almost certainly why — `git restore` them and reinstall with
-pnpm.
-
-CI pins pnpm to major version **10**. If your system `pnpm --version` is a
-different major (e.g. 8 or 11+), `.npmrc`'s `node-linker=hoisted` setting can
-be silently ignored, breaking postinstall with a confusing "closure
-package(s) do not resolve on disk" error — use `npx pnpm@10 <command>`
-instead of downgrading a system-managed pnpm install.
-
 `.env` is gitignored. `.env.example` ships with Omi's **public** Firebase + PostHog
 config, so after `cp .env.example .env` the app runs and sign-in works with no extra
 keys to obtain.
