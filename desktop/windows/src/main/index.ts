@@ -434,10 +434,12 @@ if (gotSingleInstanceLock) initCrashSentinel()
 
 // Linux: portal identity + session facts (phase 0 shortcuts groundwork).
 // Default to XWayland (x11 ozone) for the broadest shortcut + active-window
-// support today. Set OMI_OZONE=wayland for native Wayland (portal global shortcuts
-// when desktopName/.desktop are valid; X11 foreground path still blind). Also enable
-// the PipeWire capturer (portal screen share) and PulseAudio monitor-source loopback
-// for system-audio capture when pipewire-pulse/Pulse is present.
+// support today. On compositors known to lack reliable XWayland (niri, sway,
+// hyprland — see linuxCompositor.ts) the default is native Wayland instead,
+// because XWayland can fail to map the main window at all. Set
+// OMI_OZONE=wayland/x11 to override either way. Also enable the PipeWire
+// capturer (portal screen share) and PulseAudio monitor-source loopback for
+// system-audio capture when pipewire-pulse/Pulse is present.
 if (process.platform === 'linux') {
 <<<<<<< HEAD
 =======
