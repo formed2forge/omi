@@ -37,6 +37,16 @@ sudo apt-get install -y x11-utils tesseract-ocr tesseract-ocr-eng
   a Pulse layer the flag is inert and capture falls back to mic-only.
 - Headless/CI: run under `xvfb-run` and pass `--no-sandbox`.
 
+## Runtime dependencies (Arch)
+```bash
+sudo pacman -S --needed libxcrypt-compat tesseract xorg-xprop
+```
+- `libxcrypt-compat` provides the legacy `libcrypt.so.1` SONAME. Arch's
+  `libxcrypt` package only ships `libcrypt.so.2` by default, but Electron's
+  bundled Node/Chromium binaries still expect `libcrypt.so.1` — without it the
+  app fails to launch at all. This isn't Omi-specific (Mattermost Desktop and
+  other Electron apps hit the same gap on Arch).
+
 ## Wayland
 
 The app targets X11 by default on Linux (`ozone-platform=x11`, i.e. XWayland on
