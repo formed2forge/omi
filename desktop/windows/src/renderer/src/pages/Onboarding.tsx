@@ -106,6 +106,11 @@ export function Onboarding(): React.JSX.Element {
     completeOnboarding()
   }
 
+  const finishToTasks = (): void => {
+    setPendingRoute('/tasks')
+    completeOnboarding()
+  }
+
   const handleGoal = (goal: string): void => {
     setPreferences({ goal })
     // Best-effort sync to the Omi goals backend — never block onboarding on the
