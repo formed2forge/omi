@@ -39,4 +39,20 @@ describe('isNativeWaylandLinux', () => {
     expect(linuxBarParkStrategy()).toBe('hide')
     expect(shouldCreateGlowOnLinux()).toBe(false)
   })
+
+  it('is true on niri auto-detect without OMI_OZONE', async () => {
+    vi.resetModules()
+    vi.stubGlobal('process', {
+      ...process,
+      platform: 'linux',
+      env: {
+        ...process.env,
+        XDG_SESSION_TYPE: 'tty',
+        NIRI_SOCKET: '/run/user/1000/niri.sock'
+      }
+    })
+    delete (process as { env: NodeJS.ProcessEnv }).env.OMI_OZONE
+    const { isNativeWaylandLinux } = await import('./nativeWayland')
+    expect(isNativeWaylandLinux()).toBe(true)
+  })
 })
