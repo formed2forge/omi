@@ -54,6 +54,19 @@ describe('resolveLinuxOzonePlatform', () => {
   it('treats any other OMI_OZONE value as x11', () => {
     expect(resolveLinuxOzonePlatform({ OMI_OZONE: 'auto' })).toBe('x11')
   })
+
+  it('auto-detects niri even when XDG_SESSION_TYPE is unset', () => {
+    expect(resolveLinuxOzonePlatform({ NIRI_SOCKET: '/run/user/1000/niri.sock' })).toBe('wayland')
+  })
+
+  it('lets OMI_OZONE=x11 override niri auto-detect', () => {
+    expect(
+      resolveLinuxOzonePlatform({
+        NIRI_SOCKET: '/run/user/1000/niri.sock',
+        OMI_OZONE: 'x11'
+      })
+    ).toBe('x11')
+  })
 })
 
 describe('isLinuxWaylandSession', () => {
