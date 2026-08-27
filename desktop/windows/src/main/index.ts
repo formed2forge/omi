@@ -12,6 +12,7 @@ import { join } from 'path'
 import { appendFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { supportsMica } from './windowsVersion'
+import { detectLinuxCompositor } from './linuxCompositor'
 import { APP_BG_HEX, HOME_BG_HEX, WCO_SYMBOL_HEX } from '../shared/chrome'
 import iconPath from '../../resources/icon.png?asset'
 import { listCaptureSources } from './ipc/capture'
@@ -233,11 +234,6 @@ if (import.meta.env.DEV) devBench.applyDevPerfLogDefault()
 // block costs a healthy machine nothing and is what lets the renderer's recovery
 // remounts actually get a fresh context. Must run before app ready.
 app.disableDomainBlockingFor3DAPIs()
-// Dev GPU stability: render in software + keep WebGL on SwiftShader, so the orb /
-// brain map / blur / effects stay reliable on flaky dev GPUs (hybrid laptop,
-// asleep display, headless soak). Must run before app ready. Packaged builds keep
-// full hardware acceleration.
-if (import.meta.env.DEV) devBench.applyDevGpuStability()
 perfMark('app:start')
 
 // --- Global crash observability --------------------------------------------
@@ -451,13 +447,24 @@ if (process.platform === 'linux') {
   const setDesktopName = (app as unknown as { setDesktopName?: (name: string) => void })
     .setDesktopName
   applyLinuxPortalIdentity((name) => setDesktopName?.call(app, name))
-  app.commandLine.appendSwitch('ozone-platform', resolveLinuxOzonePlatform())
+  const resolvedOzone = resolveLinuxOzonePlatform()
+  app.commandLine.appendSwitch('ozone-platform', resolvedOzone)
   app.commandLine.appendSwitch(
     'enable-features',
     'WebRTCPipeWireCapturer,PulseaudioLoopbackForScreenShare'
   )
-  console.info(`[linux] ${formatLinuxSessionSummary(detectLinuxSession())}`)
+  console.info(
+    `[linux] ${formatLinuxSessionSummary(detectLinuxSession())}`,
+    `compositor=${detectLinuxCompositor() ?? 'none'}`,
+    `OMI_OZONE=${process.env.OMI_OZONE ?? '(unset)'}`
+  )
 }
+// Dev GPU stability: render in software + keep WebGL on SwiftShader, so the orb /
+// brain map / blur / effects stay reliable on flaky dev GPUs (hybrid laptop,
+// asleep display, headless soak). Positioned after the ozone block so the Wayland
+// guard inside applyDevGpuStability reads the same resolved platform. Must run
+// before app ready. Packaged builds keep full hardware acceleration.
+if (import.meta.env.DEV) devBench.applyDevGpuStability()
 
 const icon = nativeImage.createFromPath(iconPath)
 import {

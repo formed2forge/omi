@@ -53,4 +53,19 @@ describe('defaultOzonePlatform', () => {
     process.env.NIRI_SOCKET = '/run/user/1000/niri.sock'
     expect(defaultOzonePlatform()).toBe('wayland')
   })
+  it('is wayland when niri is detected even if XDG_SESSION_TYPE is tty (PAM did not propagate session type)', () => {
+    process.env.XDG_SESSION_TYPE = 'tty'
+    process.env.NIRI_SOCKET = '/run/user/1000/niri.sock'
+    expect(defaultOzonePlatform()).toBe('wayland')
+  })
+  it('is wayland when niri is detected even if XDG_SESSION_TYPE is unset (autostart / desktop shortcut)', () => {
+    // XDG_SESSION_TYPE already deleted by beforeEach
+    process.env.NIRI_SOCKET = '/run/user/1000/niri.sock'
+    expect(defaultOzonePlatform()).toBe('wayland')
+  })
+  it('is x11 on a generic Wayland session with no recognized compositor socket (GNOME, KDE)', () => {
+    process.env.XDG_SESSION_TYPE = 'wayland'
+    // no compositor sockets set
+    expect(defaultOzonePlatform()).toBe('x11')
+  })
 })

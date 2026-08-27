@@ -9,6 +9,7 @@ import { join } from 'path'
 import { rmSync } from 'fs'
 import { perfMark, flushPerfMarks } from '../../shared/perf'
 import { resolveDevInstance } from '../devInstance'
+import { defaultOzonePlatform } from '../linuxCompositor'
 
 // OMI_BENCH drives a fixed startup-timing run that quits when done; OMI_ANIM_BENCH
 // records the renderer's animation-jank summary instead. Both are dev-only: a
@@ -125,6 +126,12 @@ export function applyDevGpuStability(): void {
   // WebGL for the origin" — now runs unconditionally in index.ts, prod included; it
   // was never a dev-only concern. Don't re-add it here.)
   if (process.env.OMI_DEV_HW_GPU === '1') return
+  // Native Wayland requires hardware GPU: Chromium's software compositor has known
+  // presentation bugs on Wayland (window maps but never paints). Mirrors the same
+  // platform expression used in index.ts so both resolve consistently.
+  if (process.platform === 'linux') {
+    if ((process.env.OMI_OZONE || defaultOzonePlatform()) === 'wayland') return
+  }
   // Software compositing: the GPU process can't crash the UI…
   app.disableHardwareAcceleration()
   // …and pin GL to ANGLE's SwiftShader (CPU) so WebGL keeps working. Explicit
