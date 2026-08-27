@@ -1189,6 +1189,7 @@ describe('useChat — default thread backend hydration (B5 cross-device read par
   })
 })
 
+
 describe('useChat — chat quota gate (Mac AgentBridge.quotaExceeded parity)', () => {
   it('blocks a send when the quota is exhausted — popup shown, no fetch, no history entry', async () => {
     gateMocks.check.mockResolvedValueOnce({ blocked: true, message: "You've reached your limit." })
