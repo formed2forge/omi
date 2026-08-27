@@ -1,16 +1,18 @@
 // Native Wayland session detection and overlay policy for the Linux desktop build.
 //
 // Omi defaults to XWayland (`ozone-platform=x11`) for global shortcuts and
-// active-window tracking. On compositors with limited XWayland (e.g. niri),
-// users set `OMI_OZONE=wayland`. That path cannot honor client `setBounds`
-// off-screen parking or `setAlwaysOnTop` the way Windows/X11 do — see
+// active-window tracking. On compositors with limited XWayland (niri/Sway/
+// Hyprland), `resolveLinuxOzonePlatform` auto-selects native Wayland (override
+// with `OMI_OZONE`). That path cannot honor client `setBounds` off-screen
+// parking or `setAlwaysOnTop` the way Windows/X11 do — see
 // desktop/windows/docs/multi-worktree-dev.md.
+
+import { resolveLinuxOzonePlatform } from './linuxSession'
 
 /** True when Electron is running as a native Wayland client on Linux. */
 export function isNativeWaylandLinux(): boolean {
   if (process.platform !== 'linux') return false
-  if (process.env.XDG_SESSION_TYPE !== 'wayland') return false
-  return (process.env.OMI_OZONE ?? 'x11') === 'wayland'
+  return resolveLinuxOzonePlatform() === 'wayland'
 }
 
 /** How the bar hides while logically dismissed on Linux. */

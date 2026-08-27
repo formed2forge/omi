@@ -138,11 +138,10 @@ port in 5180-5279>` on this one.
   run `pnpm dev:instance` to confirm which port each is on.
 - **Native Wayland (auto-selected on niri/Sway/Hyprland, or forced via
   `OMI_OZONE=wayland`) main window maps but never paints (blank; tray icon
-  works)** — `pnpm dev` forces software rendering by default
-  (`applyDevGpuStability` in `src/main/dev/bench.ts`, aimed at Windows
-  GPU-process crashes), and Chromium's software-compositing path has known
-  presentation bugs on native Wayland. Run with `OMI_DEV_HW_GPU=1` too.
-  Confirmed fix on Asahi Fedora Remix (aarch64) + niri.
+  works)** — handled automatically: `applyDevGpuStability`
+  (`src/main/dev/bench.ts`) skips software rendering when native Wayland is
+  detected. If you still see a blank window, set `OMI_DEV_HW_GPU=1`.
+  Confirmed fixed on Asahi Fedora Remix (aarch64) + niri.
 - **Floating bar on native Wayland (niri, etc.)** — with native Wayland ozone,
   the bar uses a full-width top strip (`computeBarShellBounds`), hides with
   `win.hide()` when dismissed (no off-screen park ghost), skips

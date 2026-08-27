@@ -3,6 +3,8 @@
 // portal app ID (desktopName + .desktop) and centralize session detection so
 // later phases (conflict scanners, Settings UX) read one source of truth.
 
+import { defaultOzonePlatform } from '../linuxCompositor'
+
 /** Reverse-DNS portal identity — must match appId, package.json desktopName, and
  *  the installed .desktop basename (com.omiwindows.app.desktop). */
 export const LINUX_PORTAL_APP_ID = 'com.omiwindows.app'
@@ -38,10 +40,12 @@ function normalizeSessionType(raw: string | undefined): LinuxSessionType {
   return 'unknown'
 }
 
-/** Resolve ozone platform from OMI_OZONE (dev override) — default x11 / XWayland. */
+/** Resolve ozone platform: explicit OMI_OZONE wins; else compositor auto-detect. */
 export function resolveLinuxOzonePlatform(env: NodeJS.ProcessEnv = process.env): LinuxOzonePlatform {
   const raw = env.OMI_OZONE?.trim().toLowerCase()
-  return raw === 'wayland' ? 'wayland' : 'x11'
+  if (raw === 'wayland' || raw === 'x11') return raw
+  if (raw) return 'x11'
+  return defaultOzonePlatform(env)
 }
 
 export function isLinuxWaylandSession(env: NodeJS.ProcessEnv = process.env): boolean {
