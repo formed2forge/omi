@@ -22,6 +22,7 @@ import 'package:omi/pages/settings/conversation_display_settings.dart';
 import 'package:omi/pages/settings/conversation_timeout_dialog.dart';
 import 'package:omi/pages/settings/data_privacy_page.dart';
 import 'package:omi/pages/settings/import_history_page.dart';
+import 'package:omi/pages/settings/task_cleanup_page.dart';
 import 'package:omi/pages/payments/payments_page.dart';
 import 'package:omi/pages/settings/transcription_settings_page.dart';
 import 'package:omi/pages/settings/widgets/create_mcp_api_key_dialog.dart';
@@ -650,6 +651,58 @@ class _DeveloperSettingsPageState extends State<_DeveloperSettingsPageView> {
                                 const SizedBox(height: 2),
                                 Text(
                                   context.l10n.importDataFromOtherSources,
+                                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                          FaIcon(FontAwesomeIcons.chevronRight, color: Colors.grey.shade600, size: 14),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Task maintenance
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const TaskCleanupPage()));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1C1C1E),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2A2A2E),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: FaIcon(FontAwesomeIcons.broom, color: Colors.grey.shade400, size: 16),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.l10n.taskMaintenance,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  context.l10n.taskMaintenanceDesc,
                                   style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
                                 ),
                               ],

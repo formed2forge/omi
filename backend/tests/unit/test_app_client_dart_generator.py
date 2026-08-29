@@ -125,6 +125,12 @@ def test_action_items_folders_wire_dart_is_generated_from_app_client_openapi():
     assert 'class GeneratedFolder' in generated
     assert 'class GeneratedFolderMutationResponse' in generated
     assert 'class GeneratedBulkMoveConversationsResponse' in generated
+    assert 'class GeneratedCleanupPreviewRequest' in generated
+    assert 'class GeneratedCleanupPreviewResponse' in generated
+    assert 'class GeneratedCleanupExecuteRequest' in generated
+    assert 'class GeneratedCleanupExecuteResponse' in generated
+    assert 'class GeneratedCleanupCandidateMeta' in generated
+    assert 'class GeneratedCleanupSampleItem' in generated
     assert 'this.exported = false' in generated
     assert 'this.color = "#6B7280"' in generated
     assert 'deletedIds: _required(_readFieldValue<List<String>>' in generated

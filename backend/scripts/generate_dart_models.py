@@ -105,6 +105,12 @@ SCHEMA_GROUPS = {
             'Folder',
             'FolderMutationResponse',
             'BulkMoveConversationsResponse',
+            'CleanupPreviewRequest',
+            'CleanupPreviewResponse',
+            'CleanupExecuteRequest',
+            'CleanupExecuteResponse',
+            'CleanupCandidateMeta',
+            'CleanupSampleItem',
         ),
     },
     'task_intelligence': {

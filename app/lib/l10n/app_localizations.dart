@@ -109,7 +109,8 @@ import 'app_localizations_zh.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -117,7 +118,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -129,12 +131,13 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
@@ -186,7 +189,7 @@ abstract class AppLocalizations {
     Locale('uk'),
     Locale('ur'),
     Locale('vi'),
-    Locale('zh')
+    Locale('zh'),
   ];
 
   /// Message shown after an expired authenticated session returns the user to sign-in
@@ -8935,7 +8938,10 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{accessDescription} and is {triggerDescription}.'**
-  String accessesAndTriggeredBy(String accessDescription, String triggerDescription);
+  String accessesAndTriggeredBy(
+    String accessDescription,
+    String triggerDescription,
+  );
 
   /// Sentence starting with 'Is' for trigger description
   ///
@@ -18458,9 +18464,262 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your Pendant\'s storage is full and it\'s still in recording mode, so its stored audio can\'t be transferred. Press the Pendant\'s button to stop recording, then sync again.'**
   String get pendantFullSyncBlocked;
+
+  /// No description provided for @taskMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Task maintenance'**
+  String get taskMaintenance;
+
+  /// No description provided for @taskMaintenanceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean up stale and duplicate tasks'**
+  String get taskMaintenanceDesc;
+
+  /// No description provided for @taskCleanupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean up tasks'**
+  String get taskCleanupTitle;
+
+  /// No description provided for @taskCleanupConfigIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which strategies to run. Fast ones finish in seconds; slow ones use AI and may take 1–3 minutes on large accounts.'**
+  String get taskCleanupConfigIntro;
+
+  /// No description provided for @taskCleanupStrategyStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Stale tasks'**
+  String get taskCleanupStrategyStale;
+
+  /// No description provided for @taskCleanupStrategyStaleDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Open tasks older than 90 days with no due date'**
+  String get taskCleanupStrategyStaleDetail;
+
+  /// No description provided for @taskCleanupStrategyOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Long overdue'**
+  String get taskCleanupStrategyOverdue;
+
+  /// No description provided for @taskCleanupStrategyOverdueDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks with a due date more than 30 days in the past'**
+  String get taskCleanupStrategyOverdueDetail;
+
+  /// No description provided for @taskCleanupStrategyVague.
+  ///
+  /// In en, this message translates to:
+  /// **'Vague / context-lost'**
+  String get taskCleanupStrategyVague;
+
+  /// No description provided for @taskCleanupStrategyVagueDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks with unresolved pronouns (\"put it away\", \"fix those\", \"Speaker 1\")'**
+  String get taskCleanupStrategyVagueDetail;
+
+  /// No description provided for @taskCleanupStrategySemanticDedup.
+  ///
+  /// In en, this message translates to:
+  /// **'Near-duplicates'**
+  String get taskCleanupStrategySemanticDedup;
+
+  /// No description provided for @taskCleanupStrategySemanticDedupDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Older of any two tasks with nearly identical descriptions'**
+  String get taskCleanupStrategySemanticDedupDetail;
+
+  /// No description provided for @taskCleanupStrategyLlmRelevance.
+  ///
+  /// In en, this message translates to:
+  /// **'AI relevance check'**
+  String get taskCleanupStrategyLlmRelevance;
+
+  /// No description provided for @taskCleanupStrategyLlmRelevanceDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'LLM judges whether each task is still actionable'**
+  String get taskCleanupStrategyLlmRelevanceDetail;
+
+  /// No description provided for @taskCleanupStrategyConversationContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation context'**
+  String get taskCleanupStrategyConversationContext;
+
+  /// No description provided for @taskCleanupStrategyConversationContextDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses the source conversation title/summary to judge staleness'**
+  String get taskCleanupStrategyConversationContextDetail;
+
+  /// No description provided for @taskCleanupSlowBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'slow'**
+  String get taskCleanupSlowBadge;
+
+  /// No description provided for @taskCleanupSlowWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'AI strategies process tasks in batches — expect 1–3 minutes for accounts with thousands of tasks.'**
+  String get taskCleanupSlowWarning;
+
+  /// No description provided for @taskCleanupAnalyzing.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing your tasks…'**
+  String get taskCleanupAnalyzing;
+
+  /// No description provided for @taskCleanupAnalyzingSlowHint.
+  ///
+  /// In en, this message translates to:
+  /// **'AI strategies may take a minute or two'**
+  String get taskCleanupAnalyzingSlowHint;
+
+  /// No description provided for @taskCleanupFoundTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Found {count} tasks matching your criteria. Review the list below and uncheck anything you want to keep.'**
+  String taskCleanupFoundTasks(int count);
+
+  /// No description provided for @taskCleanupFoundOneTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Found 1 task matching your criteria. Review the list below and uncheck anything you want to keep.'**
+  String get taskCleanupFoundOneTask;
+
+  /// No description provided for @taskCleanupNothingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to clean up — your tasks look good with the selected strategies.'**
+  String get taskCleanupNothingFound;
+
+  /// No description provided for @taskCleanupScanTruncated.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanned your {scanCap} oldest open tasks — you have {totalOpen} total, so {remaining} weren\'t checked. Run cleanup again after this batch to reach the rest.'**
+  String taskCleanupScanTruncated(int scanCap, int totalOpen, int remaining);
+
+  /// No description provided for @taskCleanupStrategyLabelStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Stale'**
+  String get taskCleanupStrategyLabelStale;
+
+  /// No description provided for @taskCleanupStrategyLabelOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get taskCleanupStrategyLabelOverdue;
+
+  /// No description provided for @taskCleanupStrategyLabelVague.
+  ///
+  /// In en, this message translates to:
+  /// **'Vague'**
+  String get taskCleanupStrategyLabelVague;
+
+  /// No description provided for @taskCleanupStrategyLabelDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate'**
+  String get taskCleanupStrategyLabelDuplicate;
+
+  /// No description provided for @taskCleanupStrategyLabelAiFlagged.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-flagged'**
+  String get taskCleanupStrategyLabelAiFlagged;
+
+  /// No description provided for @taskCleanupStrategyLabelContextStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Context-stale'**
+  String get taskCleanupStrategyLabelContextStale;
+
+  /// No description provided for @taskCleanupReviewHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Review ({selected} of {total} selected)'**
+  String taskCleanupReviewHeader(int selected, int total);
+
+  /// No description provided for @taskCleanupSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get taskCleanupSelectAll;
+
+  /// No description provided for @taskCleanupDeselectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Deselect all'**
+  String get taskCleanupDeselectAll;
+
+  /// No description provided for @taskCleanupPermanentWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion is permanent. Session expires in {minutes} min — confirm before then.'**
+  String taskCleanupPermanentWarning(int minutes);
+
+  /// No description provided for @taskCleanupDeleting.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting tasks…'**
+  String get taskCleanupDeleting;
+
+  /// No description provided for @taskCleanupAnalyze.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze'**
+  String get taskCleanupAnalyze;
+
+  /// No description provided for @taskCleanupDeleteTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count} tasks'**
+  String taskCleanupDeleteTasks(int count);
+
+  /// No description provided for @taskCleanupDeleteOneTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete 1 task'**
+  String get taskCleanupDeleteOneTask;
+
+  /// No description provided for @taskCleanupSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Session expired — please analyze again'**
+  String get taskCleanupSessionExpired;
+
+  /// No description provided for @taskCleanupDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete failed: {error}'**
+  String taskCleanupDeleteFailed(String error);
+
+  /// No description provided for @taskCleanupDeletedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted {count} tasks'**
+  String taskCleanupDeletedSuccess(int count);
+
+  /// No description provided for @taskCleanupDeletedOneSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted 1 task'**
+  String get taskCleanupDeletedOneSuccess;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -18470,56 +18729,56 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 
   @override
   bool isSupported(Locale locale) => <String>[
-        'ar',
-        'be',
-        'bg',
-        'bn',
-        'bs',
-        'ca',
-        'cs',
-        'da',
-        'de',
-        'el',
-        'en',
-        'es',
-        'et',
-        'fa',
-        'fi',
-        'fr',
-        'he',
-        'hi',
-        'hr',
-        'hu',
-        'id',
-        'it',
-        'ja',
-        'kn',
-        'ko',
-        'lt',
-        'lv',
-        'mk',
-        'mr',
-        'ms',
-        'nl',
-        'no',
-        'pl',
-        'pt',
-        'ro',
-        'ru',
-        'sk',
-        'sl',
-        'sr',
-        'sv',
-        'ta',
-        'te',
-        'th',
-        'tl',
-        'tr',
-        'uk',
-        'ur',
-        'vi',
-        'zh'
-      ].contains(locale.languageCode);
+    'ar',
+    'be',
+    'bg',
+    'bn',
+    'bs',
+    'ca',
+    'cs',
+    'da',
+    'de',
+    'el',
+    'en',
+    'es',
+    'et',
+    'fa',
+    'fi',
+    'fr',
+    'he',
+    'hi',
+    'hr',
+    'hu',
+    'id',
+    'it',
+    'ja',
+    'kn',
+    'ko',
+    'lt',
+    'lv',
+    'mk',
+    'mr',
+    'ms',
+    'nl',
+    'no',
+    'pl',
+    'pt',
+    'ro',
+    'ru',
+    'sk',
+    'sl',
+    'sr',
+    'sv',
+    'ta',
+    'te',
+    'th',
+    'tl',
+    'tr',
+    'uk',
+    'ur',
+    'vi',
+    'zh',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -18628,8 +18887,10 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsZh();
   }
 
-  throw FlutterError('AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+  throw FlutterError(
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

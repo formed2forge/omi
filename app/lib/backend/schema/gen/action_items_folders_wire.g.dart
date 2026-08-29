@@ -828,6 +828,202 @@ class GeneratedBulkMoveConversationsResponse {
   }
 }
 
+class GeneratedCleanupPreviewRequest {
+  final int ageDays;
+  final double llmConfidenceThreshold;
+  final int overdueDays;
+  final String? scanCursor;
+  final double similarityThreshold;
+  final List<String> strategies;
+
+  const GeneratedCleanupPreviewRequest({
+    this.ageDays = 30,
+    this.llmConfidenceThreshold = 0.92,
+    this.overdueDays = 7,
+    this.scanCursor,
+    this.similarityThreshold = 0.92,
+    this.strategies = const [],
+  });
+
+  factory GeneratedCleanupPreviewRequest.fromJson(Map<String, dynamic> json) {
+    return GeneratedCleanupPreviewRequest(
+      ageDays: _required(_readFieldValue<int>(_readField(json, const ["age_days"]), "age_days", _readInt, requiredField: false, nullable: false, defaultValue: 30), "age_days"),
+      llmConfidenceThreshold: _required(_readFieldValue<double>(_readField(json, const ["llm_confidence_threshold"]), "llm_confidence_threshold", _readDouble, requiredField: false, nullable: false, defaultValue: 0.92), "llm_confidence_threshold"),
+      overdueDays: _required(_readFieldValue<int>(_readField(json, const ["overdue_days"]), "overdue_days", _readInt, requiredField: false, nullable: false, defaultValue: 7), "overdue_days"),
+      scanCursor: _readFieldValue<String>(_readField(json, const ["scan_cursor"]), "scan_cursor", _readString, requiredField: false, nullable: true),
+      similarityThreshold: _required(_readFieldValue<double>(_readField(json, const ["similarity_threshold"]), "similarity_threshold", _readDouble, requiredField: false, nullable: false, defaultValue: 0.92), "similarity_threshold"),
+      strategies: _required(_readFieldValue<List<String>>(_readField(json, const ["strategies"]), "strategies", _readStringList, requiredField: false, nullable: false, defaultValue: const []), "strategies"),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'age_days': ageDays,
+      'llm_confidence_threshold': llmConfidenceThreshold,
+      'overdue_days': overdueDays,
+      'scan_cursor': scanCursor,
+      'similarity_threshold': similarityThreshold,
+      'strategies': strategies,
+    };
+  }
+}
+
+class GeneratedCleanupPreviewResponse {
+  final Map<String, dynamic> breakdown;
+  final List<String> candidateIds;
+  final List<GeneratedCleanupCandidateMeta> candidateMeta;
+  final int expiresInSeconds;
+  final String? nextScanCursor;
+  final List<GeneratedCleanupSampleItem> sample;
+  final int scanCap;
+  final bool scanTruncated;
+  final String sessionId;
+  final int totalCandidates;
+  final int totalOpenActionItems;
+
+  const GeneratedCleanupPreviewResponse({
+    required this.breakdown,
+    required this.candidateIds,
+    required this.candidateMeta,
+    required this.expiresInSeconds,
+    this.nextScanCursor,
+    required this.sample,
+    required this.scanCap,
+    required this.scanTruncated,
+    required this.sessionId,
+    required this.totalCandidates,
+    required this.totalOpenActionItems,
+  });
+
+  factory GeneratedCleanupPreviewResponse.fromJson(Map<String, dynamic> json) {
+    return GeneratedCleanupPreviewResponse(
+      breakdown: _required(_readFieldValue<Map<String, dynamic>>(_readField(json, const ["breakdown"]), "breakdown", _readMap, requiredField: true, nullable: false), "breakdown"),
+      candidateIds: _required(_readFieldValue<List<String>>(_readField(json, const ["candidate_ids"]), "candidate_ids", _readStringList, requiredField: true, nullable: false), "candidate_ids"),
+      candidateMeta: _required(_readFieldValue<List<GeneratedCleanupCandidateMeta>>(_readField(json, const ["candidate_meta"]), "candidate_meta", (value) => _readObjectList(value, GeneratedCleanupCandidateMeta.fromJson), requiredField: true, nullable: false), "candidate_meta"),
+      expiresInSeconds: _required(_readFieldValue<int>(_readField(json, const ["expires_in_seconds"]), "expires_in_seconds", _readInt, requiredField: true, nullable: false), "expires_in_seconds"),
+      nextScanCursor: _readFieldValue<String>(_readField(json, const ["next_scan_cursor"]), "next_scan_cursor", _readString, requiredField: false, nullable: true),
+      sample: _required(_readFieldValue<List<GeneratedCleanupSampleItem>>(_readField(json, const ["sample"]), "sample", (value) => _readObjectList(value, GeneratedCleanupSampleItem.fromJson), requiredField: true, nullable: false), "sample"),
+      scanCap: _required(_readFieldValue<int>(_readField(json, const ["scan_cap"]), "scan_cap", _readInt, requiredField: true, nullable: false), "scan_cap"),
+      scanTruncated: _required(_readFieldValue<bool>(_readField(json, const ["scan_truncated"]), "scan_truncated", _readBool, requiredField: true, nullable: false), "scan_truncated"),
+      sessionId: _required(_readFieldValue<String>(_readField(json, const ["session_id"]), "session_id", _readString, requiredField: true, nullable: false), "session_id"),
+      totalCandidates: _required(_readFieldValue<int>(_readField(json, const ["total_candidates"]), "total_candidates", _readInt, requiredField: true, nullable: false), "total_candidates"),
+      totalOpenActionItems: _required(_readFieldValue<int>(_readField(json, const ["total_open_action_items"]), "total_open_action_items", _readInt, requiredField: true, nullable: false), "total_open_action_items"),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'breakdown': breakdown,
+      'candidate_ids': candidateIds,
+      'candidate_meta': candidateMeta.map((value) => value.toJson()).toList(),
+      'expires_in_seconds': expiresInSeconds,
+      'next_scan_cursor': nextScanCursor,
+      'sample': sample.map((value) => value.toJson()).toList(),
+      'scan_cap': scanCap,
+      'scan_truncated': scanTruncated,
+      'session_id': sessionId,
+      'total_candidates': totalCandidates,
+      'total_open_action_items': totalOpenActionItems,
+    };
+  }
+}
+
+class GeneratedCleanupExecuteRequest {
+  final List<String>? excludedIds;
+  final String sessionId;
+
+  const GeneratedCleanupExecuteRequest({
+    this.excludedIds,
+    required this.sessionId,
+  });
+
+  factory GeneratedCleanupExecuteRequest.fromJson(Map<String, dynamic> json) {
+    return GeneratedCleanupExecuteRequest(
+      excludedIds: _readFieldValue<List<String>>(_readField(json, const ["excluded_ids"]), "excluded_ids", _readStringList, requiredField: false, nullable: true),
+      sessionId: _required(_readFieldValue<String>(_readField(json, const ["session_id"]), "session_id", _readString, requiredField: true, nullable: false), "session_id"),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'excluded_ids': excludedIds,
+      'session_id': sessionId,
+    };
+  }
+}
+
+class GeneratedCleanupExecuteResponse {
+  final int deletedCount;
+
+  const GeneratedCleanupExecuteResponse({
+    required this.deletedCount,
+  });
+
+  factory GeneratedCleanupExecuteResponse.fromJson(Map<String, dynamic> json) {
+    return GeneratedCleanupExecuteResponse(
+      deletedCount: _required(_readFieldValue<int>(_readField(json, const ["deleted_count"]), "deleted_count", _readInt, requiredField: true, nullable: false), "deleted_count"),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'deleted_count': deletedCount,
+    };
+  }
+}
+
+class GeneratedCleanupCandidateMeta {
+  final String description;
+  final String id;
+  final String strategy;
+
+  const GeneratedCleanupCandidateMeta({
+    required this.description,
+    required this.id,
+    required this.strategy,
+  });
+
+  factory GeneratedCleanupCandidateMeta.fromJson(Map<String, dynamic> json) {
+    return GeneratedCleanupCandidateMeta(
+      description: _required(_readFieldValue<String>(_readField(json, const ["description"]), "description", _readString, requiredField: true, nullable: false), "description"),
+      id: _required(_readFieldValue<String>(_readField(json, const ["id"]), "id", _readString, requiredField: true, nullable: false), "id"),
+      strategy: _required(_readFieldValue<String>(_readField(json, const ["strategy"]), "strategy", _readString, requiredField: true, nullable: false), "strategy"),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'description': description,
+      'id': id,
+      'strategy': strategy,
+    };
+  }
+}
+
+class GeneratedCleanupSampleItem {
+  final String description;
+  final String strategy;
+
+  const GeneratedCleanupSampleItem({
+    required this.description,
+    required this.strategy,
+  });
+
+  factory GeneratedCleanupSampleItem.fromJson(Map<String, dynamic> json) {
+    return GeneratedCleanupSampleItem(
+      description: _required(_readFieldValue<String>(_readField(json, const ["description"]), "description", _readString, requiredField: true, nullable: false), "description"),
+      strategy: _required(_readFieldValue<String>(_readField(json, const ["strategy"]), "strategy", _readString, requiredField: true, nullable: false), "strategy"),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'description': description,
+      'strategy': strategy,
+    };
+  }
+}
+
 GeneratedPatchField<T> _readPatchField<T>(
   Map<String, dynamic> json,
   String name,

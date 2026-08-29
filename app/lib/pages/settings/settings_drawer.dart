@@ -394,6 +394,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       _SearchableItem(title: context.l10n.autoCreateSpeakers, icon: devIcon, onTap: goToDeveloper),
       _SearchableItem(title: context.l10n.goalTracker, icon: devIcon, onTap: goToDeveloper),
       _SearchableItem(title: context.l10n.apiEnvironment, icon: devIcon, onTap: goToDeveloper),
+      _SearchableItem(title: context.l10n.taskMaintenance, icon: devIcon, onTap: goToDeveloper),
       // --- What's New ---
       _SearchableItem(
         title: context.l10n.whatsNew,
