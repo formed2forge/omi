@@ -109,6 +109,7 @@
     "koffi": "^3.0.2",
     "lucide-react": "^1.16.0",
     "node-llama-cpp": "^3.20.0",
+    "onnxruntime-node": "1.24.3",
     "onnxruntime-web": "1.27.0",
     "react-router-dom": "~7.18.2",
     "tailwind-merge": "^3.6.0",
