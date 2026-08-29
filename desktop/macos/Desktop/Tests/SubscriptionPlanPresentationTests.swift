@@ -24,4 +24,15 @@ final class SubscriptionPlanPresentationTests: XCTestCase {
     XCTAssertEqual(plan.displayName, "Plan unavailable")
     XCTAssertFalse(plan.hasPaidCapability)
   }
+
+  func testPurchaseOrderPrioritizesCurrentCorePlusMaxLadder() {
+    XCTAssertEqual(SubscriptionPlanPresentation.purchaseOrder["plus"], 0)
+    XCTAssertEqual(SubscriptionPlanPresentation.purchaseOrder["max"], 1)
+    XCTAssertNil(SubscriptionPlanPresentation.purchaseOrder["architect"])
+    XCTAssertNil(SubscriptionPlanPresentation.purchaseOrder["operator"])
+    XCTAssertTrue(SubscriptionPlanPresentation.isPurchasablePlan(id: "plus"))
+    XCTAssertTrue(SubscriptionPlanPresentation.isPurchasablePlan(id: "max"))
+    XCTAssertFalse(SubscriptionPlanPresentation.isPurchasablePlan(id: "architect"))
+    XCTAssertFalse(SubscriptionPlanPresentation.isPurchasablePlan(id: "operator"))
+  }
 }

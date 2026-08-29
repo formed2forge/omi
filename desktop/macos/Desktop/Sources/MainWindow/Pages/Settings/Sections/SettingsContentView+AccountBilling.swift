@@ -207,7 +207,7 @@ extension SettingsContentView {
           GlassSeparator()
 
           Button(action: {
-            selectedPlanIdForCheckout = "operator"
+            selectedPlanIdForCheckout = "plus"
           }) {
             Text("View Plans")
               .scaledFont(size: OmiType.body, weight: .semibold)
@@ -341,16 +341,16 @@ extension SettingsContentView {
 
             Text(
               subscription.deprecationMessage
-                ?? "Your Unlimited plan is being retired. Try the new Operator plan — same great features at $49/mo."
+                ?? "Your legacy plan stays active until you cancel. Once canceled, it cannot be selected again."
             )
             .scaledFont(size: OmiType.body)
             .foregroundColor(Ink.secondary)
             .fixedSize(horizontal: false, vertical: true)
 
             Button(action: {
-              selectedPlanIdForCheckout = "operator"
+              selectedPlanIdForCheckout = "plus"
             }) {
-              Text("Try Operator")
+              Text("View current plans")
                 .scaledFont(size: OmiType.body, weight: .semibold)
             }
             .buttonStyle(OmiButtonStyle(.primary, size: .compact))
