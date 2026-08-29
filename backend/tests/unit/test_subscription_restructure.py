@@ -139,27 +139,35 @@ def test_filter_plans_keeps_legacy_for_current_subscriber(load_subscription):
     assert 'architect' in plan_ids
 
 
-def test_filter_plans_mobile_new_user_sees_only_plus_and_unlimited_v2(load_subscription):
-    """New / never-paid mobile users see only the consumer tiers Plus + Unlimited.
+def test_filter_plans_mobile_new_user_sees_only_plus_max_and_unlimited_v2(load_subscription):
+    """New / never-paid mobile users see the unified consumer tiers Plus + Max + Unlimited.
 
-    Neo (unlimited) is deprecated, and Operator + Architect are desktop-only, so
-    all three are hidden from the mobile purchase catalog.
+    Neo (unlimited) is deprecated, and Operator + Architect sunset to no
+    storefront at all, so all three are hidden from the mobile purchase
+    catalog. Plus and Max are the new full-unification tiers: sold on mobile,
+    desktop, and web alike (formed2forge/handoffs omi-pricing.md §3 item 1).
     """
     with load_subscription() as sub_mod:
         definitions = sub_mod.get_paid_plan_definitions()
         for platform in ('ios', 'android'):
             filtered = sub_mod.filter_plans_for_user(definitions, PlanType.basic, platform=platform)
             plan_ids = [d['plan_id'] for d in filtered]
-            assert plan_ids == ['plus', 'unlimited_v2'], (platform, plan_ids)
+            assert plan_ids == ['plus', 'max', 'unlimited_v2'], (platform, plan_ids)
 
 
-def test_filter_plans_desktop_hides_mobile_tiers(load_subscription):
-    """Desktop sells Operator + Architect; Plus/Unlimited/Neo are hidden there."""
+def test_filter_plans_desktop_sells_plus_and_max_not_sunset_legacy(load_subscription):
+    """Desktop now sells Plus + Max; Operator/Architect no longer offered to new users.
+
+    Full storefront unification (omi-pricing.md §3 item 1) replaces the old
+    "desktop sells Operator + Architect" rule outright, not just adds to it:
+    Operator and Architect sunset (§12 item 1) and stop appearing for any new
+    (non-subscriber) user, on any platform including desktop.
+    """
     with load_subscription() as sub_mod:
         definitions = sub_mod.get_paid_plan_definitions()
         filtered = sub_mod.filter_plans_for_user(definitions, PlanType.basic, platform='macos')
         plan_ids = [d['plan_id'] for d in filtered]
-        assert plan_ids == ['operator', 'architect'], plan_ids
+        assert plan_ids == ['plus', 'max'], plan_ids
 
 
 def test_filter_plans_hides_neo_on_mobile_for_non_neo_subscribers(load_subscription):
@@ -174,14 +182,17 @@ def test_filter_plans_hides_neo_on_mobile_for_non_neo_subscribers(load_subscript
             filtered = sub_mod.filter_plans_for_user(definitions, plan, platform='ios')
             plan_ids = [d['plan_id'] for d in filtered]
             assert 'unlimited' not in plan_ids, (plan, plan_ids)
-            assert plan_ids == ['plus', 'unlimited_v2'], (plan, plan_ids)
+            assert plan_ids == ['plus', 'max', 'unlimited_v2'], (plan, plan_ids)
 
 
-def test_filter_plans_mobile_desktop_plans_are_manage_only(load_subscription):
+def test_filter_plans_mobile_desktop_only_plans_are_manage_only(load_subscription):
     """Operator/Architect on iOS/Android see only their current plan.
 
     Cheaper mobile SKUs must not appear: Continue onto them is an immediate
-    prorated swap that strips desktop. Desktop/web keep the full desktop catalog.
+    prorated swap that strips desktop. Plus and Max are exempt from this
+    manage-only lock even though they're also desktop-entitled, because they
+    are themselves sold on mobile now (full unification) — see
+    `test_filter_plans_mobile_new_user_sees_only_plus_max_and_unlimited_v2`.
     """
     with load_subscription() as sub_mod:
         definitions = sub_mod.get_paid_plan_definitions()
@@ -192,19 +203,41 @@ def test_filter_plans_mobile_desktop_plans_are_manage_only(load_subscription):
             operator = [
                 d['plan_id'] for d in sub_mod.filter_plans_for_user(definitions, PlanType.operator, platform=platform)
             ]
+            max_plan = [
+                d['plan_id'] for d in sub_mod.filter_plans_for_user(definitions, PlanType.max, platform=platform)
+            ]
             assert architect == ['architect'], (platform, architect)
             assert operator == ['operator'], (platform, operator)
+            assert max_plan == ['plus', 'max', 'unlimited_v2'], (platform, max_plan)
 
-        desktop = [
+
+def test_filter_plans_desktop_sunset_siblings_no_longer_cross_shown(load_subscription):
+    """An existing Architect/Operator subscriber on desktop no longer sees the
+
+    other sunset plan as a lateral option — both are deprecated identically now
+    (omi-pricing.md §3 item 8: same keep-until-cancel rule as any other legacy
+    plan, no special Operator<->Architect cross-shopping carve-out once neither
+    is sold to new users). They do see the new upgrade catalog (Plus, Max)
+    alongside their own current plan.
+    """
+    with load_subscription() as sub_mod:
+        definitions = sub_mod.get_paid_plan_definitions()
+        architect_desktop = [
             d['plan_id'] for d in sub_mod.filter_plans_for_user(definitions, PlanType.architect, platform='macos')
         ]
-        assert desktop == ['operator', 'architect'], desktop
+        operator_desktop = [
+            d['plan_id'] for d in sub_mod.filter_plans_for_user(definitions, PlanType.operator, platform='windows')
+        ]
+        assert architect_desktop == ['architect', 'plus', 'max'], architect_desktop
+        assert operator_desktop == ['operator', 'plus', 'max'], operator_desktop
 
 
 def test_filter_plans_shows_neo_on_mobile_for_current_neo_subscriber(load_subscription):
     """Current Neo subscribers (including cancel-at-period-end) still see Neo to manage it.
 
-    Plus + Unlimited stay visible so they can migrate off the deprecated SKU.
+    Plus + Max + Unlimited stay visible so they can migrate off the deprecated SKU.
+    Operator/Architect stay invisible to them (sunset, never offered as an
+    upgrade path to a consumer-tier subscriber).
     """
     with load_subscription() as sub_mod:
         definitions = sub_mod.get_paid_plan_definitions()
@@ -213,18 +246,22 @@ def test_filter_plans_shows_neo_on_mobile_for_current_neo_subscriber(load_subscr
     plan_ids = [d['plan_id'] for d in filtered]
     assert 'unlimited' in plan_ids
     assert 'plus' in plan_ids
+    assert 'max' in plan_ids
     assert 'unlimited_v2' in plan_ids
     assert 'architect' not in plan_ids
     assert 'operator' not in plan_ids
 
 
 def test_filter_plans_hides_neo_on_web_for_new_user(load_subscription):
-    """Web sells the full new catalog (Plus + Unlimited + Operator + Architect);
-    deprecated Neo is hidden from the web purchase catalog.
+    """Web sells the unified new catalog (Plus + Max + Unlimited); deprecated Neo
+    and sunset Operator/Architect are hidden from the web purchase catalog for a
+    new user.
 
     Regression: web (X-App-Platform: web) previously hid nothing, so Neo was
     offered for purchase alongside the new tiers. Neo purchase is restricted to
-    existing subscribers only.
+    existing subscribers only. Operator/Architect additionally sunset from web
+    the same as every other storefront (omi-pricing.md §12 item 1) — full
+    unification means web is no longer a special "sells everything" surface.
     """
     with load_subscription() as sub_mod:
         definitions = sub_mod.get_paid_plan_definitions()
@@ -232,9 +269,10 @@ def test_filter_plans_hides_neo_on_web_for_new_user(load_subscription):
     plan_ids = [d['plan_id'] for d in filtered]
     assert 'unlimited' not in plan_ids  # Neo hidden
     assert 'plus' in plan_ids
+    assert 'max' in plan_ids
     assert 'unlimited_v2' in plan_ids
-    assert 'operator' in plan_ids
-    assert 'architect' in plan_ids
+    assert 'operator' not in plan_ids  # sunset: no longer sold to new users anywhere
+    assert 'architect' not in plan_ids  # sunset: no longer sold to new users anywhere
 
 
 def test_filter_plans_shows_neo_on_web_for_current_neo_subscriber(load_subscription):
@@ -259,14 +297,18 @@ def test_filter_plans_hides_neo_on_windows_for_new_user(load_subscription):
 
     Regression for the platform defect: _platform_hidden_plans only hid Neo for
     'macos', so a Windows client would have been offered the deprecated Neo plan.
+    Operator/Architect are sunset (no longer offered to new desktop users
+    either); Plus/Max are the new desktop-sold tiers.
     """
     with load_subscription() as sub_mod:
         definitions = sub_mod.get_paid_plan_definitions()
         filtered = sub_mod.filter_plans_for_user(definitions, PlanType.basic, platform='windows')
     plan_ids = [d['plan_id'] for d in filtered]
     assert 'unlimited' not in plan_ids
-    assert 'operator' in plan_ids
-    assert 'architect' in plan_ids
+    assert 'operator' not in plan_ids
+    assert 'architect' not in plan_ids
+    assert 'plus' in plan_ids
+    assert 'max' in plan_ids
 
 
 def test_neo_hidden_from_purchase_on_every_client_platform(load_subscription):
@@ -290,10 +332,11 @@ def test_neo_hidden_from_purchase_on_every_client_platform(load_subscription):
 def test_windows_full_catalog_matches_macos_canonical(load_subscription):
     """End-to-end catalog resolution for a Windows client (X-App-Platform: windows).
 
-    Pins the fix: a Windows client gets the SAME catalog macOS gets — Operator +
-    Architect visible under their canonical titles, Neo hidden from a new basic
-    desktop user — and NEVER the legacy 'Omi Pro' / 'Unlimited Plan' rename that
-    adapt_plans_for_legacy_client produces for pre-rollout clients.
+    Pins the fix: a Windows client gets the SAME catalog macOS gets — Plus + Max
+    visible under their canonical titles, Neo AND sunset Operator/Architect
+    hidden from a new basic desktop user — and NEVER the legacy 'Omi Pro' /
+    'Unlimited Plan' rename that adapt_plans_for_legacy_client produces for
+    pre-rollout clients.
     """
     with load_subscription() as sub_mod:
         # Windows is a modern desktop client → new catalog, no legacy adaptation.
@@ -301,11 +344,13 @@ def test_windows_full_catalog_matches_macos_canonical(load_subscription):
         definitions = sub_mod.get_paid_plan_definitions()
         filtered = sub_mod.filter_plans_for_user(definitions, PlanType.basic, platform='windows')
     by_id = {d['plan_id']: d for d in filtered}
-    assert 'operator' in by_id
-    assert 'architect' in by_id
+    assert 'plus' in by_id
+    assert 'max' in by_id
+    assert 'operator' not in by_id  # sunset
+    assert 'architect' not in by_id  # sunset
     assert 'unlimited' not in by_id  # Neo hidden on desktop for a new user
-    assert by_id['operator']['title'] == 'Operator'
-    assert by_id['architect']['title'] == 'Architect'
+    assert by_id['plus']['title'] == 'Plus'
+    assert by_id['max']['title'] == 'Max'
     titles = [d['title'] for d in filtered]
     assert 'Omi Pro' not in titles
     assert 'Unlimited Plan' not in titles
@@ -324,28 +369,44 @@ def test_windows_is_a_desktop_platform(load_subscription):
 
 
 def test_desktop_to_consumer_plan_change_is_blocked(load_subscription):
-    """Architect/Operator cannot swap onto Plus/Unlimited/Neo. Operator ↔ Architect stays open."""
+    """Any desktop-entitled plan cannot swap onto a non-desktop-entitled tier.
+
+    Architect/Operator (legacy) still block onto Plus/Unlimited/Neo/Basic, and
+    still stay open Operator <-> Architect. Plus and Max are desktop-entitled
+    too now (full unification): swapping between them, or onto/from the legacy
+    desktop plans, stays open; only dropping to a non-desktop-entitled plan
+    (basic, unlimited, unlimited_v2) is blocked.
+    """
     with load_subscription() as sub_mod:
         err = sub_mod.desktop_to_consumer_plan_change_error
-        for current in (PlanType.architect, PlanType.operator):
-            for target in (PlanType.plus, PlanType.unlimited_v2, PlanType.unlimited, PlanType.basic):
+        for current in (PlanType.architect, PlanType.operator, PlanType.plus, PlanType.max):
+            for target in (PlanType.unlimited_v2, PlanType.unlimited, PlanType.basic):
                 assert err(current, target), (current, target)
         assert err(PlanType.architect, PlanType.operator) is None
         assert err(PlanType.operator, PlanType.architect) is None
-        assert err(PlanType.plus, PlanType.unlimited_v2) is None
         assert err(PlanType.unlimited, PlanType.plus) is None
+        assert err(PlanType.plus, PlanType.max) is None
+        assert err(PlanType.max, PlanType.plus) is None
+        assert err(PlanType.architect, PlanType.max) is None
+        # Plus is now itself desktop-entitled (full unification), so — unlike
+        # before, when Plus carried no desktop access at all — swapping a Plus
+        # subscriber onto Unlimited-v2 (not desktop-entitled) is correctly
+        # blocked for the same reason Architect/Operator -> Unlimited-v2 is.
+        assert err(PlanType.plus, PlanType.unlimited_v2), 'Plus is desktop-entitled now; this must block'
 
 
 def test_legacy_client_adaptation(load_subscription):
-    """Old clients see Unlimited Plan (not legacy suffix) and no Operator."""
+    """Old clients see Unlimited Plan (not legacy suffix) and no Operator/Max."""
     with load_subscription() as sub_mod:
         definitions = sub_mod.get_paid_plan_definitions()
         adapted = sub_mod.adapt_plans_for_legacy_client(definitions)
 
     plan_ids = [d['plan_id'] for d in adapted]
     assert 'operator' not in plan_ids
+    assert 'max' not in plan_ids  # postdates this pre-0.11.324 client shape, same as operator
     assert 'unlimited' in plan_ids
     assert 'architect' in plan_ids
+    assert 'plus' in plan_ids  # predates this shape's operator/architect split, stays visible
 
     unlimited_def = next(d for d in adapted if d['plan_id'] == 'unlimited')
     assert unlimited_def['title'] == 'Unlimited Plan'
@@ -394,9 +455,11 @@ def test_version_gating_web_always_new(load_subscription):
 def test_web_full_catalog_shows_new_plans_and_hides_neo(load_subscription):
     """End-to-end catalog resolution for a web client (X-App-Platform: web).
 
-    Web renders the full new catalog under canonical titles — Plus + Unlimited
-    (mobile tiers) AND Operator + Architect (desktop tiers) — never the legacy
-    'Omi Pro' / 'Unlimited Plan' rename, and never deprecated Neo for a new user.
+    Web renders the unified catalog under canonical titles — Plus + Max +
+    Unlimited — never the legacy 'Omi Pro' / 'Unlimited Plan' rename, never
+    deprecated Neo for a new user, and (post-unification) never sunset
+    Operator/Architect either: web is no longer the one storefront that still
+    sells the legacy desktop-only plans to new users.
     """
     with load_subscription() as sub_mod:
         new_plans_enabled = sub_mod.should_show_new_plans('web', None)
@@ -405,10 +468,12 @@ def test_web_full_catalog_shows_new_plans_and_hides_neo(load_subscription):
         # No legacy adaptation for web (new_plans_enabled) → raw canonical catalog.
         filtered = sub_mod.filter_plans_for_user(definitions, PlanType.basic, platform='web')
     by_id = {d['plan_id']: d for d in filtered}
-    assert set(by_id) == {'plus', 'unlimited_v2', 'operator', 'architect'}, by_id
+    assert set(by_id) == {'plus', 'max', 'unlimited_v2'}, by_id
     assert 'unlimited' not in by_id  # Neo hidden
-    assert by_id['operator']['title'] == 'Operator'
-    assert by_id['architect']['title'] == 'Architect'
+    assert 'operator' not in by_id  # sunset
+    assert 'architect' not in by_id  # sunset
+    assert by_id['plus']['title'] == 'Plus'
+    assert by_id['max']['title'] == 'Max'
     assert by_id['unlimited_v2']['title'] == 'Unlimited'
     titles = [d['title'] for d in filtered]
     assert 'Omi Pro' not in titles
@@ -509,7 +574,75 @@ def test_plan_features_differentiate_operator_neo(monkeypatch, load_subscription
 
 def test_plan_display_names(load_subscription):
     with load_subscription() as sub_mod:
-        assert sub_mod.get_plan_display_name(PlanType.basic) == 'Free'
+        # Renamed Free -> Core (omi-pricing.md §9); Plus is unchanged; Max is new.
+        assert sub_mod.get_plan_display_name(PlanType.basic) == 'Core'
+        assert sub_mod.get_plan_display_name(PlanType.plus) == 'Plus'
+        assert sub_mod.get_plan_display_name(PlanType.max) == 'Max'
         assert sub_mod.get_plan_display_name(PlanType.operator) == 'Operator'
         assert sub_mod.get_plan_display_name(PlanType.architect) == 'Architect'
         assert sub_mod.get_plan_display_name(PlanType.unlimited) == 'Neo'
+
+
+def test_max_chat_cap_is_hard_capped_no_overage(load_subscription):
+    """Max: 1,000 questions/month, hard-stop — no overage billing (omi-pricing.md §23 #2).
+
+    Same allocation shape unlimited_v2 already uses (finite question count,
+    hard_cap exhaustion), not Architect's usd_cent-overage shape: Max is a new
+    plan ID, not a repurposing of Architect (see the plan-ID reasoning in the
+    commit message / handoff §24 checkpoint).
+    """
+    with load_subscription() as sub_mod:
+        limits = sub_mod.get_plan_limits(PlanType.max)
+        assert limits.chat_questions_per_month == 1000
+        assert limits.chat_cost_usd_per_month is None
+        assert sub_mod.plan_uses_overage(PlanType.max) is False
+        assert sub_mod.is_paid_plan(PlanType.max) is True
+
+
+def test_plus_and_max_get_real_desktop_entitlement(load_subscription):
+    """Plus and Max are both real desktop-entitled plans now (full unification).
+
+    Plus previously mapped to `desktop_free` (no desktop access at all); it now
+    grants full desktop access, same as Operator. Max gets the top
+    `desktop_architect` tier, same shape Architect already has, which in turn
+    grants identical Smart Screen Search access for both (`cloud_screen_vectors`
+    is True on both the `desktop_full` and `desktop_architect` profiles) — see
+    omi-pricing.md §23 #5.
+    """
+    with load_subscription() as sub_mod:
+        assert sub_mod.plan_grants_desktop(PlanType.plus) is True
+        assert sub_mod.effective_desktop_access_tier(PlanType.plus) == sub_mod.DESKTOP_ACCESS_TIER_FULL
+        assert sub_mod.effective_desktop_access_tier(PlanType.max) == sub_mod.DESKTOP_ACCESS_TIER_ARCHITECT
+
+        from config.plan_catalog import DESKTOP_PROFILE_DEFAULTS
+
+        assert DESKTOP_PROFILE_DEFAULTS['desktop_full']['cloud_screen_vectors'] is True
+        assert DESKTOP_PROFILE_DEFAULTS['desktop_architect']['cloud_screen_vectors'] is True
+
+
+def test_plus_and_max_phone_calls_are_unlimited_for_now(load_subscription):
+    """No phone-call cap for Plus or Max yet (omi-pricing.md §23 #4) — both keep
+    the existing uncapped `paid` phone_calls_profile, unchanged from today.
+    """
+    with load_subscription() as sub_mod:
+        from config.plan_catalog import get_plan_definition
+
+        assert get_plan_definition(PlanType.plus)['phone_calls_profile'] == 'paid'
+        assert get_plan_definition(PlanType.max)['phone_calls_profile'] == 'paid'
+
+
+def test_pro_wire_alias_still_resolves_to_architect(load_subscription):
+    """The `pro` wire alias is untouched: still architect, not reassigned to Max.
+
+    Per the investigation in omi-pricing.md §8 (never resolved) and the §24
+    dispatch, reassigning it is blocked by two independent facts: the catalog
+    compiler's append-only compatibility guard rejects remapping an existing
+    wire alias to a different plan ID, and nobody has confirmed there are no
+    live `subscription.plan == "pro"` documents that would silently
+    misattribute if the alias moved. Max ships with no wire alias of its own.
+    """
+    with load_subscription() as sub_mod:
+        from config.plan_catalog import WIRE_PLAN_ALIASES
+
+        assert WIRE_PLAN_ALIASES['pro'] == PlanType.architect
+        assert 'pro' not in [alias for alias in WIRE_PLAN_ALIASES if WIRE_PLAN_ALIASES[alias] == PlanType.max]

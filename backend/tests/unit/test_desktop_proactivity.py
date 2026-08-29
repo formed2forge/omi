@@ -850,6 +850,15 @@ def test_unknown_tier_falls_back_to_free_row_without_raising(monkeypatch):
         (desktop_proactivity.PlanType.basic, 60, 150),
         (desktop_proactivity.PlanType.operator, 500, 1000),
         (desktop_proactivity.PlanType.architect, 1000, 2000),
+        # Plus/Max are new desktop-entitled plans (full storefront unification,
+        # omi-pricing.md §3 item 1/§24 Stage 0): Plus reuses the desktop_full
+        # row, Max reuses the same desktop_architect row Architect already
+        # gets (effective_desktop_access_tier special-cases Max alongside
+        # Architect for exactly this). Core (basic) keeps the existing
+        # desktop_free placeholder row unchanged — that's the "basic Proactive
+        # AI" grant from omi-pricing.md §23 #1, already wired mechanically.
+        (desktop_proactivity.PlanType.plus, 500, 1000),
+        (desktop_proactivity.PlanType.max, 1000, 2000),
     ],
 )
 def test_quota_limit_scales_from_server_verified_subscription(plan, reasoning_limit, extraction_limit):

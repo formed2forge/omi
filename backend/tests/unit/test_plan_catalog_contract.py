@@ -59,6 +59,11 @@ def test_source_scan_covers_production_code_and_ignores_tests_and_docs(tmp_path,
 
 
 def test_plan_identity_and_paid_membership_are_complete():
+    # Core/Plus/Max: `basic` and `architect` are reused catalog identities
+    # (renamed/re-entitled in place, never removed — plan IDs are append-only);
+    # `max` is a genuinely new plan ID, not a repurposing of `architect`, which
+    # stays a live, still-billed legacy identity for its existing subscribers
+    # (see the commit message / omi-pricing.md §24 checkpoint for the reasoning).
     assert PLAN_TYPE_VALUES == {
         'basic',
         'unlimited',
@@ -66,8 +71,13 @@ def test_plan_identity_and_paid_membership_are_complete():
         'operator',
         'plus',
         'unlimited_v2',
+        'max',
     }
     assert PAID_PLAN_IDS == PLAN_TYPE_VALUES - {'basic'}
+    # The 'pro' wire alias is untouched: it still resolves to the sunsetting
+    # Architect, not reassigned to Max (append-only wire-alias guard; see
+    # test_pro_wire_alias_still_resolves_to_architect in
+    # test_subscription_restructure.py and omi-pricing.md §8/§24).
     assert PlanType('pro') is PlanType.architect
 
 

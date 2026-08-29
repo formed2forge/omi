@@ -13,6 +13,8 @@ def test_overage_policy_matrix_uses_one_catalog_predicate():
         'operator': True,
         'plus': False,
         'unlimited_v2': False,
+        # Max: hard-capped at 1,000 questions/month, no overage (omi-pricing.md §23 #2).
+        'max': False,
     }
     assert not hasattr(overage, 'is_overage_plan')
 

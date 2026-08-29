@@ -360,7 +360,11 @@ class TestEnforceChatQuota:
             sub_mod.enforce_chat_quota("uid123")  # no exception
 
     def test_enforcement_exceeded_basic_raises_402(self, monkeypatch):
-        """When a free user exceeds quota, raises HTTPException 402."""
+        """When a free user exceeds quota, raises HTTPException 402.
+
+        Display name is "Core" now (renamed from "Free", omi-pricing.md §9);
+        the wire `plan_type` identity ("basic") is unchanged.
+        """
         from fastapi import HTTPException
 
         sub_mod = _reload_subscription_module()
@@ -382,7 +386,7 @@ class TestEnforceChatQuota:
 
             assert exc_info.value.status_code == 402
             assert exc_info.value.detail['error'] == 'quota_exceeded'
-            assert exc_info.value.detail['plan'] == 'Free'
+            assert exc_info.value.detail['plan'] == 'Core'
             assert exc_info.value.detail['plan_type'] == 'basic'
             assert exc_info.value.detail['unit'] == 'questions'
             assert exc_info.value.detail['used'] == 31
