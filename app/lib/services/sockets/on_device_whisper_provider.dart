@@ -11,6 +11,7 @@ import 'package:omi/models/stt_result.dart';
 import 'package:omi/services/custom_stt_log_service.dart';
 import 'package:omi/services/sockets/on_device_transcript_quality_gate.dart';
 import 'package:omi/services/sockets/pure_polling.dart';
+import 'package:omi/services/sockets/whisper_model_manager.dart';
 
 class OnDeviceWhisperProvider implements ISttProvider {
   final String modelPath;
@@ -24,32 +25,43 @@ class OnDeviceWhisperProvider implements ISttProvider {
   Future<void> _ensureInitialized() async {
     if (_isInitialized) return;
     try {
-      if (!await File(modelPath).exists()) {
-        throw Exception('Model file not found at $modelPath');
-      }
-
-      final dir = p.dirname(modelPath);
       final filename = p.basename(modelPath);
+      final dir = p.dirname(modelPath);
 
       WhisperModel targetModel = WhisperModel.tiny;
+      String modelName = 'tiny';
 
       if (filename.contains('tiny')) {
         targetModel = WhisperModel.tiny;
+        modelName = 'tiny';
       } else if (filename.contains('base')) {
         targetModel = WhisperModel.base;
+        modelName = 'base';
       } else if (filename.contains('small')) {
         targetModel = WhisperModel.small;
+        modelName = 'small';
       } else if (filename.contains('medium')) {
         targetModel = WhisperModel.medium;
+        modelName = 'medium';
       } else if (filename.contains('large-v1')) {
         targetModel = WhisperModel.largeV1;
+        modelName = 'large-v1';
       } else if (filename.contains('large-v2')) {
         targetModel = WhisperModel.largeV2;
+        modelName = 'large-v2';
       } else {
         CustomSttLogService.instance.warning(
           'OnDeviceWhisper',
           'Unknown model filename "$filename", defaulting to tiny.',
         );
+      }
+
+      // Guard against a truncated/corrupt download: whisper.cpp can crash the
+      // native FFI layer if handed a malformed ggml file, so reject anything
+      // that doesn't pass the same size sanity check the download flow uses
+      // rather than letting it reach the FFI call.
+      if (!WhisperModelManager.isModelFileValid(File(modelPath), modelName)) {
+        throw Exception('Model file missing or incomplete/corrupt at $modelPath');
       }
 
       _whisper = Whisper(model: targetModel, modelDir: dir);
