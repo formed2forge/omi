@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "Updated Windows billing to recognize the Core, Plus, and Max plan catalog while preserving unknown future plan values"
+  ]
+}
