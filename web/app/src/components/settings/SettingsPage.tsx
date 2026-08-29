@@ -54,6 +54,10 @@ import {
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
 import { cn } from '@/lib/utils';
+import {
+  BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT,
+  BASIC_TIER_TRANSCRIPTION_SECONDS_LIMIT,
+} from '@/lib/basicPlanLimits';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
   CLAUDE_CONNECTOR_OAUTH,
@@ -965,9 +969,13 @@ function UsageSectionContent({
   const monthlyUsage = allUsage?.monthly;
   const periods: UsagePeriod[] = ['today', 'monthly', 'yearly', 'all_time'];
 
-  // Default limits for basic plan (1200 minutes = 72000 seconds)
+  // Default limits for basic plan. Transcription mirrors the deployed
+  // BASIC_TIER_MINUTES_LIMIT_PER_MONTH — see lib/basicPlanLimits.ts for why this can't be
+  // read live here. The other three limits are a separate, pre-existing hardcoded-vs-catalog
+  // question (backend/utils/subscription.py's legacy 0-means-unlimited overlay) out of scope
+  // for this fix.
   const limits = {
-    transcription_seconds: 72000, // 1200 minutes
+    transcription_seconds: BASIC_TIER_TRANSCRIPTION_SECONDS_LIMIT,
     words_transcribed: 50000,
     insights_gained: 100,
     memories_created: 50,
@@ -1175,13 +1183,14 @@ function UsageSectionContent({
                         ? Math.round(monthlyUsage.transcription_seconds / 60)
                         : 0}
                       <span className="text-sm font-normal text-text-tertiary ml-1">
-                        / 1,200 min
+                        / {BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT.toLocaleString()} min
                       </span>
                     </span>
                     <span className="text-sm text-text-tertiary">
                       {monthlyUsage
-                        ? 1200 - Math.round(monthlyUsage.transcription_seconds / 60)
-                        : 1200}{' '}
+                        ? BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT -
+                          Math.round(monthlyUsage.transcription_seconds / 60)
+                        : BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT}{' '}
                       min left
                     </span>
                   </div>
@@ -1207,7 +1216,8 @@ function UsageSectionContent({
                       </div>
                       <span className="text-sm text-text-secondary">
                         <span className="font-medium text-text-primary">
-                          1,200 minutes
+                          {BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT.toLocaleString()}{' '}
+                          minutes
                         </span>{' '}
                         of listening per month
                         <span className="text-amber-400 text-xs ml-1">(limited)</span>
