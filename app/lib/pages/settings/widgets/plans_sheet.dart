@@ -47,7 +47,7 @@ class PlansSheet extends StatefulWidget {
 
 class _PlansSheetState extends State<PlansSheet> {
   String selectedPlan = 'yearly'; // 'yearly' or 'monthly'  (billing period)
-  String? selectedTierId; // 'unlimited', 'operator', 'architect'
+  String? selectedTierId; // backend plan_id, e.g. 'plus' or 'max'
   bool _isUpgrading = false;
   bool _showTrainingDataOptIn = false; // Control visibility of training data opt-in
   bool _isSwitchingToFree = false;
@@ -1170,7 +1170,7 @@ class _PlansSheetState extends State<PlansSheet> {
                         const SizedBox(height: 16),
 
                         // Continue/Upgrade — hidden for same-tier annual (nothing to
-                        // change) and for desktop-plan → mobile-tier switches.
+                        // change) and for desktop-only legacy-plan → mobile-tier switches.
                         Builder(
                           builder: (context) {
                             final currentPlan = _getCurrentPlanDetails();
@@ -1185,7 +1185,7 @@ class _PlansSheetState extends State<PlansSheet> {
                               plansLoaded: !usageProvider.isLoadingPlans && usageProvider.availablePlans != null,
                               selectedTierId: selectedTierId,
                               currentTierId: currentSub?.plan.wireName,
-                              currentGrantsDesktop: currentSub?.plan.grantsDesktop ?? false,
+                              currentPlanIsMobileManageOnly: currentSub?.plan.isMobileManageOnly ?? false,
                             );
 
                             if (!shouldShowContinueButton) {
@@ -1566,7 +1566,7 @@ class _PlansSheetState extends State<PlansSheet> {
     }
 
     // Tier ordering
-    const tierOrder = ['plus', 'unlimited_v2', 'unlimited', 'operator', 'architect'];
+    const tierOrder = ['plus', 'max', 'unlimited_v2', 'unlimited', 'operator', 'architect'];
     final sortedTierIds = grouped.keys.toList()
       ..sort((a, b) {
         final ai = tierOrder.indexOf(a);
@@ -2078,21 +2078,12 @@ class _PlansSheetState extends State<PlansSheet> {
     );
   }
 
-  /// Whether a plan tier includes the desktop (macOS) app. Neo (unlimited) is
-  /// mobile/web only; Operator and Architect include desktop. Keep in sync with
-  /// backend `DESKTOP_ENTITLED_PLAN_TYPES`. Returns null for unknown tiers.
+  /// Whether a known catalog tier includes full desktop access. The plan type
+  /// is also the client-side tolerant wire decoder, so a future tier renders
+  /// neutral copy instead of inheriting a stale entitlement assumption.
   bool? _tierGrantsDesktop(String tierId) {
-    switch (tierId) {
-      case 'operator':
-      case 'architect':
-        return true;
-      case 'unlimited':
-      case 'plus':
-      case 'unlimited_v2':
-        return false;
-      default:
-        return null;
-    }
+    final plan = PlanType.fromWire(tierId);
+    return plan.isUnknown ? null : plan.grantsDesktop;
   }
 
   String? _monthsFreeLabel(int? months) => months == null ? null : context.l10n.monthsFreeBadge(months);
