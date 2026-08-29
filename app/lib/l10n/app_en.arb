@@ -10580,7 +10580,7 @@
     },
     "planDeprecationMessage": "Your Unlimited plan is being retired. Switch to the Operator plan — same great features at $49/mo. Your current plan will continue to work in the meantime.",
     "@planDeprecationMessage": {
-        "description": "Deprecation notice for legacy Unlimited subscribers"
+        "description": "Deprecation notice for legacy Unlimited subscribers. Dead as of 2026-08: no confirmed Dart call site references this key. The $49/mo Operator price is a hardcoded duplicate of the same fallback constant maintained separately per-platform in macOS/Windows (SettingsContentView+AccountBilling.swift operatorDeprecationFallbackPrice / billing.ts OPERATOR_DEPRECATION_FALLBACK_PRICE) -- kept here as a single literal rather than interpolated because ARB is static per-locale prose with no runtime price lookup, and rewriting would touch ~49 untranslated locale files for dead code. Update or remove this key together with the platform constants if Operator pricing changes and this message is ever wired up."
     },
     "upgradeYourPlan": "Upgrade Your Plan",
     "@upgradeYourPlan": {
