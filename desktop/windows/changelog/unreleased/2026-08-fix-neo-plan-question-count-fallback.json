@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "Fixed the Unlimited plan's fallback description showing the wrong monthly question count"
+  ]
+}
