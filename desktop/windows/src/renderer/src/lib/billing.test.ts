@@ -74,16 +74,16 @@ function sub(partial: Partial<TestSubscription>): TestSubscription {
 }
 
 describe('resolvePlanTitle', () => {
-  it('short-circuits to Free (BYOK) for any plan with the byok feature', () => {
+  it('short-circuits to Core (BYOK) for any plan with the byok feature', () => {
     expect(resolvePlanTitle(sub({ plan: 'basic', features: ['byok'] }), CATALOG)).toBe(
-      'Free (BYOK)'
+      'Core (BYOK)'
     )
     expect(resolvePlanTitle(sub({ plan: 'unlimited', features: ['byok'] }), CATALOG)).toBe(
-      'Free (BYOK)'
+      'Core (BYOK)'
     )
   })
-  it('maps basic to Free', () => {
-    expect(resolvePlanTitle(sub({ plan: 'basic' }), CATALOG)).toBe('Free')
+  it('maps basic to Core', () => {
+    expect(resolvePlanTitle(sub({ plan: 'basic' }), CATALOG)).toBe('Core')
   })
   it('maps unlimited to Neo by default', () => {
     expect(
@@ -102,6 +102,7 @@ describe('resolvePlanTitle', () => {
   it.each([
     ['plus', 'Plus'],
     ['unlimited_v2', 'Unlimited'],
+    ['max', 'Max'],
     ['pro', 'Architect']
   ] as const)('handles the known wire plan %s', (wirePlan, title) => {
     expect(resolvePlanTitle(sub({ plan: wirePlan }), undefined)).toBe(title)
@@ -128,6 +129,7 @@ describe('lossless plan decoding', () => {
     'unlimited_v2',
     'operator',
     'architect',
+    'max',
     'pro',
     'future_plan_123'
   ] as const
@@ -191,13 +193,13 @@ describe('resolvePlanTitle — catalog-first with the live Windows catalog', () 
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'legacy_price' }), LIVE_CATALOG)
     ).toBe('Neo')
   })
-  it('still short-circuits to Free (BYOK) even with a catalog price match', () => {
+  it('still short-circuits to Core (BYOK) even with a catalog price match', () => {
     expect(
       resolvePlanTitle(
         sub({ plan: 'unlimited', current_price_id: 'price_u_m', features: ['byok'] }),
         LIVE_CATALOG
       )
-    ).toBe('Free (BYOK)')
+    ).toBe('Core (BYOK)')
   })
   it('filters the subscriber’s own plan out of the grid even when titles differ from enum names', () => {
     const s = sub({ plan: 'unlimited', current_price_id: 'price_u_m' })
@@ -251,9 +253,9 @@ describe('currentPlanSubtitle', () => {
       )
     ).toBe('Operator Monthly • $49/mo')
   })
-  it('shows the free-tier line otherwise', () => {
+  it('shows the Core-tier line otherwise', () => {
     expect(currentPlanSubtitle(sub({ plan: 'basic' }), CATALOG)).toBe(
-      'You are currently on the free tier.'
+      'You are currently on the Core tier.'
     )
   })
 })
