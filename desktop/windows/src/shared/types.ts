@@ -254,6 +254,12 @@ export type ListenMessage =
 export type LocalAsrMessage =
   | { sessionId: string; kind: 'segments'; segments: BackendSegment[] }
   | { sessionId: string; kind: 'error'; message: string; fatal: boolean }
+  /** Post-hoc "basic processing" summary of the session's full transcript,
+   *  emitted once after the session stops — only when the local-LLM Settings
+   *  toggle is on (see main/ipc/localOnDeviceSettings.ts) and the session
+   *  produced any transcript at all. See main/localAsr/localAsrSession.ts's
+   *  stop() for the convergence point that produces this. */
+  | { sessionId: string; kind: 'summary'; summary: string }
 
 // ───────────────────────── Capture window IPC ─────────────────────────
 // The hidden always-alive capture window (renderer #/capture) owns ALL audio +
@@ -796,10 +802,13 @@ export type OmiBridgeApi = {
   /** True when OMI_E2E=1 — renderer-side test hooks (e.g. window.__omiVoice)
    *  attach only in harness runs, never in production. */
   e2e: boolean
-  /** True when OMI_LOCAL_ASR=1 — capability-only dev/verification flag that
-   *  routes the same PCM stream already feeding cloud STT into a parallel local
-   *  ASR session too (see localAsrStart/localAsrFeed above). Never a Settings
-   *  toggle; OFF unless explicitly set. */
+  /** True when OMI_LOCAL_ASR=1 — dev/verification flag that routes the same
+   *  PCM stream already feeding cloud STT into a parallel local ASR session
+   *  too (see localAsrStart/localAsrFeed above). OFF unless explicitly set.
+   *  This is a static, env-derived capability check only — the persisted
+   *  Settings toggle (getLocalAsrSettingEnabled, default off) is the OTHER
+   *  way to enable the same path; a caller should treat either one being true
+   *  as "on" (see lib/omiListenClient.ts). */
   localAsrEnabled: boolean
   /** True when OMI_E2E_FAKE_AUTH=1 — the shell E2E injects an offline fake user
    *  so the authed `/*` shell mounts on the real production build. A dedicated
@@ -829,6 +838,14 @@ export type OmiBridgeApi = {
    *  model-invoked capture_screen tool. Returns the stored value. */
   getChatScreenshotSharing: () => Promise<boolean>
   setChatScreenshotSharing: (enabled: boolean) => Promise<boolean>
+  /** Read/write the Windows on-device prototype toggles (default OFF for
+   *  both) — local ASR (main/localAsr/) and its post-hoc local-LLM
+   *  summarization (main/inference/localLlmService.ts). See
+   *  main/ipc/localOnDeviceSettings.ts. Returns the stored value. */
+  getLocalAsrSettingEnabled: () => Promise<boolean>
+  setLocalAsrSettingEnabled: (enabled: boolean) => Promise<boolean>
+  getLocalLlmSummaryEnabled: () => Promise<boolean>
+  setLocalLlmSummaryEnabled: (enabled: boolean) => Promise<boolean>
   /** Open a Stripe Checkout URL in a modal in-app window; resolves when the flow
    *  completes ('success'/'cancel' at the backend redirect) or the user closes it
    *  ('closed'). Only displays Stripe's hosted page — completes no payment. */
