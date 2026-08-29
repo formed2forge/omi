@@ -50,6 +50,7 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   koffi: true
+  node-llama-cpp: true
   onnxruntime-node: true
   protobufjs: true
   sharp: true
