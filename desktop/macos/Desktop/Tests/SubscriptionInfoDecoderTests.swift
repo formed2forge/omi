@@ -161,6 +161,16 @@ final class SubscriptionInfoDecoderTests: XCTestCase {
     XCTAssertTrue(plan.hasPaidCapability)
   }
 
+  func testDecodeMaxPlanAndKeepCoreDisplayName() throws {
+    let max = try JSONDecoder().decode(SubscriptionPlanType.self, from: Data(#""max""#.utf8))
+
+    XCTAssertEqual(max, .max)
+    XCTAssertEqual(max.rawValue, "max")
+    XCTAssertEqual(max.displayName, "Max")
+    XCTAssertTrue(max.hasPaidCapability)
+    XCTAssertEqual(SubscriptionPlanType.basic.displayName, "Core")
+  }
+
   func testDecodeUnlimitedV2Plan() throws {
     let plan = try JSONDecoder().decode(SubscriptionPlanType.self, from: Data(#""unlimited_v2""#.utf8))
     XCTAssertEqual(plan, .unlimitedV2)

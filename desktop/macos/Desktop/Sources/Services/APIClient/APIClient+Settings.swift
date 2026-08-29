@@ -363,8 +363,9 @@ struct NotificationSettingsResponse: Codable {
 }
 
 enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
-  case basic  // display "Free"
+  case basic  // display "Core"
   case plus
+  case max
   case unlimited  // legacy — display "Unlimited (legacy)"
   case unlimitedV2
   case architect  // display "Architect" ($400/mo, cost_usd quota)
@@ -376,6 +377,7 @@ enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
     switch rawValue {
     case "basic": self = .basic
     case "plus": self = .plus
+    case "max": self = .max
     case "unlimited": self = .unlimited
     case "unlimited_v2": self = .unlimitedV2
     case "architect": self = .architect
@@ -389,6 +391,7 @@ enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
     switch self {
     case .basic: return "basic"
     case .plus: return "plus"
+    case .max: return "max"
     case .unlimited: return "unlimited"
     case .unlimitedV2: return "unlimited_v2"
     case .architect: return "architect"
@@ -411,8 +414,9 @@ enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
   /// Copy that is safe to show when the backend sends a plan introduced after this build.
   var displayName: String {
     switch self {
-    case .basic: return "Free"
+    case .basic: return "Core"
     case .plus: return "Plus"
+    case .max: return "Max"
     case .unlimited: return "Unlimited (legacy)"
     case .unlimitedV2: return "Unlimited"
     case .architect, .pro: return "Architect"
@@ -425,7 +429,7 @@ enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
   var hasPaidCapability: Bool {
     switch self {
     case .basic, .unknown: return false
-    case .plus, .unlimited, .unlimitedV2, .architect, .pro, .operator: return true
+    case .plus, .max, .unlimited, .unlimitedV2, .architect, .pro, .operator: return true
     }
   }
 }
