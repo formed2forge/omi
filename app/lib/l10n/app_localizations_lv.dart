@@ -9193,6 +9193,9 @@ class AppLocalizationsLv extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Fails nav pieejams';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Vēl nav ierakstu';
 
   @override

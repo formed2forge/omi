@@ -644,7 +644,11 @@ class _WalItemDetailPageState extends State<WalItemDetailPage> {
                 _buildDetailRow(context.l10n.deviceIdLabel, widget.wal.device),
               _buildDetailRow(
                 context.l10n.statusLabel,
-                widget.wal.status == WalStatus.synced ? context.l10n.statusProcessed : context.l10n.statusUnprocessed,
+                widget.wal.status == WalStatus.synced
+                    ? context.l10n.statusProcessed
+                    : widget.wal.status == WalStatus.localOnly
+                        ? context.l10n.syncStatusLocalOnly
+                        : context.l10n.statusUnprocessed,
               ),
             ],
           ),

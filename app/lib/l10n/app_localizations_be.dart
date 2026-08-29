@@ -9199,6 +9199,9 @@ class AppLocalizationsBe extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Файл недаступны';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Запісаў пакуль няма';
 
   @override

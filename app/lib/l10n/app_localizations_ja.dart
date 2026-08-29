@@ -9031,6 +9031,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get syncStatusFileUnavailable => 'ファイルを利用できません';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'まだ録音がありません';
 
   @override

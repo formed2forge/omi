@@ -9182,6 +9182,9 @@ class AppLocalizationsBn extends AppLocalizations {
   String get syncStatusFileUnavailable => 'ফাইল অনুপলব্ধ';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'এখনও কোনো রেকর্ডিং নেই';
 
   @override

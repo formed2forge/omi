@@ -9161,6 +9161,9 @@ class AppLocalizationsDa extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Filen er utilgængelig';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Ingen optagelser endnu';
 
   @override

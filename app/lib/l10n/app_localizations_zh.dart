@@ -9017,6 +9017,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get syncStatusFileUnavailable => '文件不可用';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => '暂无录音';
 
   @override

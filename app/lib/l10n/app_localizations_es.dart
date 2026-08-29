@@ -9197,6 +9197,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Archivo no disponible';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Aún no hay grabaciones';
 
   @override

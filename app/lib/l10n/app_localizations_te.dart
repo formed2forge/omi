@@ -9223,6 +9223,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get syncStatusFileUnavailable => 'ఫైల్ అందుబాటులో లేదు';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'ఇంకా రికార్డింగ్‌లు లేవు';
 
   @override

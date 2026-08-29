@@ -9204,6 +9204,9 @@ class AppLocalizationsHr extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Datoteka nije dostupna';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Još nema snimaka';
 
   @override

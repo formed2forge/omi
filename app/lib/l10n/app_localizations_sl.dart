@@ -9198,6 +9198,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Datoteka ni na voljo';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Še ni posnetkov';
 
   @override

@@ -10903,6 +10903,10 @@
     "syncStatusRetrying": "Couldn’t process — retrying",
     "syncStatusFailed": "Failed — tap Retry",
     "syncStatusFileUnavailable": "File unavailable",
+    "syncStatusLocalOnly": "Kept on device",
+    "@syncStatusLocalOnly": {
+        "description": "Row subtitle for a recording kept local-only forever (Core-tier retention) and never uploaded."
+    },
     "noRecordingsYet": "No recordings yet",
     "syncInProgress": "Sync in progress",
     "syncStatusUploaded": "Uploaded · processing on Omi",

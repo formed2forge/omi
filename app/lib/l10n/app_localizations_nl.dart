@@ -9200,6 +9200,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Bestand niet beschikbaar';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Nog geen opnames';
 
   @override

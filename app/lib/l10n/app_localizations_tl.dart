@@ -9258,6 +9258,9 @@ class AppLocalizationsTl extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Hindi available ang file';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Wala pang mga recording';
 
   @override

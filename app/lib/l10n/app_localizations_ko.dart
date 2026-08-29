@@ -9032,6 +9032,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get syncStatusFileUnavailable => '파일을 사용할 수 없음';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => '아직 녹음이 없습니다';
 
   @override

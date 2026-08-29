@@ -9223,6 +9223,9 @@ class AppLocalizationsMk extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Датотеката е недостапна';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Сè уште нема снимки';
 
   @override

@@ -9212,6 +9212,9 @@ class AppLocalizationsHu extends AppLocalizations {
   String get syncStatusFileUnavailable => 'A fájl nem érhető el';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Még nincs felvétel';
 
   @override

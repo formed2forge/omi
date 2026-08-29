@@ -9188,6 +9188,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Файл недоступний';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Записів ще немає';
 
   @override

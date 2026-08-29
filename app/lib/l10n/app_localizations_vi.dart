@@ -9175,6 +9175,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Tệp không khả dụng';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Chưa có bản ghi nào';
 
   @override

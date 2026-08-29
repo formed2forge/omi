@@ -9238,6 +9238,9 @@ class AppLocalizationsEl extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Το αρχείο δεν είναι διαθέσιμο';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Δεν υπάρχουν ακόμη ηχογραφήσεις';
 
   @override
