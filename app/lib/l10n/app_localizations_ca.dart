@@ -9227,6 +9227,9 @@ class AppLocalizationsCa extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Fitxer no disponible';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Encara no hi ha enregistraments';
 
   @override

@@ -9240,6 +9240,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get syncStatusFileUnavailable => 'கோப்பு கிடைக்கவில்லை';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'இன்னும் பதிவுகள் இல்லை';
 
   @override

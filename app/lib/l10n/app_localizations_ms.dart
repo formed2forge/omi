@@ -9198,6 +9198,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Fail tidak tersedia';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Belum ada rakaman';
 
   @override

@@ -9184,6 +9184,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get syncStatusFileUnavailable => 'File tidak tersedia';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Belum ada rekaman';
 
   @override

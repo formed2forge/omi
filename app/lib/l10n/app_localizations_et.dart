@@ -9172,6 +9172,9 @@ class AppLocalizationsEt extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Fail pole saadaval';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Salvestisi veel pole';
 
   @override

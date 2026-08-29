@@ -9103,6 +9103,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get syncStatusFileUnavailable => 'הקובץ אינו זמין';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'אין הקלטות עדיין';
 
   @override

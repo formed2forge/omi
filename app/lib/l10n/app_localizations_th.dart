@@ -9128,6 +9128,9 @@ class AppLocalizationsTh extends AppLocalizations {
   String get syncStatusFileUnavailable => 'ไม่พบไฟล์';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'ยังไม่มีการบันทึก';
 
   @override

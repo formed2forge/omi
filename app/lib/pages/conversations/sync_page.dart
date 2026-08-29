@@ -79,6 +79,8 @@ class WalListItem extends StatelessWidget {
         return (Colors.redAccent, l.syncStatusFileUnavailable);
       case WalSyncDisplayState.outsideRecoveryWindow:
         return (Colors.redAccent, l.syncStatusTooOld);
+      case WalSyncDisplayState.localOnly:
+        return (Colors.grey.shade500, l.syncStatusLocalOnly);
       case WalSyncDisplayState.waiting:
       case WalSyncDisplayState.syncing:
         return (Colors.grey.shade500, l.syncStatusWaiting);

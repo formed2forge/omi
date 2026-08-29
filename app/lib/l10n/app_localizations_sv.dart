@@ -9179,6 +9179,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Filen är inte tillgänglig';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Inga inspelningar än';
 
   @override

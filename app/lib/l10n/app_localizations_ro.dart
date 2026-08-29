@@ -9215,6 +9215,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Fișierul nu este disponibil';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Încă nu există înregistrări';
 
   @override

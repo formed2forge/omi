@@ -9113,6 +9113,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get syncStatusFileUnavailable => 'الملف غير متوفر';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'لا توجد تسجيلات بعد';
 
   @override

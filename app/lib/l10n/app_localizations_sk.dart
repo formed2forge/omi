@@ -9163,6 +9163,9 @@ class AppLocalizationsSk extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Súbor nie je dostupný';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Zatiaľ žiadne nahrávky';
 
   @override

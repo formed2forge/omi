@@ -9185,6 +9185,9 @@ class AppLocalizationsSr extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Датотека није доступна';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Још нема снимака';
 
   @override

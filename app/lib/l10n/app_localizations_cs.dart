@@ -9169,6 +9169,9 @@ class AppLocalizationsCs extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Soubor není k dispozici';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Zatím žádné nahrávky';
 
   @override

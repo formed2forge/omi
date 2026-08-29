@@ -9205,6 +9205,9 @@ class AppLocalizationsKn extends AppLocalizations {
   String get syncStatusFileUnavailable => 'ಫೈಲ್ ಲಭ್ಯವಿಲ್ಲ';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'ಇನ್ನೂ ಯಾವುದೇ ರೆಕಾರ್ಡಿಂಗ್ ಇಲ್ಲ';
 
   @override

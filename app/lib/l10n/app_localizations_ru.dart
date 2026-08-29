@@ -9203,6 +9203,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Файл недоступен';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Записей пока нет';
 
   @override

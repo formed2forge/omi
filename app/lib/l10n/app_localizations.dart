@@ -17127,6 +17127,12 @@ abstract class AppLocalizations {
   /// **'File unavailable'**
   String get syncStatusFileUnavailable;
 
+  /// Row subtitle for a recording kept local-only forever (Core-tier retention) and never uploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept on device'**
+  String get syncStatusLocalOnly;
+
   /// No description provided for @noRecordingsYet.
   ///
   /// In en, this message translates to:

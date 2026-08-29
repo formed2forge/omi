@@ -9186,6 +9186,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Dosya kullanılamıyor';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Henüz kayıt yok';
 
   @override

@@ -9174,6 +9174,9 @@ class AppLocalizationsFi extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Tiedosto ei ole käytettävissä';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Ei vielä tallenteita';
 
   @override

@@ -9176,6 +9176,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get syncStatusFileUnavailable => 'فایل در دسترس نیست';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'هنوز ضبطی وجود ندارد';
 
   @override

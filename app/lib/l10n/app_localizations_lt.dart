@@ -9184,6 +9184,9 @@ class AppLocalizationsLt extends AppLocalizations {
   String get syncStatusFileUnavailable => 'Failas nepasiekiamas';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'Įrašų dar nėra';
 
   @override

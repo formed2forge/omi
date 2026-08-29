@@ -113,7 +113,10 @@ class SyncProvider extends ChangeNotifier implements IWalServiceListener, IWalSy
     final synced = <Wal>[];
     final corrupted = <Wal>[];
     for (final w in _allWals) {
-      if (w.status == WalStatus.synced) {
+      // localOnly is terminal-by-design (Core-tier retention, never uploads) —
+      // bucket it with synced rather than dropping it from every partition:
+      // it is done/resting on-device, not work sync can still complete.
+      if (w.status == WalStatus.synced || w.status == WalStatus.localOnly) {
         synced.add(w);
       } else if (w.status == WalStatus.corrupted || w.status == WalStatus.outsideRecoveryWindow) {
         corrupted.add(w);

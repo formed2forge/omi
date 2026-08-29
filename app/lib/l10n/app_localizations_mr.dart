@@ -9185,6 +9185,9 @@ class AppLocalizationsMr extends AppLocalizations {
   String get syncStatusFileUnavailable => 'फाइल उपलब्ध नाही';
 
   @override
+  String get syncStatusLocalOnly => 'Kept on device';
+
+  @override
   String get noRecordingsYet => 'अद्याप कोणतीही रेकॉर्डिंग नाही';
 
   @override
