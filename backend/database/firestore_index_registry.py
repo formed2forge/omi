@@ -967,6 +967,14 @@ ACTION_ITEMS_COMPLETED_CREATED_RANGE_QUERY = FirestoreQuerySpec(
     index_fields=(_asc('completed'), _asc('created_at'), _asc('__name__')),
 )
 
+ACTION_ITEMS_CLEANUP_OPEN_CREATED_SCAN_QUERY = FirestoreQuerySpec(
+    identifier='action_items_cleanup_open_created_scan',
+    collection_group='action_items',
+    query_scope='COLLECTION',
+    filters=(FirestoreQueryFilter('completed', '==', 'completed'),),
+    index_fields=(_asc('completed'), _asc('created_at'), _asc('__name__')),
+)
+
 CHAT_FIRST_DEFERRALS_DUE_QUERY = FirestoreQuerySpec(
     identifier='chat_first_deferrals_due',
     collection_group='chat_first_deferrals',
@@ -1149,6 +1157,7 @@ QUERY_SPECS = (
     ACTION_ITEMS_COMPLETED_DUE_RANGE_QUERY,
     ACTION_ITEMS_CREATED_RANGE_QUERY,
     ACTION_ITEMS_COMPLETED_CREATED_RANGE_QUERY,
+    ACTION_ITEMS_CLEANUP_OPEN_CREATED_SCAN_QUERY,
     CANDIDATES_COMPATIBILITY_QUERY,
     DUE_MEMORY_OUTBOX_QUERY,
     EXPIRED_MEMORY_OUTBOX_LEASE_QUERY,
