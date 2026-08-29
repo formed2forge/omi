@@ -14,10 +14,17 @@
 // harness. NOT verified on real Windows hardware (this was run on macOS/arm64;
 // onnxruntime-node ships prebuilt binaries for both, and the CPU EP is
 // platform-independent, but Windows CPU throughput is unmeasured).
+//
+// Execution provider: asrExecutionProvider.ts's selectAsrExecutionProviders()
+// consumes the GPU/NPU capability report to optionally try DirectML ahead of
+// CPU on Windows. UNVERIFIED ON REAL HARDWARE (same caveat as the capability
+// report itself) — if session creation with the preferred providers fails
+// outright, getSessions() below retries CPU-only rather than losing local ASR.
 import * as ort from 'onnxruntime-node'
 import { join } from 'node:path'
 import { ARCH, DECODER_FILE, ENCODER_FILE, SAMPLE_RATE, TOKENIZER_FILE } from './model'
 import { loadDetokenizer, type Detokenizer } from './tokenizer'
+import { selectAsrExecutionProviders } from './asrExecutionProvider'
 
 export type AsrResult = { text: string }
 
@@ -52,21 +59,36 @@ export function createMoonshineEngine(modelDir: string): AsrEngine {
     null
   let detokenizer: Promise<Detokenizer> | null = null
 
+  async function createSessionPair(
+    executionProviders: readonly string[]
+  ): Promise<{ encoder: ort.InferenceSession; decoder: ort.InferenceSession }> {
+    const [encoder, decoder] = await Promise.all([
+      ort.InferenceSession.create(join(modelDir, ENCODER_FILE), {
+        executionProviders: executionProviders as string[]
+      }),
+      ort.InferenceSession.create(join(modelDir, DECODER_FILE), {
+        executionProviders: executionProviders as string[]
+      })
+    ])
+    return { encoder, decoder }
+  }
+
   function getSessions(): Promise<{
     encoder: ort.InferenceSession
     decoder: ort.InferenceSession
   }> {
     if (!sessions) {
       sessions = (async () => {
-        const [encoder, decoder] = await Promise.all([
-          ort.InferenceSession.create(join(modelDir, ENCODER_FILE), {
-            executionProviders: ['cpu']
-          }),
-          ort.InferenceSession.create(join(modelDir, DECODER_FILE), {
-            executionProviders: ['cpu']
-          })
-        ])
-        return { encoder, decoder }
+        const providers = await selectAsrExecutionProviders()
+        try {
+          return await createSessionPair(providers)
+        } catch (e) {
+          // A non-CPU provider (unverified on real hardware) failed to
+          // initialize — fail open to CPU-only rather than losing local ASR
+          // entirely. Only retry if we weren't already CPU-only.
+          if (providers.length === 1 && providers[0] === 'cpu') throw e
+          return createSessionPair(['cpu'])
+        }
       })().catch((e) => {
         sessions = null // allow a later call to retry (e.g. a corrupt download gets re-fixed)
         throw e
