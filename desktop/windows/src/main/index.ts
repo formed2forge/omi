@@ -25,6 +25,7 @@ import {
   startTestListenSession,
   stopTestListenSession
 } from './ipc/omiListen'
+import { registerOmiLocalAsrHandlers } from './ipc/omiLocalAsr'
 import { registerCaptureBridge } from './ipc/captureBridge'
 import { registerSoak } from './soak'
 import { createCaptureWindow, getCaptureWindow, getCaptureWc } from './captureWindow'
@@ -850,6 +851,14 @@ app.whenReady().then(async () => {
   // machine can't see the prior user's local data (renderer authTeardown.ts).
   ipcMain.handle('db:wipeUserData', async () => wipeUserData())
   registerOmiListenHandlers((ownerId) => {
+    const captureWc = getCaptureWc()
+    const mainWc = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null
+    return ownerId === mainWc?.id || ownerId === captureWc?.id
+  })
+  // Local (on-device) ASR — same owner gate as omi-listen. Capability-only today:
+  // nothing starts a session unless a caller opts in (see AudioSessionHost's
+  // OMI_LOCAL_ASR-gated duplication), so this is inert in normal use.
+  registerOmiLocalAsrHandlers((ownerId) => {
     const captureWc = getCaptureWc()
     const mainWc = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null
     return ownerId === mainWc?.id || ownerId === captureWc?.id
