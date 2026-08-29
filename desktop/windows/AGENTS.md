@@ -118,6 +118,7 @@ starting this from scratch.
   env var reference.
 - `docs/perf-invisible-wins.md`, `docs/perf-startup-burst-2026-07-19.md` —
   perf investigation notes.
+- `docs/local-llm-inference.md` — on-device transcript summarization (`src/main/inference/`).
 
 ## Changelog Entries
 
