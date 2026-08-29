@@ -40,6 +40,36 @@ export interface LocalLlmModelSpec {
 export const UNVERIFIED_SHA256 = 'UNVERIFIED-PENDING-PRODUCT-DECISION'
 
 /**
+ * Investigated 2026-08-29 while wiring the GPU/NPU capability report into
+ * `executionProvider.ts` — still left as UNVERIFIED_SHA256 above, on purpose,
+ * because verification actually surfaced TWO blockers, not zero:
+ *
+ * 1. `google/gemma-3-1b-it-qat-q4_0-gguf` on Hugging Face is GATED (requires
+ *    an accepted license + an authenticated HF token). This environment has
+ *    no HF credentials, so the real file's bytes could not be fetched to hash
+ *    at all — `modelDownloader.ts`'s plain unauthenticated HTTPS GET would
+ *    401 against this URL regardless of the sha256 field.
+ * 2. Separately, `fileName`/`url` below (`gemma-3-1b-it-qat-Q4_0.gguf`) do
+ *    NOT match the real repo's actual file — confirmed via HF's public
+ *    `/api/models/...` tree listing against both the gated repo itself and
+ *    an ungated mirror of the identical repo
+ *    (`vinimuchulski/gemma-3-1b-it-qat-q4_0-gguf`): the real file is named
+ *    `gemma-3-1b-it-q4_0.gguf` (no `qat-` segment, lowercase `q4_0`).
+ *
+ * Two community re-uploads under "qat-q4_0"-ish names were checked as
+ * candidate second sources for a hash, and they DISAGREE with each other —
+ * `vinimuchulski/...` is ~957MB, `msievers/gemma-3-1b-it-qat-q4_0-gguf` is
+ * ~687MB (closer to this file's own `approxSizeBytes` comment below, but
+ * that comment itself was never verified against a real download either).
+ * Neither could be cross-checked against the actual gated Google file
+ * (blocked by #1), so trusting either mirror's hash would mean silently
+ * betting which of two disagreeing community re-uploads is the real thing —
+ * worse than the current fail-safe placeholder. Do not paste a hash here
+ * without first resolving #1 (get real HF credentials + license acceptance)
+ * and downloading the actual gated file directly.
+ */
+
+/**
  * The active local-LLM model choice. NOT YET FINALIZED by the product owner —
  * this whole object is designed to be swapped wholesale for a different
  * model/quantization/runtime footprint; nothing else in this feature hardcodes
