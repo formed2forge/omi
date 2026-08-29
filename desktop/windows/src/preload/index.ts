@@ -161,11 +161,15 @@ const omi: OmiBridgeApi = {
   },
   allowVirtualMic: process.env.OMI_ALLOW_VIRTUAL_MIC === '1',
   e2e: process.env.OMI_E2E === '1',
-  // Capability-only dev/verification flag for the local (on-device) ASR path
-  // (see main/localAsr/): OFF unless explicitly set, never surfaced as a Settings
-  // toggle. When on, AudioSessionHost/omiListenClient additionally route the same
-  // PCM stream already going to the cloud STT socket into a parallel local ASR
-  // session, purely to exercise the capability — no fallback/selection logic.
+  // Dev/verification flag for the local (on-device) ASR path (see
+  // main/localAsr/): OFF unless explicitly set. When on, AudioSessionHost/
+  // omiListenClient additionally route the same PCM stream already going to
+  // the cloud STT socket into a parallel local ASR session. This is now ONE
+  // of two ways to enable that path — the other is the persisted Settings
+  // toggle (getLocalAsrSettingEnabled/setLocalAsrSettingEnabled above,
+  // main/ipc/localOnDeviceSettings.ts); omiListenClient.ts treats either
+  // being true as "on". This env flag remains for quick dev testing without
+  // touching Settings.
   localAsrEnabled: process.env.OMI_LOCAL_ASR === '1',
   // Offline fake-auth for the shell E2E (survives production builds). Gated on a
   // dedicated flag the app never sets itself, so it can never activate in normal
@@ -186,6 +190,12 @@ const omi: OmiBridgeApi = {
   getChatScreenshotSharing: () => ipcRenderer.invoke('chat:getScreenshotSharing'),
   setChatScreenshotSharing: (enabled: boolean) =>
     ipcRenderer.invoke('chat:setScreenshotSharing', enabled),
+  getLocalAsrSettingEnabled: () => ipcRenderer.invoke('local-ondevice:getAsrEnabled'),
+  setLocalAsrSettingEnabled: (enabled: boolean) =>
+    ipcRenderer.invoke('local-ondevice:setAsrEnabled', enabled),
+  getLocalLlmSummaryEnabled: () => ipcRenderer.invoke('local-ondevice:getLlmSummaryEnabled'),
+  setLocalLlmSummaryEnabled: (enabled: boolean) =>
+    ipcRenderer.invoke('local-ondevice:setLlmSummaryEnabled', enabled),
   openCheckout: (url: string) => ipcRenderer.invoke('billing:openCheckout', url),
   openExternalUrl: (url: string) => ipcRenderer.invoke('billing:openExternal', url),
   checkAppSetup: (args: { url: string; uid: string }) =>

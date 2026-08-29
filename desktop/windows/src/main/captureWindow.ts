@@ -78,7 +78,7 @@ export function createCaptureWindow(): BrowserWindow {
     // The dead window's listen sessions would otherwise linger as open
     // WebSockets in the main process until server timeout.
     killSessionsForOwner(win.webContents.id)
-    killLocalAsrSessionsForOwner(win.webContents.id)
+    void killLocalAsrSessionsForOwner(win.webContents.id)
     const now = Date.now()
     const { allow, times } = decideRespawn(spawnTimes, now)
     if (!allow) {

@@ -191,6 +191,121 @@ describe('localAsrSession', () => {
     await vi.advanceTimersByTimeAsync(4000)
 
     expect(transcribe).toHaveBeenCalledTimes(1)
-    mgr.stop('s1')
+    await mgr.stop('s1')
+  })
+
+  describe('post-hoc summarization on stop', () => {
+    let onSummary: ReturnType<typeof vi.fn>
+
+    beforeEach(() => {
+      onSummary = vi.fn()
+    })
+
+    it('summarizes the full accumulated transcript once the session stops, and delivers it via onSummary', async () => {
+      const transcribe = vi
+        .fn()
+        .mockResolvedValueOnce({ text: 'hello' })
+        .mockResolvedValueOnce({ text: 'world' })
+      const summarizeTranscript = vi.fn(async () => 'a short summary')
+      const deps = { ...makeDeps(fakeEngine(transcribe)), summarizeTranscript }
+      const mgr = createLocalAsrManager({ onSegments, onError, onSummary }, deps)
+
+      mgr.start('s1')
+      await Promise.resolve()
+      await Promise.resolve()
+      mgr.feed('s1', synthPcm(1600))
+      mgr.finalize('s1')
+      await vi.waitFor(() => expect(transcribe).toHaveBeenCalledTimes(1))
+      mgr.feed('s1', synthPcm(1600))
+      mgr.finalize('s1')
+      await vi.waitFor(() => expect(transcribe).toHaveBeenCalledTimes(2))
+
+      await mgr.stop('s1')
+
+      // Both flushes' text joined into one transcript, not just the last one.
+      expect(summarizeTranscript).toHaveBeenCalledWith('hello world')
+      expect(onSummary).toHaveBeenCalledWith('s1', 'a short summary')
+      expect(onError).not.toHaveBeenCalled()
+    })
+
+    it('never calls summarizeTranscript when the session produced no transcript', async () => {
+      const summarizeTranscript = vi.fn(async () => 'unused')
+      const deps = {
+        ...makeDeps(fakeEngine(vi.fn(async () => ({ text: '' })))),
+        summarizeTranscript
+      }
+      const mgr = createLocalAsrManager({ onSegments, onError, onSummary }, deps)
+
+      mgr.start('s1')
+      await Promise.resolve()
+      await Promise.resolve()
+      await mgr.stop('s1') // nothing fed, nothing flushed — no transcript at all
+
+      expect(summarizeTranscript).not.toHaveBeenCalled()
+      expect(onSummary).not.toHaveBeenCalled()
+    })
+
+    it('does not call onSummary when summarizeTranscript resolves null (e.g. disabled at call time)', async () => {
+      const transcribe = vi.fn(async () => ({ text: 'hello' }))
+      const summarizeTranscript = vi.fn(async () => null)
+      const deps = { ...makeDeps(fakeEngine(transcribe)), summarizeTranscript }
+      const mgr = createLocalAsrManager({ onSegments, onError, onSummary }, deps)
+
+      mgr.start('s1')
+      await Promise.resolve()
+      await Promise.resolve()
+      mgr.feed('s1', synthPcm(1600))
+      mgr.finalize('s1')
+      await vi.waitFor(() => expect(transcribe).toHaveBeenCalledTimes(1))
+
+      await mgr.stop('s1')
+
+      expect(summarizeTranscript).toHaveBeenCalledTimes(1)
+      expect(onSummary).not.toHaveBeenCalled()
+      expect(onError).not.toHaveBeenCalled()
+    })
+
+    // Main error path: the post-hoc LLM call itself fails.
+    it('reports a non-fatal error when summarization fails, without touching transcription results', async () => {
+      const transcribe = vi.fn(async () => ({ text: 'hello' }))
+      const summarizeTranscript = vi.fn(async () => {
+        throw new Error('model not downloaded')
+      })
+      const deps = { ...makeDeps(fakeEngine(transcribe)), summarizeTranscript }
+      const mgr = createLocalAsrManager({ onSegments, onError, onSummary }, deps)
+
+      mgr.start('s1')
+      await Promise.resolve()
+      await Promise.resolve()
+      mgr.feed('s1', synthPcm(1600))
+      mgr.finalize('s1')
+      await vi.waitFor(() => expect(transcribe).toHaveBeenCalledTimes(1))
+      expect(onSegments).toHaveBeenCalledTimes(1) // the transcript itself still succeeded
+
+      await mgr.stop('s1')
+
+      expect(onSummary).not.toHaveBeenCalled()
+      expect(onError).toHaveBeenCalledWith(
+        's1',
+        expect.stringMatching(/local LLM summarization failed.*model not downloaded/),
+        false
+      )
+    })
+
+    it('never calls summarizeTranscript when deps omits it (feature not configured)', async () => {
+      const transcribe = vi.fn(async () => ({ text: 'hello' }))
+      const deps = makeDeps(fakeEngine(transcribe)) // no summarizeTranscript
+      const mgr = createLocalAsrManager({ onSegments, onError, onSummary }, deps)
+
+      mgr.start('s1')
+      await Promise.resolve()
+      await Promise.resolve()
+      mgr.feed('s1', synthPcm(1600))
+      mgr.finalize('s1')
+      await vi.waitFor(() => expect(transcribe).toHaveBeenCalledTimes(1))
+
+      await expect(mgr.stop('s1')).resolves.toBeUndefined()
+      expect(onSummary).not.toHaveBeenCalled()
+    })
   })
 })

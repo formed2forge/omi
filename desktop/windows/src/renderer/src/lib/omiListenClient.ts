@@ -33,6 +33,20 @@ export type OmiListenHandle = {
 
 let nextSessionId = 1
 
+/** Reads the persisted "on-device local ASR" Settings toggle (default off,
+ *  see main/ipc/localOnDeviceSettings.ts). Defensive on two axes: the IPC
+ *  call itself failing (main-process error) and the bridge method being
+ *  absent entirely (older preload / a minimal test double) both fail closed
+ *  to `false` — a broken settings read must never silently turn a capability
+ *  ON. */
+async function isLocalAsrSettingEnabled(): Promise<boolean> {
+  try {
+    return (await window.omi.getLocalAsrSettingEnabled?.()) === true
+  } catch {
+    return false
+  }
+}
+
 /**
  * Open a v4/listen session for one audio source. The main process owns the
  * WebSocket (needed to set the Authorization header) and, since Phase 2, the
@@ -138,18 +152,25 @@ export async function startOmiListen(
   // the session we just opened.
   window.omi.captureCommand({ type: 'audio-start', sessionId, source })
 
-  // Capability-only (see preload's localAsrEnabled doc comment): open a parallel
-  // local ASR session under the SAME sessionId, purely so AudioSessionHost's
-  // gated duplicate feed (see there) has somewhere to go. Not surfaced in the UI —
-  // just logged, so a developer running with OMI_LOCAL_ASR=1 can see it working.
+  // Open a parallel local ASR session under the SAME sessionId, purely so
+  // AudioSessionHost's gated duplicate feed (see there) has somewhere to go.
+  // Enabled by EITHER the dev-only OMI_LOCAL_ASR env flag (preload's
+  // localAsrEnabled) OR the persisted Settings toggle (getLocalAsrSettingEnabled,
+  // main/ipc/localOnDeviceSettings.ts, default off) — either one is enough.
+  // Segments are just logged (no UI surface yet, per the settings toggle's own
+  // "minimal prototype" scope); a summary (only emitted when the separate
+  // local-LLM Settings toggle is also on) is logged too.
+  const localAsrActive = window.omi.localAsrEnabled || (await isLocalAsrSettingEnabled())
   let unsubLocalAsr: (() => void) | undefined
-  if (window.omi.localAsrEnabled) {
+  if (localAsrActive) {
     unsubLocalAsr = window.omi.onLocalAsrMessage((msg) => {
       if (msg.sessionId !== sessionId) return
       if (msg.kind === 'segments') {
         console.log('[local-asr]', msg.segments.map((s) => s.text).join(' '))
       } else if (msg.kind === 'error') {
         console.warn('[local-asr] error:', msg.message)
+      } else if (msg.kind === 'summary') {
+        console.log('[local-asr] summary:', msg.summary)
       }
     })
     void window.omi.localAsrStart(sessionId)
@@ -162,14 +183,14 @@ export async function startOmiListen(
       unsubCapture()
       window.omi.captureCommand({ type: 'audio-stop', sessionId })
       void window.omi.listenStop(sessionId)
-      if (window.omi.localAsrEnabled) {
+      if (localAsrActive) {
         unsubLocalAsr?.()
         void window.omi.localAsrStop(sessionId)
       }
     },
     finalize: (): void => {
       window.omi.listenFinalize(sessionId)
-      if (window.omi.localAsrEnabled) window.omi.localAsrFinalize(sessionId)
+      if (localAsrActive) window.omi.localAsrFinalize(sessionId)
     }
   }
 }

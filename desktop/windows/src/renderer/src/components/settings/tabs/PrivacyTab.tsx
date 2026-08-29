@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Activity, EyeOff, Monitor, ShieldCheck } from 'lucide-react'
+import { Activity, EyeOff, Mic, Monitor, ShieldCheck, Sparkles } from 'lucide-react'
 import { SettingRow } from '../SettingRow'
 import { Toggle } from '../Toggle'
 import type { UsageSettings } from '../../../../../shared/types'
@@ -52,6 +52,39 @@ export function PrivacyTab(): React.JSX.Element {
   const toggleScreenShareInChat = (on: boolean): void => {
     setScreenShareInChat(on)
     void window.omi.setChatScreenshotSharing(on).then(setScreenShareInChat)
+  }
+
+  // Windows on-device prototype toggles (default OFF for both) — see
+  // main/ipc/localOnDeviceSettings.ts. Local ASR: an additional on-device
+  // transcription pass alongside the existing cloud STT path (never replaces
+  // it). Local summary: only runs once local ASR is also on and a session
+  // ends; requires the on-device summarizer model to already be downloaded,
+  // so it may not do anything yet even when turned on.
+  // EXTENSION POINT (plan/tier gating): neither toggle is plan-aware yet —
+  // see formed2forge/handoffs/omi-pricing.md §24 for the not-yet-landed
+  // Core/Plus/Max catalog this will eventually gate against.
+  const [localAsrOn, setLocalAsrOn] = useState<boolean | null>(null)
+  useEffect(() => {
+    window.omi
+      .getLocalAsrSettingEnabled()
+      .then(setLocalAsrOn)
+      .catch(() => setLocalAsrOn(null))
+  }, [])
+  const toggleLocalAsr = (on: boolean): void => {
+    setLocalAsrOn(on)
+    void window.omi.setLocalAsrSettingEnabled(on).then(setLocalAsrOn)
+  }
+
+  const [localLlmSummaryOn, setLocalLlmSummaryOn] = useState<boolean | null>(null)
+  useEffect(() => {
+    window.omi
+      .getLocalLlmSummaryEnabled()
+      .then(setLocalLlmSummaryOn)
+      .catch(() => setLocalLlmSummaryOn(null))
+  }, [])
+  const toggleLocalLlmSummary = (on: boolean): void => {
+    setLocalLlmSummaryOn(on)
+    void window.omi.setLocalLlmSummaryEnabled(on).then(setLocalLlmSummaryOn)
   }
 
   return (
@@ -115,6 +148,36 @@ export function PrivacyTab(): React.JSX.Element {
             onChange={toggleScreenShareInChat}
             disabled={screenShareInChat === null}
             label="Screen Sharing in Chat"
+          />
+        }
+      />
+      <SettingRow
+        icon={Mic}
+        dot={localAsrOn ? 'on' : 'off'}
+        title="On-device transcription (prototype)"
+        subtitle="Runs a small local speech-recognition model alongside the normal cloud transcription — nothing is removed or replaced, this just adds a second, on-device transcript for experimentation."
+        keywords="local asr on-device transcription prototype offline speech recognition"
+        control={
+          <Toggle
+            on={!!localAsrOn}
+            onChange={toggleLocalAsr}
+            disabled={localAsrOn === null}
+            label="On-device transcription (prototype)"
+          />
+        }
+      />
+      <SettingRow
+        icon={Sparkles}
+        dot={localLlmSummaryOn ? 'on' : 'off'}
+        title="On-device transcript summary (prototype)"
+        subtitle="After an on-device transcription session ends, run it through a small local model for a short summary. Requires on-device transcription (above) and its summarizer model to be downloaded first."
+        keywords="local llm summary on-device prototype offline summarization"
+        control={
+          <Toggle
+            on={!!localLlmSummaryOn}
+            onChange={toggleLocalLlmSummary}
+            disabled={localLlmSummaryOn === null}
+            label="On-device transcript summary (prototype)"
           />
         }
       />

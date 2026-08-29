@@ -200,4 +200,55 @@ describe('startOmiListen', () => {
     emitMsg({ sessionId, kind: 'segments', segments: [] })
     expect(cb.onSegments).not.toHaveBeenCalled()
   })
+
+  describe('local ASR opt-in (env flag OR persisted Settings toggle)', () => {
+    it('opens a parallel local ASR session when the persisted setting is on, even with the env flag off', async () => {
+      const omi = (globalThis as Record<string, unknown>).window as { omi: Record<string, unknown> }
+      omi.omi = {
+        ...omi.omi,
+        localAsrEnabled: false,
+        getLocalAsrSettingEnabled: vi.fn(async () => true),
+        localAsrStart: vi.fn(async () => {}),
+        onLocalAsrMessage: vi.fn(() => () => {})
+      }
+
+      await startOmiListen('mic', callbacks())
+
+      expect(omi.omi.localAsrStart).toHaveBeenCalled()
+    })
+
+    it('does not open a local ASR session when both the env flag and the persisted setting are off', async () => {
+      const omi = (globalThis as Record<string, unknown>).window as { omi: Record<string, unknown> }
+      omi.omi = {
+        ...omi.omi,
+        localAsrEnabled: false,
+        getLocalAsrSettingEnabled: vi.fn(async () => false),
+        localAsrStart: vi.fn(async () => {}),
+        onLocalAsrMessage: vi.fn(() => () => {})
+      }
+
+      await startOmiListen('mic', callbacks())
+
+      expect(omi.omi.localAsrStart).not.toHaveBeenCalled()
+    })
+
+    // Main error path: the persisted-setting read itself fails (main-process
+    // error, IPC dropped, etc.) — must fail closed, never fail open.
+    it('fails closed (treats local ASR as off) when reading the persisted setting throws', async () => {
+      const omi = (globalThis as Record<string, unknown>).window as { omi: Record<string, unknown> }
+      omi.omi = {
+        ...omi.omi,
+        localAsrEnabled: false,
+        getLocalAsrSettingEnabled: vi.fn(async () => {
+          throw new Error('IPC channel closed')
+        }),
+        localAsrStart: vi.fn(async () => {}),
+        onLocalAsrMessage: vi.fn(() => () => {})
+      }
+
+      await startOmiListen('mic', callbacks())
+
+      expect(omi.omi.localAsrStart).not.toHaveBeenCalled()
+    })
+  })
 })

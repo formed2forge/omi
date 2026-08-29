@@ -70,6 +70,7 @@ import { seedUserAssistOnce } from './usage/userAssistSeed'
 import { registerRewindHandlers } from './ipc/rewind'
 import { registerScreenHandlers } from './ipc/screen'
 import { registerChatPrivacyHandlers } from './ipc/chatPrivacy'
+import { registerLocalOnDeviceSettingsHandlers } from './ipc/localOnDeviceSettings'
 import { registerAssistantSettingsHandlers } from './ipc/assistantSettings'
 import { registerBillingIpc } from './billing/checkoutWindow'
 import { registerAppsIpc } from './apps/checkAppSetup'
@@ -855,9 +856,11 @@ app.whenReady().then(async () => {
     const mainWc = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null
     return ownerId === mainWc?.id || ownerId === captureWc?.id
   })
-  // Local (on-device) ASR — same owner gate as omi-listen. Capability-only today:
-  // nothing starts a session unless a caller opts in (see AudioSessionHost's
-  // OMI_LOCAL_ASR-gated duplication), so this is inert in normal use.
+  // Local (on-device) ASR — same owner gate as omi-listen. Opt-in: nothing
+  // starts a session unless a caller opts in, either the dev-only
+  // OMI_LOCAL_ASR env var (AudioSessionHost's gated duplication) or the
+  // persisted Settings toggle (appSettings.localAsrEnabled, default off; see
+  // ipc/localOnDeviceSettings.ts) — so this is inert by default in normal use.
   registerOmiLocalAsrHandlers((ownerId) => {
     const captureWc = getCaptureWc()
     const mainWc = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null
@@ -914,6 +917,7 @@ app.whenReady().then(async () => {
   })
   registerScreenHandlers()
   registerChatPrivacyHandlers()
+  registerLocalOnDeviceSettingsHandlers()
   registerAssistantSettingsHandlers()
   registerJitFeedbackHandlers()
   registerBillingIpc()
