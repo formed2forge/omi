@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:disk_space_2/disk_space_2.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,6 +23,7 @@ import 'package:omi/providers/usage_provider.dart';
 import 'package:omi/services/custom_stt_log_service.dart';
 import 'package:omi/services/services.dart';
 import 'package:omi/services/sockets/transcription_service.dart';
+import 'package:omi/services/sockets/whisper_model_manager.dart';
 import 'package:omi/utils/l10n_extensions.dart';
 import 'package:omi/utils/logger.dart';
 
@@ -51,6 +51,7 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
 
   // On-device model download state
   static bool _hasShownDebugWarning = false;
+  final WhisperModelManager _modelManager = const WhisperModelManager();
   bool _isDownloadingModel = false;
   bool _isModelFilePresent = false;
   double _downloadProgress = 0.0;
@@ -285,10 +286,12 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
 
   Future<void> _checkLocalModel() async {
     try {
-      final appDir = await getApplicationSupportDirectory();
-      final modelName = _currentModel.isEmpty ? 'tiny' : _currentModel;
-      final filePath = '${appDir.path}/models/ggml-$modelName.bin';
-      if (await File(filePath).exists()) {
+      final modelName = _currentModel.isEmpty ? WhisperModelManager.defaultModel : _currentModel;
+      final filePath = await _modelManager.modelPath(modelName);
+      // Clear out any leftover `.part` temp file from a download that was interrupted
+      // (app killed mid-transfer) before it could be validated and renamed into place.
+      unawaited(_modelManager.cleanupStaleTempFiles());
+      if (WhisperModelManager.isModelFileValid(File(filePath), modelName)) {
         if (mounted) {
           setState(() {
             _urlController.text = filePath;
@@ -1049,6 +1052,19 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
         source: isIOS ? 'custom_on_device_ios' : 'custom_on_device',
       );
     });
+
+    // iOS uses native Apple Speech (no model file needed). On other platforms,
+    // kick off the whisper.cpp model download right away instead of leaving
+    // the user to find and press a separate "Download Model" button — this is
+    // the "auto-download on first enable" path; a valid model already on disk
+    // (e.g. re-enabling on-device mode later) is left untouched.
+    if (!isIOS && mounted) {
+      final modelName = _currentModel.isEmpty ? WhisperModelManager.defaultModel : _currentModel;
+      final alreadyReady = await _modelManager.isModelReady(modelName);
+      if (!alreadyReady && mounted) {
+        await _downloadModel();
+      }
+    }
   }
 
   /// Current transcription source, derived from the persisted STT state.
@@ -1768,32 +1784,12 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
   http.Client? _downloadClient;
 
   Future<void> _downloadModel() async {
-    final modelName = _currentModel.isEmpty ? 'tiny' : _currentModel;
+    final modelName = _currentModel.isEmpty ? WhisperModelManager.defaultModel : _currentModel;
 
-    double estimatedSizeMB = 1500;
-    switch (modelName) {
-      case 'tiny':
-        estimatedSizeMB = 75;
-        break;
-      case 'base':
-        estimatedSizeMB = 142;
-        break;
-      case 'small':
-        estimatedSizeMB = 466;
-        break;
-      case 'medium':
-        estimatedSizeMB = 1500;
-        break;
-      case 'large-v1':
-      case 'large-v2':
-        estimatedSizeMB = 2900;
-        break;
-    }
+    final estimatedSizeMB = (WhisperModelManager.minExpectedBytes[modelName] ?? (1500 * 1024 * 1024)) / 1024 / 1024;
 
-    final appDir = await getApplicationSupportDirectory();
-    final modelDir = Directory('${appDir.path}/models');
-
-    double? freeSpaceMB = await DiskSpace.getFreeDiskSpaceForPath(appDir.path);
+    final modelDir = await _modelManager.defaultModelsDirectory();
+    double? freeSpaceMB = await DiskSpace.getFreeDiskSpaceForPath(modelDir.path);
 
     if (!mounted) return;
     final confirmed = await showDialog<bool>(
@@ -1805,7 +1801,10 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.l10n.modelNameWithFile('ggml-$modelName.bin'), style: const TextStyle(color: Colors.white70)),
+            Text(
+              context.l10n.modelNameWithFile(WhisperModelManager.fileNameFor(modelName)),
+              style: const TextStyle(color: Colors.white70),
+            ),
             const SizedBox(height: 8),
             Text(
               context.l10n.estimatedSizeWithValue(estimatedSizeMB.toStringAsFixed(0)),
@@ -1850,47 +1849,29 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
       _modelDownloadStatus = context.l10n.preparingModel(modelName);
     });
 
+    _downloadClient = http.Client();
     try {
-      if (!await modelDir.exists()) {
-        await modelDir.create(recursive: true);
-      }
-
-      final fileName = 'ggml-$modelName.bin';
-      final filePath = '${modelDir.path}/$fileName';
-      final url = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$fileName';
-
-      _downloadClient = http.Client();
-      final request = http.Request('GET', Uri.parse(url));
-      final response = await _downloadClient!.send(request);
-
-      if (response.statusCode != 200) {
-        throw Exception('Download failed: ${response.statusCode}');
-      }
-
-      final contentLength = response.contentLength ?? (estimatedSizeMB * 1024 * 1024).toInt();
-      int received = 0;
-
-      final file = File(filePath);
-      final sink = file.openWrite();
-
-      try {
-        await response.stream.listen((chunk) {
-          sink.add(chunk);
-          received += chunk.length;
-          if (mounted) {
-            setState(() {
-              _downloadProgress = received / contentLength;
-              _modelDownloadStatus = context.l10n.downloadingModelProgress(
-                modelName,
-                (received / 1024 / 1024).toStringAsFixed(1),
-                (contentLength / 1024 / 1024).toStringAsFixed(1),
-              );
-            });
-          }
-        }, cancelOnError: true).asFuture();
-      } finally {
-        await sink.close();
-      }
+      // WhisperModelManager downloads to a `.part` temp file and only replaces the
+      // final model file once the transfer completes and passes a size sanity
+      // check — a dropped connection, cancel, or full disk can never leave a
+      // corrupt/incomplete file behind at the path we treat as "model ready".
+      final filePath = await _modelManager.downloadModel(
+        model: modelName,
+        client: _downloadClient!,
+        modelsDir: modelDir,
+        onProgress: (received, total) {
+          if (!mounted) return;
+          final contentLength = total ?? (estimatedSizeMB * 1024 * 1024).toInt();
+          setState(() {
+            _downloadProgress = received / contentLength;
+            _modelDownloadStatus = context.l10n.downloadingModelProgress(
+              modelName,
+              (received / 1024 / 1024).toStringAsFixed(1),
+              (contentLength / 1024 / 1024).toStringAsFixed(1),
+            );
+          });
+        },
+      );
 
       if (mounted) {
         setState(() {
@@ -1923,24 +1904,27 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
       } catch (e) {
         Logger.debug('Error cleaning up models: $e');
       }
-    } catch (e) {
-      if (e is http.ClientException) {
-        if (mounted) {
-          setState(() {
-            _isDownloadingModel = false;
-            _modelDownloadStatus = context.l10n.cancelled;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isDownloadingModel = false;
-            _modelDownloadStatus = context.l10n.errorWithMessage(e.toString());
-          });
+    } on WhisperModelDownloadException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDownloadingModel = false;
+          _modelDownloadStatus = e.isCancelled ? context.l10n.cancelled : context.l10n.errorWithMessage(e.message);
+        });
+        if (!e.isCancelled) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.downloadErrorWithMessage(e.toString())), backgroundColor: Colors.red),
+            SnackBar(content: Text(context.l10n.downloadErrorWithMessage(e.message)), backgroundColor: Colors.red),
           );
         }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDownloadingModel = false;
+          _modelDownloadStatus = context.l10n.errorWithMessage(e.toString());
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.downloadErrorWithMessage(e.toString())), backgroundColor: Colors.red),
+        );
       }
     } finally {
       _downloadClient?.close();
