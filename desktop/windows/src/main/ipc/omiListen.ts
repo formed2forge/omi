@@ -11,6 +11,15 @@ import {
 import { ByokKeyStore } from '../agentKernel/byokStore'
 import { isByokActive, withByokHeaders } from '../../shared/byok'
 import { decodeUidFromIdToken } from '../auth/omiAuth'
+import { getAppSettings } from '../appSettings'
+import {
+  isLocalAudioRecordingActive,
+  localAudioRoot,
+  startLocalAudioRecording,
+  stopLocalAudioRecording,
+  writeLocalAudioChunk
+} from '../localAudio/localAudioStore'
+import { runLocalAudioRetentionSweep } from '../localAudio/localAudioRetention'
 
 // Lazy so this module stays import-pure (ByokKeyStore's default path needs
 // app.getPath('userData'), only ready after the app is).
@@ -260,6 +269,23 @@ function stopKeepalive(s: Session): void {
   }
 }
 
+/**
+ * Local-audio persistence (the "Core" free-tier on-device audio mechanism,
+ * see appSettings.ts's `localAudioPersistenceEnabled`): finalize the WAV file
+ * for this session (if one is active — no-op otherwise) and opportunistically
+ * run the retention sweep. Entirely independent of the WebSocket lane below;
+ * a local-disk failure here never touches the socket, and vice versa.
+ */
+function finalizeLocalAudioRecording(sessionId: string): void {
+  const path = stopLocalAudioRecording(sessionId)
+  if (!path) return
+  try {
+    runLocalAudioRetentionSweep(localAudioRoot())
+  } catch (e) {
+    console.warn('[local-audio] retention sweep failed:', e)
+  }
+}
+
 /** The one way a session dies early: mark closed, drop buffers, remove from the
  *  map, close the socket. Shared by replace/supersede/stop so Session cleanup
  *  can't drift between call sites. */
@@ -270,6 +296,7 @@ function killSession(id: string, s: Session, why: string): void {
   s.pendingBytes = 0
   stopKeepalive(s)
   sessions.delete(id)
+  finalizeLocalAudioRecording(id)
   try {
     s.ws.close()
   } catch {
@@ -345,6 +372,15 @@ function startSession(args: ListenStartArgs, owner: WebContents): void {
   sessions.set(args.sessionId, session)
   const t0 = Date.now()
   console.log(`[omi-listen] start ${args.sessionId} mode=${mode} source=${args.source}`)
+
+  // Local-audio persistence (dev toggle, see appSettings.ts): ADDITIVE to the
+  // WebSocket lane above, never a substitute for it. 'conversation' mode names
+  // the file after the server-side conversation id (client_conversation_id) so
+  // it can be looked up later; other modes have no server-side conversation, so
+  // the sessionId itself is the namespacing key.
+  if (getAppSettings().localAudioPersistenceEnabled) {
+    startLocalAudioRecording(args.sessionId, args.clientConversationId ?? args.sessionId)
+  }
 
   ws.on('open', () => {
     console.log(`[omi-listen] connected ${args.sessionId} mode=${mode} in ${Date.now() - t0}ms`)
@@ -425,6 +461,7 @@ function startSession(args: ListenStartArgs, owner: WebContents): void {
     session.closed = true
     stopKeepalive(session)
     sessions.delete(args.sessionId)
+    finalizeLocalAudioRecording(args.sessionId)
     const reason = reasonBuf.toString()
     console.log(
       `[omi-listen] closed ${args.sessionId} mode=${mode} code=${code}${reason ? ` reason=${reason}` : ''}`
@@ -470,6 +507,12 @@ function feedSession(sessionId: string, pcm: ArrayBuffer): void {
   if (!s) return
   recordFed(s.mode, s.source, pcm.byteLength)
   s.lastFeedAt = Date.now()
+  // Local-audio persistence: write the SAME bytes to the local WAV file
+  // (if the dev toggle turned recording on for this session), independent of
+  // the socket's state below. The isLocalAudioRecordingActive check avoids a
+  // Buffer.from copy of every audio chunk in the (default) common case where
+  // the feature is off.
+  if (isLocalAudioRecordingActive(sessionId)) writeLocalAudioChunk(sessionId, Buffer.from(pcm))
   if (s.ws.readyState === WebSocket.OPEN) {
     s.ws.send(pcm)
     return
