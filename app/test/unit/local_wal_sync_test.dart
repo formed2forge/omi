@@ -10,6 +10,7 @@ import 'package:omi/backend/schema/bt_device/bt_device.dart';
 import 'package:omi/backend/schema/conversation.dart';
 import 'package:omi/services/audio_sources/audio_source.dart';
 import 'package:omi/services/wals/flash_page_wal_sync.dart';
+import 'package:omi/services/wals/local_audio_retention.dart';
 import 'package:omi/services/wals/local_wal_sync.dart';
 import 'package:omi/services/wals/wal.dart';
 import 'package:omi/services/wals/wal_interfaces.dart';
@@ -519,6 +520,121 @@ void main() {
       final result = await flashSync.syncWal(wal: orphan);
 
       expect(result, isNull);
+    });
+  });
+
+  group('Core-tier local-only audio retention (formed2forge/handoffs/omi-pricing.md §15)', () {
+    tearDown(() {
+      SharedPreferencesUtil().coreTierLocalOnlyAudioEnabled = false;
+    });
+
+    test('isLocalOnlyAudioRetentionEnabled defaults to off and reflects the preference', () {
+      expect(isLocalOnlyAudioRetentionEnabled(), isFalse);
+
+      SharedPreferencesUtil().coreTierLocalOnlyAudioEnabled = true;
+
+      expect(isLocalOnlyAudioRetentionEnabled(), isTrue);
+    });
+
+    test(
+      'finalizeCurrentSession pins to localOnly when enabled, even for frames the websocket already delivered',
+      () async {
+        SharedPreferencesUtil().coreTierLocalOnlyAudioEnabled = true;
+
+        // Every frame already synced live — without local-only retention this
+        // would be dropped entirely (no loss to justify local storage). Core
+        // tier must retain the raw audio locally regardless.
+        for (int i = 0; i < 5; i++) {
+          final frame = WalFrame(payload: [i], syncKey: FrameSyncKey.fromIndex(i));
+          sync.onFrameCaptured(frame);
+          sync.markFrameSynced(frame.syncKey);
+        }
+
+        await sync.finalizeCurrentSession();
+
+        expect(sync.testWals, hasLength(1));
+        expect(sync.testWals.first.status, WalStatus.localOnly);
+      },
+    );
+  });
+
+  group('runLocalAudioRetentionSweep (formed2forge/handoffs/omi-pricing.md §15/§20)', () {
+    final createdFiles = <File>[];
+
+    Future<Wal> makeLocalOnlyWalWithFile({required int timerStart, required int sizeBytes}) async {
+      final name = 'retention_test_${timerStart}_${createdFiles.length}.bin';
+      final file = File('${Directory.systemTemp.path}/$name');
+      await file.writeAsBytes(List.filled(sizeBytes, 0));
+      createdFiles.add(file);
+      return Wal(
+        timerStart: timerStart,
+        codec: BleAudioCodec.opus,
+        seconds: 10,
+        status: WalStatus.localOnly,
+        storage: WalStorage.disk,
+        filePath: name,
+      );
+    }
+
+    tearDown(() async {
+      for (final f in createdFiles) {
+        if (f.existsSync()) await f.delete();
+      }
+      createdFiles.clear();
+    });
+
+    test('deletes local-only recordings older than maxAge, keeps recent ones', () async {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final old = await makeLocalOnlyWalWithFile(timerStart: now - const Duration(days: 40).inSeconds, sizeBytes: 100);
+      final recent = await makeLocalOnlyWalWithFile(timerStart: now - 60, sizeBytes: 100);
+      sync.testWals = [old, recent];
+
+      final result = await sync.runLocalAudioRetentionSweep(
+        policy: const LocalAudioRetentionPolicy(maxAge: Duration(days: 30), maxTotalBytes: 0),
+      );
+
+      expect(result.deletedByAge, 1);
+      expect(result.deletedBySize, 0);
+      expect(sync.testWals.map((w) => w.id), isNot(contains(old.id)));
+      expect(sync.testWals.map((w) => w.id), contains(recent.id));
+      expect(File('${Directory.systemTemp.path}/${old.filePath}').existsSync(), isFalse);
+      expect(File('${Directory.systemTemp.path}/${recent.filePath}').existsSync(), isTrue);
+    });
+
+    test('deletes oldest-first once total size exceeds maxTotalBytes', () async {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final oldest = await makeLocalOnlyWalWithFile(timerStart: now - 300, sizeBytes: 1000);
+      final middle = await makeLocalOnlyWalWithFile(timerStart: now - 200, sizeBytes: 1000);
+      final newest = await makeLocalOnlyWalWithFile(timerStart: now - 100, sizeBytes: 1000);
+      sync.testWals = [oldest, middle, newest];
+
+      final result = await sync.runLocalAudioRetentionSweep(
+        policy: const LocalAudioRetentionPolicy(maxAge: Duration(days: 365), maxTotalBytes: 2500),
+      );
+
+      expect(result.deletedBySize, 1);
+      expect(sync.testWals.map((w) => w.id), isNot(contains(oldest.id)));
+      expect(sync.testWals.map((w) => w.id), containsAll([middle.id, newest.id]));
+      expect(File('${Directory.systemTemp.path}/${oldest.filePath}').existsSync(), isFalse);
+    });
+
+    test('never touches miss/synced/uploaded WALs — only localOnly is in scope', () async {
+      final missWal = Wal(
+        timerStart: 0,
+        codec: BleAudioCodec.opus,
+        seconds: 10,
+        status: WalStatus.miss,
+        storage: WalStorage.disk,
+        filePath: 'never_created.bin',
+      );
+      sync.testWals = [missWal];
+
+      final result = await sync.runLocalAudioRetentionSweep(
+        policy: const LocalAudioRetentionPolicy(maxAge: Duration.zero, maxTotalBytes: 1),
+      );
+
+      expect(result.totalDeleted, 0);
+      expect(sync.testWals, contains(missWal));
     });
   });
 }

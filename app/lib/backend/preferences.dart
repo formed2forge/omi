@@ -539,6 +539,18 @@ class SharedPreferencesUtil {
 
   set unlimitedLocalStorageEnabled(bool value) => saveBool('unlimitedLocalStorageEnabled', value);
 
+  /// Dev toggle for the Core-tier "never advance past local" audio mechanism
+  /// (raw audio stays on-device instead of GCS — see
+  /// formed2forge/handoffs/omi-pricing.md §15/§24). Default off. Real plan/tier
+  /// catalog gating has not landed yet; do NOT read this preference directly
+  /// from call sites — go through
+  /// `local_audio_retention.dart`'s `isLocalOnlyAudioRetentionEnabled()`, the
+  /// single extension point meant to be swapped for a real plan check once the
+  /// Core/Plus/Max catalog lands.
+  bool get coreTierLocalOnlyAudioEnabled => getBool('coreTierLocalOnlyAudioEnabled');
+
+  set coreTierLocalOnlyAudioEnabled(bool value) => saveBool('coreTierLocalOnlyAudioEnabled', value);
+
   // Whether connected device supports new multi-file storage sync (persisted so it works when disconnected)
   bool get deviceSupportsMultiFileSync => getBool('deviceSupportsMultiFileSync');
 

@@ -19,7 +19,7 @@ void main() {
   }
 
   group('Wal.syncDisplayState', () {
-    const terminalStatuses = {WalStatus.corrupted, WalStatus.outsideRecoveryWindow};
+    const terminalStatuses = {WalStatus.corrupted, WalStatus.outsideRecoveryWindow, WalStatus.localOnly};
 
     test('isSyncing wins over every non-terminal status', () {
       for (final s in WalStatus.values.where((status) => !terminalStatuses.contains(status))) {
@@ -57,6 +57,28 @@ void main() {
 
     test('synced -> synced', () {
       expect(makeWal(status: WalStatus.synced).syncDisplayState, WalSyncDisplayState.synced);
+    });
+
+    test('localOnly -> localOnly', () {
+      expect(makeWal(status: WalStatus.localOnly).syncDisplayState, WalSyncDisplayState.localOnly);
+    });
+
+    test('localOnly wins over a stale syncing flag', () {
+      expect(
+        makeWal(status: WalStatus.localOnly, isSyncing: true).syncDisplayState,
+        WalSyncDisplayState.localOnly,
+        reason: 'a Core-tier local-only recording never actually uploads, so it must never render as an active upload',
+      );
+    });
+
+    test('localOnly -> localOnly regardless of retry count', () {
+      for (final r in [0, 1, walMaxAutoRetries]) {
+        expect(
+          makeWal(status: WalStatus.localOnly, retryCount: r).syncDisplayState,
+          WalSyncDisplayState.localOnly,
+          reason: 'retryCount=$r must not surface retry/failed UI for a recording that was never attempted',
+        );
+      }
     });
 
     test('corrupted -> corrupted', () {
@@ -105,6 +127,11 @@ void main() {
     test('outsideRecoveryWindow survives a restart', () {
       final w = makeWal(status: WalStatus.outsideRecoveryWindow);
       expect(Wal.fromJson(w.toJson()).status, WalStatus.outsideRecoveryWindow);
+    });
+
+    test('localOnly survives a restart', () {
+      final w = makeWal(status: WalStatus.localOnly);
+      expect(Wal.fromJson(w.toJson()).status, WalStatus.localOnly);
     });
 
     test('legacy json without job fields defaults safely', () {

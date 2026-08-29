@@ -11,6 +11,7 @@ import 'package:omi/models/sync_state.dart';
 import 'package:omi/backend/schema/bt_device/bt_device.dart';
 import 'package:omi/backend/schema/conversation.dart';
 import 'package:omi/services/audio_sources/audio_source.dart';
+import 'package:omi/services/wals/local_audio_retention.dart';
 import 'package:omi/services/wals/wal.dart';
 import 'package:omi/services/wals/wal_interfaces.dart';
 import 'package:omi/services/wals/sync_rate_limiter.dart';
@@ -77,6 +78,16 @@ class LocalWalSyncImpl implements LocalWalSync {
 
   Timer? _chunkingTimer;
   Timer? _flushingTimer;
+  Timer? _retentionTimer;
+
+  /// Swappable age/size bounds for the local-only audio retention sweep.
+  /// See [LocalAudioRetentionPolicy] for the shape and default values.
+  LocalAudioRetentionPolicy _retentionPolicy = LocalAudioRetentionPolicy.defaultPolicy;
+
+  @visibleForTesting
+  set retentionPolicyForTesting(LocalAudioRetentionPolicy policy) => _retentionPolicy = policy;
+
+  static const Duration _retentionSweepInterval = Duration(hours: 1);
 
   IWalSyncListener listener;
 
@@ -144,6 +155,15 @@ class LocalWalSyncImpl implements LocalWalSync {
     ) async {
       await _flush();
     });
+
+    // At-launch sweep (once WALs finish loading from disk) + hourly thereafter.
+    // Mirrors the Windows local-audio retention sweep's hourly+at-launch shape
+    // (formed2forge/handoffs/omi-pricing.md §20), adapted to this service's own
+    // Timer.periodic idiom rather than a literal port.
+    unawaited(walReady.then((_) => runLocalAudioRetentionSweep()));
+    _retentionTimer = Timer.periodic(_retentionSweepInterval, (t) async {
+      await runLocalAudioRetentionSweep();
+    });
   }
 
   Future<void> _initializeWals() async {
@@ -179,6 +199,7 @@ class LocalWalSyncImpl implements LocalWalSync {
   Future stop() async {
     _chunkingTimer?.cancel();
     _flushingTimer?.cancel();
+    _retentionTimer?.cancel();
 
     await _chunk();
     await _flush();
@@ -225,7 +246,8 @@ class LocalWalSyncImpl implements LocalWalSync {
     var timerStart = timerEnd - (high - low) ~/ _framesPerSecond;
     var chunkFrameCount = high - low;
 
-    bool shouldStored = SharedPreferencesUtil().unlimitedLocalStorageEnabled;
+    final localOnlyRetention = isLocalOnlyAudioRetentionEnabled();
+    bool shouldStored = localOnlyRetention || SharedPreferencesUtil().unlimitedLocalStorageEnabled;
     if (!shouldStored) {
       bool synced = true;
       var losses = 0;
@@ -253,6 +275,13 @@ class LocalWalSyncImpl implements LocalWalSync {
       }
       Logger.debug("${low} - ${high} - ${syncedOffset} - ${chunkFrameCount} - ${_framesPerSecond}");
 
+      // Core-tier local-only retention never advances past the local state,
+      // regardless of whether the live websocket already delivered every
+      // frame — the raw audio itself must never reach the upload path.
+      final resolvedStatus = localOnlyRetention
+          ? WalStatus.localOnly
+          : (syncedOffset == chunkFrameCount ? WalStatus.synced : WalStatus.miss);
+
       Wal wal;
       var walIdx = _wals.indexWhere(
         (w) => w.timerStart == timerStart && w.device == (_deviceId ?? "omi") && w.codec == _codec,
@@ -263,7 +292,7 @@ class LocalWalSyncImpl implements LocalWalSync {
           timerStart: timerStart,
           data: chunk,
           storage: WalStorage.mem,
-          status: syncedOffset == chunkFrameCount ? WalStatus.synced : WalStatus.miss,
+          status: resolvedStatus,
           device: _deviceId ?? "omi",
           deviceModel: _deviceModel ?? "Omi",
           seconds: chunkFrameCount ~/ _framesPerSecond,
@@ -277,7 +306,7 @@ class LocalWalSyncImpl implements LocalWalSync {
         wal.storage = WalStorage.mem;
         wal.totalFrames = chunkFrameCount;
         wal.syncedFrameOffset = syncedOffset;
-        wal.status = syncedOffset == chunkFrameCount ? WalStatus.synced : WalStatus.miss;
+        wal.status = resolvedStatus;
         _wals[walIdx] = wal;
       }
 
@@ -412,9 +441,11 @@ class LocalWalSyncImpl implements LocalWalSync {
     var timerStart = timerEnd - high ~/ _framesPerSecond;
     var chunkFrameCount = high;
 
-    // Same shouldStored check as _chunk(): only store if unlimited storage enabled
-    // or if significant frame loss detected (meaning WebSocket didn't deliver them).
-    bool shouldStored = SharedPreferencesUtil().unlimitedLocalStorageEnabled;
+    // Same shouldStored check as _chunk(): only store if unlimited storage enabled,
+    // local-only retention is on, or significant frame loss detected (meaning
+    // WebSocket didn't deliver them).
+    final localOnlyRetention = isLocalOnlyAudioRetentionEnabled();
+    bool shouldStored = localOnlyRetention || SharedPreferencesUtil().unlimitedLocalStorageEnabled;
     if (!shouldStored) {
       bool synced = true;
       var losses = 0;
@@ -440,6 +471,12 @@ class LocalWalSyncImpl implements LocalWalSync {
         }
       }
 
+      // Core-tier local-only retention never advances past the local state
+      // here either — see the matching comment in _chunk().
+      final resolvedStatus = localOnlyRetention
+          ? WalStatus.localOnly
+          : (syncedOffset == chunkFrameCount ? WalStatus.synced : WalStatus.miss);
+
       // Use a distinct timerStart so we don't collide with WALs from _chunk().
       // This is the tail buffer that _chunk() left behind.
       _wals = List.from(_wals)
@@ -449,7 +486,7 @@ class LocalWalSyncImpl implements LocalWalSync {
             timerStart: timerStart,
             data: chunk,
             storage: WalStorage.mem,
-            status: syncedOffset == chunkFrameCount ? WalStatus.synced : WalStatus.miss,
+            status: resolvedStatus,
             device: _deviceId ?? "omi",
             deviceModel: _deviceModel ?? "Omi",
             seconds: chunkFrameCount ~/ _framesPerSecond,
@@ -1035,6 +1072,93 @@ class LocalWalSyncImpl implements LocalWalSync {
     final p = await Wal.getFilePath(wal.filePath);
     if (p == null) return false;
     return File(p).existsSync();
+  }
+
+  Future<int> _walFileSizeBytes(Wal wal) async {
+    if (wal.filePath == null) return 0;
+    final path = await Wal.getFilePath(wal.filePath);
+    if (path == null) return 0;
+    final file = File(path);
+    if (!file.existsSync()) return 0;
+    try {
+      return file.lengthSync();
+    } catch (e) {
+      Logger.debug('local audio retention: could not stat $path: $e');
+      return 0;
+    }
+  }
+
+  /// Bounds how much [WalStatus.localOnly] audio accumulates on disk over
+  /// time. Two passes, oldest recordings go first in each:
+  ///
+  /// 1. Age: anything older than [LocalAudioRetentionPolicy.maxAge] (by
+  ///    [Wal.timerStart]) is deleted outright.
+  /// 2. Size: if the remaining local-only audio still exceeds
+  ///    [LocalAudioRetentionPolicy.maxTotalBytes], the oldest survivors are
+  ///    deleted (oldest-first) until back under the cap.
+  ///
+  /// Only ever touches [WalStatus.localOnly] WALs — never a [WalStatus.miss]
+  /// or [WalStatus.uploaded] recording still owed to the sync/reconcile paths.
+  /// Safe to call repeatedly (at launch and on an hourly timer, see [start]);
+  /// a no-op pass returns [LocalAudioRetentionSweepResult.empty] without
+  /// touching disk or persisted state.
+  Future<LocalAudioRetentionSweepResult> runLocalAudioRetentionSweep({LocalAudioRetentionPolicy? policy}) async {
+    final effectivePolicy = policy ?? _retentionPolicy;
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final maxAgeSeconds = effectivePolicy.maxAge.inSeconds;
+
+    final localOnly = _wals.where((w) => w.status == WalStatus.localOnly && w.storage == WalStorage.disk).toList();
+    if (localOnly.isEmpty) return LocalAudioRetentionSweepResult.empty;
+
+    int deletedByAge = 0;
+    int deletedBySize = 0;
+    int bytesFreed = 0;
+
+    final survivors = <Wal>[];
+    final sizeByWalId = <String, int>{};
+    for (final wal in localOnly) {
+      final size = await _walFileSizeBytes(wal);
+      final ageSeconds = nowSeconds - wal.timerStart;
+      if (maxAgeSeconds > 0 && ageSeconds > maxAgeSeconds) {
+        await _deleteWal(wal);
+        deletedByAge++;
+        bytesFreed += size;
+        continue;
+      }
+      sizeByWalId[wal.id] = size;
+      survivors.add(wal);
+    }
+
+    survivors.sort((a, b) => a.timerStart.compareTo(b.timerStart));
+    int totalBytes = sizeByWalId.values.fold(0, (a, b) => a + b);
+    if (effectivePolicy.maxTotalBytes > 0) {
+      for (final wal in survivors) {
+        if (totalBytes <= effectivePolicy.maxTotalBytes) break;
+        final size = sizeByWalId[wal.id] ?? 0;
+        await _deleteWal(wal);
+        deletedBySize++;
+        bytesFreed += size;
+        totalBytes -= size;
+      }
+    }
+
+    if (deletedByAge > 0 || deletedBySize > 0) {
+      await _saveWalsToFile();
+      listener.onWalUpdated();
+      DebugLogManager.logEvent('local_audio_retention_swept', {
+        'deletedByAge': deletedByAge,
+        'deletedBySize': deletedBySize,
+        'bytesFreed': bytesFreed,
+        'remainingBytes': totalBytes,
+      });
+    }
+
+    return LocalAudioRetentionSweepResult(
+      deletedByAge: deletedByAge,
+      deletedBySize: deletedBySize,
+      bytesFreed: bytesFreed,
+      remainingBytes: totalBytes,
+    );
   }
 
   /// Resolve WALs sitting in [WalStatus.uploaded] by polling their server job

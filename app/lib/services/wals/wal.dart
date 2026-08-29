@@ -24,7 +24,17 @@ const secondsPerFlashPage = 1.4;
 ///                  (HTTP 422 `backfill_lookback_exceeded`). The local file is
 ///                  intact, but re-uploading it can never succeed, so it is
 ///                  terminal for sync rather than pending work.
-enum WalStatus { inProgress, miss, uploaded, synced, corrupted, outsideRecoveryWindow }
+/// - [localOnly]  — deliberately never advances to upload/sync. This is the
+///                  Core-tier "raw audio stays local instead of GCS" mechanism
+///                  (see formed2forge/handoffs/omi-pricing.md §15/§24 — plan
+///                  gating for it has not landed yet, see
+///                  `local_audio_retention.dart`'s `isLocalOnlyAudioRetentionEnabled`
+///                  extension point). Unlike [miss], a [localOnly] WAL is never
+///                  picked up by any sync-upload query — it is terminal by
+///                  construction, not merely unattempted. Bounded by
+///                  `LocalAudioRetentionPolicy`'s age/size sweep rather than
+///                  kept forever.
+enum WalStatus { inProgress, miss, uploaded, synced, corrupted, outsideRecoveryWindow, localOnly }
 
 enum WalStorage { mem, disk, sdcard, flashPage }
 
@@ -44,7 +54,19 @@ enum SyncMethod { ble }
 /// - [outsideRecoveryWindow] — too old for the server to accept; retrying
 ///                  cannot help, so the row explains that instead of offering
 ///                  a Retry the user would spend forever
-enum WalSyncDisplayState { syncing, uploaded, synced, waiting, retrying, failed, corrupted, outsideRecoveryWindow }
+/// - [localOnly]  — kept on-device forever by design (Core-tier local audio
+///                  retention); never uploads, never shown as failed/waiting.
+enum WalSyncDisplayState {
+  syncing,
+  uploaded,
+  synced,
+  waiting,
+  retrying,
+  failed,
+  corrupted,
+  outsideRecoveryWindow,
+  localOnly,
+}
 
 /// Max automatic sync attempts before a recording is considered [WalSyncDisplayState.failed].
 /// Mirrors the `maxRetries` used by the auto-sync loop in capture_provider.
@@ -150,6 +172,7 @@ class Wal {
     // behind by an interrupted attempt.
     if (status == WalStatus.corrupted) return WalSyncDisplayState.corrupted;
     if (status == WalStatus.outsideRecoveryWindow) return WalSyncDisplayState.outsideRecoveryWindow;
+    if (status == WalStatus.localOnly) return WalSyncDisplayState.localOnly;
     if (isSyncing) return WalSyncDisplayState.syncing;
     switch (status) {
       case WalStatus.uploaded:
@@ -160,6 +183,8 @@ class Wal {
         return WalSyncDisplayState.corrupted;
       case WalStatus.outsideRecoveryWindow:
         return WalSyncDisplayState.outsideRecoveryWindow;
+      case WalStatus.localOnly:
+        return WalSyncDisplayState.localOnly;
       case WalStatus.miss:
         if (retryCount >= walMaxAutoRetries) return WalSyncDisplayState.failed;
         if (retryCount > 0) return WalSyncDisplayState.retrying;
