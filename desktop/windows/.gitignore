@@ -52,6 +52,7 @@ docs/*
 !docs/release-pipeline.md
 !docs/perf-startup-burst-2026-07-19.md
 !docs/mac-parity-audit
+!docs/local-llm-inference.md
 !docs/perf-invisible-wins.md
 skills-lock.json
 
