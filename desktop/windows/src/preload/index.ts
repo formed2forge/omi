@@ -18,6 +18,7 @@ import type {
   CaptureChoice,
   ListenStartArgs,
   ListenMessage,
+  LocalAsrMessage,
   CaptureCommand,
   CaptureEvent,
   ExportMemory,
@@ -131,6 +132,17 @@ const omi: OmiBridgeApi = {
     ipcRenderer.on('omi-listen:message', listener)
     return () => ipcRenderer.removeListener('omi-listen:message', listener)
   },
+  localAsrStart: (sessionId: string) => ipcRenderer.invoke('omi-local-asr:start', sessionId),
+  localAsrStop: (sessionId: string) => ipcRenderer.invoke('omi-local-asr:stop', sessionId),
+  localAsrFeed: (sessionId: string, pcm: ArrayBuffer) => {
+    ipcRenderer.send('omi-local-asr:feed', sessionId, pcm)
+  },
+  localAsrFinalize: (sessionId: string) => ipcRenderer.send('omi-local-asr:finalize', sessionId),
+  onLocalAsrMessage: (cb: (msg: LocalAsrMessage) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, msg: LocalAsrMessage): void => cb(msg)
+    ipcRenderer.on('omi-local-asr:message', listener)
+    return () => ipcRenderer.removeListener('omi-local-asr:message', listener)
+  },
   captureCommand: (cmd: CaptureCommand) => ipcRenderer.send('omi-capture:cmd', cmd),
   onCaptureCommand: (cb: (cmd: CaptureCommand, ownerId: number) => void) => {
     const listener = (
@@ -149,6 +161,12 @@ const omi: OmiBridgeApi = {
   },
   allowVirtualMic: process.env.OMI_ALLOW_VIRTUAL_MIC === '1',
   e2e: process.env.OMI_E2E === '1',
+  // Capability-only dev/verification flag for the local (on-device) ASR path
+  // (see main/localAsr/): OFF unless explicitly set, never surfaced as a Settings
+  // toggle. When on, AudioSessionHost/omiListenClient additionally route the same
+  // PCM stream already going to the cloud STT socket into a parallel local ASR
+  // session, purely to exercise the capability — no fallback/selection logic.
+  localAsrEnabled: process.env.OMI_LOCAL_ASR === '1',
   // Offline fake-auth for the shell E2E (survives production builds). Gated on a
   // dedicated flag the app never sets itself, so it can never activate in normal
   // use — and separate from OMI_E2E so the bar/meeting/lifecycle specs (which set

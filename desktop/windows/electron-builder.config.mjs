@@ -51,6 +51,10 @@ export default {
     // koffi loads its native .node at runtime, resolved relative to its own package
     // dir — it must live outside the asar archive or the foreground monitor fails.
     'node_modules/koffi/**',
+    // onnxruntime-node (local ASR, main/localAsr/) ships prebuilt native .node
+    // addons under bin/napi-v6/<platform>/<arch>/ — same asar constraint as koffi:
+    // a native addon can't be dlopen()'d from inside the archive.
+    'node_modules/onnxruntime-node/**',
     // kgWorker.js is loaded via new Worker(path) which bypasses Electron's asar
     // virtual-fs patch — it must be a real file on disk.
     'out/main/kgWorker.js',

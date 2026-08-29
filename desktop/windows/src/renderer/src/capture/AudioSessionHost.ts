@@ -80,8 +80,15 @@ async function startAudioSession(
   }
 
   try {
-    const feed = (pcm: Int16Array): void =>
+    const feed = (pcm: Int16Array): void => {
       window.omi?.listenFeed(sessionId, pcm.buffer as ArrayBuffer)
+      // Capability-only (see preload's localAsrEnabled doc comment): duplicate the
+      // SAME gated PCM stream into a parallel local ASR session. `pcm.buffer` is
+      // structured-cloned per ipcRenderer.send call, so sending it twice is safe.
+      if (window.omi?.localAsrEnabled) {
+        window.omi.localAsrFeed(sessionId, pcm.buffer as ArrayBuffer)
+      }
+    }
     // Loopback lane: classify VAD-gated windows (YAMNet) so a confident music
     // verdict closes the lane — ambient/meeting capture never transcribes a
     // movie. The mic lane never classifies (the user's own voice always counts).

@@ -243,6 +243,18 @@ export type ListenMessage =
   | { sessionId: string; kind: 'error'; message: string; fatal: boolean }
   | { sessionId: string; kind: 'closed'; code: number; reason: string }
 
+/**
+ * Messages from a local (on-device) ASR session — see main/localAsr/. Deliberately
+ * a subset of ListenMessage's shape ('segments' carries the same BackendSegment[],
+ * 'error' the same {message, fatal}) so a future consumer that can receive
+ * transcript segments from either source doesn't need a source-specific branch.
+ * No 'connected'/'closed'/'event' variants: there is no socket lifecycle, only a
+ * local buffering/inference loop (see localAsrSession.ts).
+ */
+export type LocalAsrMessage =
+  | { sessionId: string; kind: 'segments'; segments: BackendSegment[] }
+  | { sessionId: string; kind: 'error'; message: string; fatal: boolean }
+
 // ───────────────────────── Capture window IPC ─────────────────────────
 // The hidden always-alive capture window (renderer #/capture) owns ALL audio +
 // Rewind capture; UI windows are pure UI. Commands flow UI window → main →
@@ -749,6 +761,18 @@ export type OmiBridgeApi = {
   listenFinalize: (sessionId: string) => void
   /** Subscribe to status/segment/event messages from every listen session. */
   onListenMessage: (cb: (msg: ListenMessage) => void) => () => void
+  // Local (on-device) ASR sessions (main-process owned) — see main/localAsr/.
+  // Structurally parallel to listenStart/listenFeed/listenStop/onListenMessage
+  // above, minus the socket-lifecycle events ('connected'/'closed') a buffered
+  // local inference loop has no equivalent of.
+  localAsrStart: (sessionId: string) => Promise<void>
+  localAsrStop: (sessionId: string) => Promise<void>
+  /** Push a PCM16 chunk for an active local ASR session. Fire-and-forget. */
+  localAsrFeed: (sessionId: string, pcm: ArrayBuffer) => void
+  /** Flush whatever is buffered right now instead of waiting for the next timed
+   *  flush — mirrors listenFinalize. */
+  localAsrFinalize: (sessionId: string) => void
+  onLocalAsrMessage: (cb: (msg: LocalAsrMessage) => void) => () => void
   // --- Capture window bridge (Phase 2) ---
   /** Send a capture command. From a UI window it's forwarded to the hidden
    *  capture window; the capture window itself services them. Fire-and-forget. */
@@ -772,6 +796,11 @@ export type OmiBridgeApi = {
   /** True when OMI_E2E=1 — renderer-side test hooks (e.g. window.__omiVoice)
    *  attach only in harness runs, never in production. */
   e2e: boolean
+  /** True when OMI_LOCAL_ASR=1 — capability-only dev/verification flag that
+   *  routes the same PCM stream already feeding cloud STT into a parallel local
+   *  ASR session too (see localAsrStart/localAsrFeed above). Never a Settings
+   *  toggle; OFF unless explicitly set. */
+  localAsrEnabled: boolean
   /** True when OMI_E2E_FAKE_AUTH=1 — the shell E2E injects an offline fake user
    *  so the authed `/*` shell mounts on the real production build. A dedicated
    *  flag (never set by the app), so it can never activate in normal use. */
