@@ -137,6 +137,7 @@ import {
 import { startRewindOcr, stopRewindOcr } from './rewind/ocrService'
 import { startRewindEmbedding } from './rewind/embeddingService'
 import { startRewindRetention } from './rewind/retentionRunner'
+import { startLocalAudioRetention } from './localAudio/localAudioRetentionRunner'
 import { startOrphanSweep } from './rewind/orphanSweep'
 import { prewarmPrimarySourceId } from './rewind/sourceId'
 import { perfMark, flushPerfMarks } from '../shared/perf'
@@ -1216,6 +1217,12 @@ app.whenReady().then(async () => {
           }
         },
         { name: 'rewindRetention', run: () => startRewindRetention() },
+        // Local-audio persistence (Core free-tier mechanism, dev-toggle gated —
+        // see appSettings.ts's localAudioPersistenceEnabled): runs unconditionally
+        // so any recordings from a prior session where the toggle was on still
+        // age out per policy even if it's since been turned off. No-op sweep when
+        // the local-audio directory has never been created.
+        { name: 'localAudioRetention', run: () => startLocalAudioRetention() },
         // Delete JPEGs orphaned by a crash between the file write and the DB insert
         // (Windows-specific — frames are per-file). Startup pass + every 6h.
         { name: 'orphanSweep', run: () => startOrphanSweep() },
