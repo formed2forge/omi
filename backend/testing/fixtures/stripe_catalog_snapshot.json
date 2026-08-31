@@ -1,0 +1,214 @@
+{
+  "_meta": {
+    "synthetic": true,
+    "generated_from": "config/plan_catalog.json",
+    "catalog_revision": 2,
+    "note": "Placeholder amounts. Real price IDs come from the recognition ledger; run this script with --from-stripe (TEST-MODE key) to capture real amounts."
+  },
+  "env": {
+    "STRIPE_ARCHITECT_ANNUAL_PRICE_ID": "price_1TN7sF1F8wnoWYvwd0QaLZNA",
+    "STRIPE_ARCHITECT_MONTHLY_PRICE_ID": "price_1TN7s21F8wnoWYvwG6JuEFm6",
+    "STRIPE_OPERATOR_ANNUAL_PRICE_ID": "price_1TN7jo1F8wnoWYvw6Xu1zAtC",
+    "STRIPE_OPERATOR_MONTHLY_PRICE_ID": "price_1TN7jS1F8wnoWYvwM5GqfxDw",
+    "STRIPE_PLUS_ANNUAL_PRICE_ID": "price_1TuHCw1F8wnoWYvwZvKu86sI",
+    "STRIPE_PLUS_MONTHLY_PRICE_ID": "price_1TuH6z1F8wnoWYvw7Siv61SX",
+    "STRIPE_UNLIMITED_ANNUAL_PRICE_ID": "price_1RrxXL1F8wnoWYvw3kDbWmjs",
+    "STRIPE_UNLIMITED_MONTHLY_PRICE_ID": "price_1RrxXL1F8wnoWYvwIddzR902",
+    "STRIPE_UNLIMITED_V2_ANNUAL_PRICE_ID": "price_1TuIap1F8wnoWYvwHWq0EvNU",
+    "STRIPE_UNLIMITED_V2_MONTHLY_PRICE_ID": "price_1TuIa81F8wnoWYvw0iX0j5M8"
+  },
+  "plan_to_price": {
+    "unlimited": {
+      "month": "price_1RrxXL1F8wnoWYvwIddzR902",
+      "year": "price_1RrxXL1F8wnoWYvw3kDbWmjs"
+    },
+    "architect": {
+      "month": "price_1TN7s21F8wnoWYvwG6JuEFm6",
+      "year": "price_1TN7sF1F8wnoWYvwd0QaLZNA"
+    },
+    "operator": {
+      "month": "price_1TN7jS1F8wnoWYvwM5GqfxDw",
+      "year": "price_1TN7jo1F8wnoWYvw6Xu1zAtC"
+    },
+    "plus": {
+      "month": "price_1TuH6z1F8wnoWYvw7Siv61SX",
+      "year": "price_1TuHCw1F8wnoWYvwZvKu86sI"
+    },
+    "unlimited_v2": {
+      "month": "price_1TuIa81F8wnoWYvw0iX0j5M8",
+      "year": "price_1TuIap1F8wnoWYvwHWq0EvNU"
+    }
+  },
+  "prices": {
+    "price_1RrxXL1F8wnoWYvwIddzR902": {
+      "id": "price_1RrxXL1F8wnoWYvwIddzR902",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 999,
+      "unit_amount_decimal": "999",
+      "nickname": "Neo month",
+      "recurring": {
+        "interval": "month",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_unlimited"
+    },
+    "price_1RrxXL1F8wnoWYvw3kDbWmjs": {
+      "id": "price_1RrxXL1F8wnoWYvw3kDbWmjs",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 9990,
+      "unit_amount_decimal": "9990",
+      "nickname": "Neo year",
+      "recurring": {
+        "interval": "year",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_unlimited"
+    },
+    "price_1TN7s21F8wnoWYvwG6JuEFm6": {
+      "id": "price_1TN7s21F8wnoWYvwG6JuEFm6",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 19900,
+      "unit_amount_decimal": "19900",
+      "nickname": "Architect month",
+      "recurring": {
+        "interval": "month",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_architect"
+    },
+    "price_1TN7sF1F8wnoWYvwd0QaLZNA": {
+      "id": "price_1TN7sF1F8wnoWYvwd0QaLZNA",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 199000,
+      "unit_amount_decimal": "199000",
+      "nickname": "Architect year",
+      "recurring": {
+        "interval": "year",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_architect"
+    },
+    "price_1TN7jS1F8wnoWYvwM5GqfxDw": {
+      "id": "price_1TN7jS1F8wnoWYvwM5GqfxDw",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 1900,
+      "unit_amount_decimal": "1900",
+      "nickname": "Operator month",
+      "recurring": {
+        "interval": "month",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_operator"
+    },
+    "price_1TN7jo1F8wnoWYvw6Xu1zAtC": {
+      "id": "price_1TN7jo1F8wnoWYvw6Xu1zAtC",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 18000,
+      "unit_amount_decimal": "18000",
+      "nickname": "Operator year",
+      "recurring": {
+        "interval": "year",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_operator"
+    },
+    "price_1TuH6z1F8wnoWYvw7Siv61SX": {
+      "id": "price_1TuH6z1F8wnoWYvw7Siv61SX",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 1499,
+      "unit_amount_decimal": "1499",
+      "nickname": "Plus month",
+      "recurring": {
+        "interval": "month",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_plus"
+    },
+    "price_1TuHCw1F8wnoWYvwZvKu86sI": {
+      "id": "price_1TuHCw1F8wnoWYvwZvKu86sI",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 14990,
+      "unit_amount_decimal": "14990",
+      "nickname": "Plus year",
+      "recurring": {
+        "interval": "year",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_plus"
+    },
+    "price_1TuIa81F8wnoWYvw0iX0j5M8": {
+      "id": "price_1TuIa81F8wnoWYvw0iX0j5M8",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 2999,
+      "unit_amount_decimal": "2999",
+      "nickname": "Unlimited month",
+      "recurring": {
+        "interval": "month",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_unlimited_v2"
+    },
+    "price_1TuIap1F8wnoWYvwHWq0EvNU": {
+      "id": "price_1TuIap1F8wnoWYvwHWq0EvNU",
+      "object": "price",
+      "active": true,
+      "currency": "usd",
+      "unit_amount": 29990,
+      "unit_amount_decimal": "29990",
+      "nickname": "Unlimited year",
+      "recurring": {
+        "interval": "year",
+        "interval_count": 1,
+        "usage_type": "licensed"
+      },
+      "type": "recurring",
+      "livemode": false,
+      "product": "prod_synthetic_unlimited_v2"
+    }
+  }
+}
