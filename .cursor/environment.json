@@ -1,0 +1,7 @@
+{
+  "name": "Omi Backend (Linux x86)",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "ports": [8080]
+}
