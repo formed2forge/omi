@@ -334,6 +334,11 @@ def _create_backend_app(fake_firestore_instance, fake_redis_instance, fake_stora
     # Script to the fake so their state lives in fakeredis (flushed per test).
     _rebind_registered_scripts(redis_db, fake_redis_instance)
 
+    # database/cache.py lazily builds RedisPubSubManager(r).start() on first
+    # cache access, spawning a background subscribe loop against a client it
+    # captured at import — another real-redis reach the r-repoint above misses.
+    _rebind_cache_pubsub(fake_redis_instance)
+
     _app_cache = backend_main.app
     return _app_cache
 
@@ -348,6 +353,30 @@ def _rebind_registered_scripts(redis_db_module, fake_redis_instance) -> None:
                 _value.registered_client = fake_redis_instance
             except Exception:
                 continue
+
+
+def _rebind_cache_pubsub(fake_redis_instance) -> None:
+    """Point database/cache.py's pub/sub client (and any built manager) at the fake.
+
+    ``_ensure_initialized`` reads the module global ``r`` when constructing the
+    manager, so repointing it makes the lazy init use the fake; if a manager was
+    already built (e.g. by an earlier test's request), repoint its client too so
+    its reconnect loop never dials a real redis.
+    """
+    try:
+        import database.cache as cache_module
+    except Exception:
+        return
+    try:
+        cache_module.r = fake_redis_instance
+    except Exception:
+        pass
+    manager = getattr(cache_module, "_pubsub_manager", None)
+    if manager is not None:
+        try:
+            manager.redis_client = fake_redis_instance
+        except Exception:
+            pass
 
 
 # ─── Backend TestClient — function scoped for test isolation ─────────────
@@ -410,6 +439,7 @@ def isolate_e2e_state(fake_firestore, fake_redis, fake_storage):
             redis_db.r = fake_redis
         except Exception:
             pass
+        _rebind_cache_pubsub(fake_redis)
 
     clear_state()
     yield
