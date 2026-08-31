@@ -74,13 +74,23 @@ def test_available_plans_render_from_snapshot(client, auth_headers, stripe_catal
     assert plus_month_id in by_id
 
 
-# NOTE: the parallel `routers/users.py` subscription `available_plans` builder is
-# also served by this fixture (cache preseed + `stripe.Price.retrieve` stub), but
-# is intentionally not asserted via `/v1/users/me/subscription` here. That endpoint
-# reaches `utils/phone_calls.get_quota_snapshot` -> `database/redis_pubsub.start`,
-# which opens its OWN redis connection to localhost:6379 (not the harness-repointed
-# `database.redis_db.r`, nor a register_script Script the conftest now re-binds), so
-# it raises ConnectionRefused under the redis-less hermetic job. Repointing the
-# pubsub client is a separate harness-isolation follow-up. The payment endpoint
-# above is the canonical `available_plans` surface and fully proves offline
-# rendering from the snapshot.
+def test_user_subscription_available_plans_populated(client, auth_headers, stripe_catalog):
+    """The users.py subscription builder (cache-backed) also renders offline.
+
+    Exercises the parallel `available_plans` path in `routers/users.py`, which
+    reads the ``stripe_price:{id}`` cache (pre-seeded by the fixture) before the
+    stubbed ``stripe.Price.retrieve``. Deterministic now that the harness repoints
+    both the register_script Lua objects and the `database/cache.py` pub/sub client
+    to the fake redis (the endpoint reaches `phone_calls.get_quota_snapshot` ->
+    cache init -> `redis_pubsub.start`).
+    """
+    resp = client.get("/v1/users/me/subscription", headers={**auth_headers, **WEB_HEADERS})
+    assert resp.status_code == 200, resp.text
+
+    body = resp.json()
+    available = body.get("available_plans")
+    assert available, "subscription.available_plans should be populated from the snapshot fixture"
+    # Prices come from the fixture, so every option carries a real price id.
+    for plan in available:
+        for option in plan.get("prices", []):
+            assert option["id"] in stripe_catalog.prices
