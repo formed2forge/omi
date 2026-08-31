@@ -75,10 +75,12 @@ def test_available_plans_render_from_snapshot(client, auth_headers, stripe_catal
 
 
 # NOTE: the parallel `routers/users.py` subscription `available_plans` builder is
-# also served by this fixture (its `stripe_price:{id}` cache is pre-seeded and its
-# `stripe.Price.retrieve` calls are stubbed). It is intentionally not asserted via
-# `/v1/users/me/subscription` here: that endpoint reaches a `register_script`-bound
-# Redis path that isn't repointed to the harness fake (scripts bind to the real
-# client at import), making it order-dependent under the redis-less hermetic job.
-# The payment endpoint above is the canonical `available_plans` surface and fully
-# proves offline rendering from the snapshot.
+# also served by this fixture (cache preseed + `stripe.Price.retrieve` stub), but
+# is intentionally not asserted via `/v1/users/me/subscription` here. That endpoint
+# reaches `utils/phone_calls.get_quota_snapshot` -> `database/redis_pubsub.start`,
+# which opens its OWN redis connection to localhost:6379 (not the harness-repointed
+# `database.redis_db.r`, nor a register_script Script the conftest now re-binds), so
+# it raises ConnectionRefused under the redis-less hermetic job. Repointing the
+# pubsub client is a separate harness-isolation follow-up. The payment endpoint
+# above is the canonical `available_plans` surface and fully proves offline
+# rendering from the snapshot.
