@@ -323,8 +323,31 @@ def _create_backend_app(fake_firestore_instance, fake_redis_instance, fake_stora
             except Exception:
                 continue
 
+    # redis-py Script objects created via ``r.register_script(...)`` at import
+    # time (rate-limit / proactive-quota / TTS Lua in database/redis_db.py)
+    # capture the ORIGINAL real redis client and are NOT covered by the
+    # ``redis_db.r`` repoint above — calling them still targets whatever real
+    # redis happens to listen on localhost:6379. On a dev box with a redis
+    # running that leaks rate-limit/lock state across tests (never flushed by the
+    # fake's ``flushall``), so counters accumulate and trip spurious 429s; with
+    # no redis they raise instead of failing closed to the fake. Re-bind every
+    # Script to the fake so their state lives in fakeredis (flushed per test).
+    _rebind_registered_scripts(redis_db, fake_redis_instance)
+
     _app_cache = backend_main.app
     return _app_cache
+
+
+def _rebind_registered_scripts(redis_db_module, fake_redis_instance) -> None:
+    """Point every register_script Script in redis_db at the harness fake redis."""
+    for _value in list(vars(redis_db_module).values()):
+        # Duck-type on ``registered_client`` rather than importing the Script
+        # class, whose import path has moved across redis-py versions.
+        if hasattr(_value, "registered_client") and hasattr(_value, "sha"):
+            try:
+                _value.registered_client = fake_redis_instance
+            except Exception:
+                continue
 
 
 # ─── Backend TestClient — function scoped for test isolation ─────────────
