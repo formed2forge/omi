@@ -94,7 +94,11 @@ def _set_e2e_env():
     os.environ["DEV_WEBHOOK_RETRY_DELAYS"] = "0,0,0"
     os.environ["SYNC_DISPATCH_MODE"] = "inline"
     os.environ["AUDIO_MERGE_DISPATCH_MODE"] = "inline"
-    # Disable Stripe validation so startup doesn't fail.
+    # Clear the real Stripe key var the backend reads (utils/stripe.py reads
+    # STRIPE_API_KEY, not STRIPE_SECRET_KEY) so a developer's shell can't leak a
+    # live key into e2e, and startup Stripe validation stays disabled. An empty
+    # key makes the SDK raise locally (no network) rather than call Stripe.
+    os.environ["STRIPE_API_KEY"] = ""
     os.environ["STRIPE_SECRET_KEY"] = ""
     os.environ["ADMIN_KEY"] = ""
     for proxy_var in (
@@ -425,6 +429,23 @@ def isolate_e2e_state(fake_firestore, fake_redis, fake_storage):
 def auth_headers():
     """Return dev-token auth headers for each test."""
     return dict(DEV_AUTH_HEADERS)
+
+
+@pytest.fixture()
+def stripe_catalog():
+    """Install the offline Stripe catalog fake from the snapshot fixture.
+
+    Sets the ``STRIPE_*_PRICE_ID`` env vars, stubs ``stripe.Price.retrieve``, and
+    pre-seeds the ``stripe_price:{id}`` cache so `available_plans` renders with
+    real price IDs and no live Stripe call. See
+    `fakes/stripe_catalog.py` and `scripts/snapshot_stripe_catalog.py`.
+    """
+    from fakes.stripe_catalog import install
+
+    mp = pytest.MonkeyPatch()
+    fake = install(mp, seed_cache=True)
+    yield fake
+    mp.undo()
 
 
 # ─── Test data fixtures ────────────────────────────────────────────────
