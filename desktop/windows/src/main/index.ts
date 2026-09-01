@@ -439,6 +439,13 @@ if (gotSingleInstanceLock) initCrashSentinel()
 // the PipeWire capturer (portal screen share) and PulseAudio monitor-source loopback
 // for system-audio capture when pipewire-pulse/Pulse is present.
 if (process.platform === 'linux') {
+<<<<<<< HEAD
+=======
+  // app.setDesktopName is a newer Linux/Wayland-portal-only Electron API, undeclared
+  // in this project's pinned Electron 39 types and absent at runtime on it — guard so
+  // a version without it degrades to a no-op instead of throwing on launch.
+  // package.json's desktopName field still carries identity for packaged builds either way.
+>>>>>>> e8caf1c597 (fix(desktop-windows): use a runtime guard for app.setDesktopName instead of an unsafe cast)
   const setDesktopName = (app as unknown as { setDesktopName?: (name: string) => void })
     .setDesktopName
   applyLinuxPortalIdentity((name) => setDesktopName?.call(app, name))
