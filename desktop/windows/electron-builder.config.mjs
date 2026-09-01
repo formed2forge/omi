@@ -144,6 +144,11 @@ export default {
     // AppImage + deb only — snap omitted: strict confinement blocks
     // xprop/tesseract/proc used by Linux active-window and OCR seams.
     target: ['AppImage', 'deb'],
+    // Matches LINUX_STARTUP_WM_CLASS / resources/linux/com.omiwindows.app.desktop —
+    // portal identity and task switcher grouping depend on this staying aligned with
+    // package.json desktopName (com.omiwindows.app).
+    executableName: 'omi-windows',
+    desktop: 'resources/linux/com.omiwindows.app.desktop',
     maintainer: 'Based Hardware <team@basedhardware.com>',
     category: 'Utility',
     synopsis: 'AI that sees your screen, listens, and remembers'

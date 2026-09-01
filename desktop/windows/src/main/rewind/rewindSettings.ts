@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync } from 'fs'
 import type { RewindCaptureQuality, RewindSettings } from '../../shared/types'
+import { isLinuxWaylandSession } from '../linux/linuxSession'
 
 // Rewind capture is ON by default — screen history is a core feature, so a fresh
 // install (no settings file yet) starts capturing. Once the user changes a
@@ -30,7 +31,7 @@ function file(): string {
 // screen" is unaffected, and the user can still enable continuous capture
 // explicitly (one prompt per session). X11 sessions keep the default-on behavior.
 export function defaultCaptureEnabled(): boolean {
-  return process.env.XDG_SESSION_TYPE !== 'wayland'
+  return !isLinuxWaylandSession()
 }
 
 // Coerce a partial/untrusted settings object into a fully-valid one.

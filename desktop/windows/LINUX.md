@@ -39,10 +39,20 @@ sudo apt-get install -y x11-utils tesseract-ocr tesseract-ocr-eng
 
 ## Wayland
 
-The app targets X11. On a Wayland session it defaults to **XWayland**
-(`ozone-platform=x11`) because a native Wayland surface breaks Electron global
-shortcuts (push-to-talk / overlay summon) and the X11 active-window path. To run
-native Wayland anyway, set `OMI_OZONE=wayland` (accepting those limitations).
+The app targets X11 by default on Linux (`ozone-platform=x11`, i.e. XWayland on
+Wayland hosts) because that path keeps global shortcuts and the X11 active-window
+seam working today. Set `OMI_OZONE=wayland` to run under native Wayland instead.
+
+**Portal identity (global shortcuts on native Wayland):** Electron binds
+`globalShortcut` through `org.freedesktop.portal.GlobalShortcuts` when running
+native Wayland. That requires a stable app ID:
+
+- `package.json` → `"desktopName": "com.omiwindows.app"` (matches `appId`)
+- Shipped `.desktop` → `resources/linux/com.omiwindows.app.desktop` (`StartupWMClass=omi-windows`)
+- Main process calls `app.setDesktopName('com.omiwindows.app')` before `ready`
+
+Session facts are centralized in `src/main/linux/linuxSession.ts` and logged at
+startup as `[linux] session=… ozone=… portal=… shortcuts=…`.
 
 Screen capture on Wayland goes through the desktop portal, which asks
 "Share screen?" for consent — and Electron has no persisted-consent path, so
@@ -67,13 +77,15 @@ continuous capture explicitly. X11 sessions keep continuous Rewind on by default
 - ⏳ Auto-update (AppImage-only: gate on `process.env.APPIMAGE`, not just
   `isPackaged`; `.deb` stays package-manager).
 - ⏳ XDG autostart (`.desktop` under `~/.config/autostart`) when launch-at-login
-  Settings exists on this tree.
+  Settings exists on this tree. Base `.desktop` ships in `resources/linux/` for
+  packaging; autostart wiring is still TODO.
 - ⏳ Pendant BLE, Glass video, native-Wayland capture (portal restore-token),
   full Windows-parity feature wave (lands with the Windows desktop umbrella,
   then reuses these Linux seams).
 
 ## Implementation notes
-- `src/main/usage/linuxForeground.ts` — X11 active-window (xprop + /proc/<pid>/exe).
+- `src/main/linux/linuxSession.ts` — portal app ID, session/desktop env detection,
+  global-shortcut capability hints (phase 0 of Linux shortcuts work).
 - `src/main/usage/nativeForeground.ts` — Linux branch delegates to the above; the
   Windows (koffi) path is unchanged. koffi is lazy-`require`d so Linux import of
   this module (and of `userAssistRegistry.ts`) never loads the Win32 native at
