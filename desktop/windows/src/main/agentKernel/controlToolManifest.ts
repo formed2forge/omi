@@ -802,7 +802,7 @@ Pass parentRunId to link the new run to a parent.`,
       'Calling spawn_agent is the only way to start a visible floating-bar background agent; saying you will start one does not start it.',
       'Prefer spawning when a request needs more than ~30 seconds of tool work or research — start the agent and tell the user in one line instead of making them wait.',
       'Use visible=false for parent-linked background work that should not appear as a pill.',
-      "If the user asks to use OpenClaw or Hermes AND that agent is connected, pass provider='openclaw' or provider='hermes'. Omit provider otherwise — an unconnected provider is ignored and the default background worker runs instead.",
+      "Pass provider='openclaw' or provider='hermes' only when the current user explicitly names that provider AND it is connected; otherwise omit provider so Omi starts its regular managed agent.",
       'Inspect progress with list_agent_sessions or get_agent_run.'
     ],
     capabilityDoc: controlDoc(
@@ -825,7 +825,7 @@ Pass parentRunId to link the new run to a parent.`,
         type: 'string',
         enum: ['openclaw', 'hermes'],
         description:
-          'Optional local provider override. Only pass when that coding agent is connected; omit to use the default background worker.'
+          'Optional local provider override only when the current user explicitly names it; omit for a regular Omi agent.'
       },
       parentRunId: { type: 'string', description: 'Optional parent run to link via delegation.' },
       visible: {

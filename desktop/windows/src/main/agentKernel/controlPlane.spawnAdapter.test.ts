@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  availableDirectedProviderIds,
   resolveSpawnableCodingAgentAdapterId,
   ensureDirectedCodingAgentRegistered
 } from './controlPlane'
@@ -53,6 +54,28 @@ describe('resolveSpawnableCodingAgentAdapterId', () => {
       ensureRegistered: (id) => id !== 'acp'
     })
     expect(picked).toBe('hermes')
+  })
+})
+
+describe('availableDirectedProviderIds', () => {
+  it('is empty when neither OpenClaw nor Hermes has a launch command', () => {
+    expect(availableDirectedProviderIds({ env: EMPTY_ENV })).toEqual([])
+  })
+
+  it('lists only the directed providers that have a command configured', () => {
+    expect(
+      availableDirectedProviderIds({
+        env: { OMI_HERMES_ADAPTER_COMMAND: 'hermes acp' }
+      })
+    ).toEqual(['hermes'])
+    expect(
+      availableDirectedProviderIds({
+        env: {
+          OMI_OPENCLAW_ADAPTER_COMMAND: 'openclaw acp',
+          OMI_HERMES_ADAPTER_COMMAND: 'hermes acp'
+        }
+      })
+    ).toEqual(['openclaw', 'hermes'])
   })
 })
 
