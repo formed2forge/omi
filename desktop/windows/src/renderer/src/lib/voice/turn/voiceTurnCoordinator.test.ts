@@ -440,7 +440,9 @@ describe('VoiceTurnCoordinator (port of VoiceTurnCoordinatorTests.swift)', () =>
 describe('VoiceTurnCoordinator — route-aware deadlines (decision D2)', () => {
   it('gives the shipped omniSTT cascade its 20s transcription budget, not Mac 12s', () => {
     expect(DEFAULT_VOICE_TURN_DEADLINES.transcription).toBe(12)
+    expect(DEFAULT_VOICE_TURN_DEADLINES.chatLaneTool).toBe(180)
     expect(CASCADE_VOICE_TURN_DEADLINES.transcription).toBe(20)
+    expect(CASCADE_VOICE_TURN_DEADLINES.chatLaneTool).toBe(180)
     expect(deadlinesForVoiceTurnRoute({ kind: 'hub', sessionID: null })).toBe(
       DEFAULT_VOICE_TURN_DEADLINES
     )
