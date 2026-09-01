@@ -30,6 +30,9 @@
 //     forwards only canonical stream events to the sink; harness `error` still
 //     propagates via the rejected sendPrompt promise (matching the ACP adapter),
 //     and `tool_use` is display-redundant with `tool_activity`.
+//   - Public-web routing: `routePromptForPublicWeb` (publicWebRouting.ts) prepends
+//     the backend policy tag so research questions take the managed search lane
+//     instead of a client function named `web_search` (reserved; 500s Anthropic).
 //   - Capabilities: the wrapper reads `adapterCapabilitiesFor('pi-mono')` from
 //     the shared ADAPTER_CAPABILITY_MATRIX (PR-D added the entry; it previously
 //     held a local static set equal to what the macOS matrix entry produces).
@@ -45,6 +48,10 @@ import { dirname, join } from 'path'
 import { createInterface, Interface as ReadlineInterface } from 'readline'
 import { fileURLToPath } from 'url'
 import { adapterCapabilitiesFor } from './interface'
+import {
+  routePromptForPublicWeb,
+  stripFalsePublicWebAvailabilityDisclaimers
+} from './publicWebRouting'
 import {
   WINDOWS_SERVICEABLE_PRODUCT_TOOLS,
   type ToolRelayRegistration
@@ -65,6 +72,8 @@ import type {
   RuntimeAdapter,
   ToolDef
 } from './interface'
+
+export { routePromptForPublicWeb, stripFalsePublicWebAvailabilityDisclaimers } from './publicWebRouting'
 
 // === Harness-config types (trimmed from Windows interface.ts) ================
 // Re-declared locally so the pi-mono port stays self-contained — it does not widen
@@ -492,6 +501,15 @@ export class PiMonoAdapter {
   private pendingByokRefresh = false
   /** True when a system-prompt change was deferred because a prompt was active */
   private pendingSystemPromptRefresh = false
+  /**
+   * Synthetic web_search activity while the gateway public-web lane is in
+   * flight. Pi never sees a local tool lifecycle for server-side search.
+   */
+  private activePublicWebTurn: {
+    bufferedText: string
+    emittedText: string
+    progressToolUseId: string
+  } | null = null
 
   constructor(config: PiMonoConfig, options: PiMonoAdapterOptions = {}) {
     this.config = config
@@ -794,7 +812,25 @@ export class PiMonoAdapter {
       }
     }
 
-    const message = textParts.join('\n')
+    const rawMessage = textParts.join('\n')
+    const message = routePromptForPublicWeb(rawMessage)
+    this.activePublicWebTurn =
+      message === rawMessage
+        ? null
+        : {
+            bufferedText: '',
+            emittedText: '',
+            progressToolUseId: `gateway-public-web-${generation}`
+          }
+    if (this.activePublicWebTurn) {
+      this.eventHandler?.({
+        type: 'tool_activity',
+        name: 'web_search',
+        status: 'started',
+        toolUseId: this.activePublicWebTurn.progressToolUseId,
+        input: { executor: 'gateway' }
+      })
+    }
 
     const cmd: PiRpcCommand = {
       type: 'prompt',
@@ -804,8 +840,17 @@ export class PiMonoAdapter {
       cmd.images = images
     }
 
-    this.sendCommand(cmd)
-    onDispatched?.()
+    try {
+      this.sendCommand(cmd)
+      onDispatched?.()
+    } catch (error) {
+      this.finishPublicWebProgress(this.activePublicWebTurn, 'failed')
+      this.activePublicWebTurn = null
+      this.activePromptGeneration = 0
+      this.currentAbortController = null
+      this.eventHandler = null
+      throw error
+    }
 
     // Wait for turn_end event mapped to THIS generation
     return new Promise<PromptResult>((resolve, reject) => {
@@ -818,13 +863,19 @@ export class PiMonoAdapter {
   }
 
   abort(sessionId: string): void {
-    this.sendCommand({ type: 'abort' })
+    try {
+      this.sendCommand({ type: 'abort' })
+    } catch (error) {
+      process.stderr.write(`[pi-mono] abort dispatch failed: ${String(error)}\n`)
+    }
     this.currentAbortController?.abort()
 
     // Resolve the in-flight prompt (by generation) with a partial result and
     // CLEAR activePromptGeneration so a stray late turn_end is dropped instead
     // of completing whatever comes next.
     const generation = this.activePromptGeneration
+    this.finishPublicWebProgress(this.activePublicWebTurn, 'failed')
+    this.activePublicWebTurn = null
     if (generation === 0) return
     const pending = this.pendingRequests.get(generation)
     if (pending) {
@@ -1151,10 +1202,15 @@ export class PiMonoAdapter {
     switch (msgEvent.type) {
       case 'text_delta':
         if (msgEvent.delta) {
-          this.eventHandler?.({
-            type: 'text_delta',
-            text: msgEvent.delta
-          })
+          if (this.activePublicWebTurn) {
+            this.activePublicWebTurn.bufferedText += msgEvent.delta
+            this.emitPublicWebText(this.activePublicWebTurn)
+          } else {
+            this.eventHandler?.({
+              type: 'text_delta',
+              text: msgEvent.delta
+            })
+          }
         }
         break
 
@@ -1281,6 +1337,8 @@ export class PiMonoAdapter {
     if (!pending) {
       process.stderr.write(`[pi-mono] dropping stray turn_end for generation ${generation}\n`)
       this.activePromptGeneration = 0
+      this.finishPublicWebProgress(this.activePublicWebTurn, 'failed')
+      this.activePublicWebTurn = null
       return
     }
 
@@ -1290,6 +1348,7 @@ export class PiMonoAdapter {
         ? message.errorMessage.trim()
         : undefined
     if (errorMessage) {
+      this.finishPublicWebProgress(this.activePublicWebTurn, 'failed')
       this.eventHandler?.({
         type: 'error',
         message: errorMessage,
@@ -1297,6 +1356,7 @@ export class PiMonoAdapter {
       })
       this.pendingRequests.delete(generation)
       this.activePromptGeneration = 0
+      this.activePublicWebTurn = null
       pending.reject(new Error(errorMessage))
       this.eventHandler = null
       return
@@ -1320,6 +1380,7 @@ export class PiMonoAdapter {
       | string
       | undefined
     if (controlFailure) {
+      this.finishPublicWebProgress(this.activePublicWebTurn, 'failed')
       this.eventHandler?.({
         type: 'error',
         message: controlFailure,
@@ -1327,6 +1388,7 @@ export class PiMonoAdapter {
       })
       this.pendingRequests.delete(generation)
       this.activePromptGeneration = 0
+      this.activePublicWebTurn = null
       pending.reject(new Error(controlFailure))
       this.eventHandler = null
       return
@@ -1339,6 +1401,15 @@ export class PiMonoAdapter {
         .filter((b) => b.type === 'text')
         .map((b) => b.text || '')
         .join('')
+    }
+
+    const publicWebTurn = this.activePublicWebTurn
+    this.activePublicWebTurn = null
+    if (publicWebTurn) {
+      publicWebTurn.bufferedText = text || publicWebTurn.bufferedText
+      text = stripFalsePublicWebAvailabilityDisclaimers(text)
+      this.emitPublicWebText(publicWebTurn, true)
+      this.finishPublicWebProgress(publicWebTurn, 'completed')
     }
 
     // Extract usage
@@ -1361,6 +1432,57 @@ export class PiMonoAdapter {
     pending.resolve(result)
 
     this.eventHandler = null
+  }
+
+  private finishPublicWebProgress(
+    publicWebTurn: { progressToolUseId: string } | null,
+    status: 'completed' | 'failed'
+  ): void {
+    if (!publicWebTurn) return
+    this.eventHandler?.({
+      type: 'tool_activity',
+      name: 'web_search',
+      status,
+      toolUseId: publicWebTurn.progressToolUseId
+    })
+  }
+
+  private emitPublicWebText(
+    publicWebTurn: { bufferedText: string; emittedText: string },
+    terminal = false
+  ): void {
+    const raw = publicWebTurn.bufferedText
+    const normalized = raw.trimStart().toLowerCase()
+    const possibleDenialPrefixes = [
+      "i don't",
+      'i do not',
+      'i cannot',
+      "i can't",
+      'i can not',
+      "don't",
+      'do not',
+      'cannot',
+      "can't",
+      'can not'
+    ]
+    const mayBecomeAvailabilityDenial = possibleDenialPrefixes.some(
+      (prefix) => prefix.startsWith(normalized) || normalized.startsWith(prefix)
+    )
+    if (
+      !terminal &&
+      publicWebTurn.emittedText.length === 0 &&
+      mayBecomeAvailabilityDenial &&
+      !/[.!?]/.test(raw) &&
+      !/\b(?:but|however)\b/i.test(raw)
+    ) {
+      return
+    }
+
+    const sanitized = stripFalsePublicWebAvailabilityDisclaimers(raw)
+    if (!sanitized.startsWith(publicWebTurn.emittedText)) return
+    const delta = sanitized.slice(publicWebTurn.emittedText.length)
+    publicWebTurn.emittedText = sanitized
+    if (delta) this.eventHandler?.({ type: 'text_delta', text: delta })
   }
 }
 
