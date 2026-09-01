@@ -38,8 +38,11 @@ def test_checkout_subscription_fixture_is_subscription_mode():
     session = fixture["fixtures"][0]["params"]
     assert session["mode"] == "subscription"
     assert session["client_reference_id"] == "pricing_basic"
+    assert session["customer_email"] == "pricing_basic@local.omi.invalid"
     assert session["line_items"][0]["price"] == "price_plus_m"
     assert session["metadata"]["uid"] == "pricing_basic"
+    payment_method = fixture["fixtures"][2]["params"]
+    assert payment_method["billing_details"]["email"] == "pricing_basic@local.omi.invalid"
     confirm = fixture["fixtures"][-1]["params"]
     assert confirm["expected_amount"] == 1799
 
