@@ -349,4 +349,27 @@ describe('ChatMessages — supplemental evidence', () => {
     expect(screen.getByText('Plain answer')).not.toBeNull()
     expect(screen.queryByRole('region', { name: 'Supporting evidence' })).toBeNull()
   })
+
+  it('does not throw when assistant evidence has sources but no references array', () => {
+    const evidence = {
+      sources: [{ id: 'src-1', title: 'Test', url: 'https://t.co', score: 0.9 }]
+    } as unknown as ChatEvidenceReferenceEnvelope
+    expect(() =>
+      render(
+        <ChatMessages
+          messages={[{ id: 'a1', role: 'assistant', content: 'hi', evidence }]}
+          sending={false}
+          variant="main"
+        />
+      )
+    ).not.toThrow()
+    expect(screen.getByTestId('md').textContent).toBe('hi')
+  })
+
+  it('does not throw when assistant content is missing', () => {
+    const msg = { id: 'a1', role: 'assistant' as const, content: undefined as unknown as string }
+    expect(() =>
+      render(<ChatMessages messages={[msg]} sending={false} variant="main" />)
+    ).not.toThrow()
+  })
 })
