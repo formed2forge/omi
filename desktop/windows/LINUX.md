@@ -49,6 +49,12 @@ XWayland there can fail to map the main window at all. Set `OMI_OZONE=x11` or
 `OMI_OZONE=wayland` to override the auto-detected choice in either direction
 (accepting native Wayland's limitations if you force it on).
 
+On native Wayland the floating bar uses a **full-width top strip** (pill stays at
+the screen top via in-window layout), **hides with `win.hide()`** when dismissed
+instead of parking off-screen, skips `setAlwaysOnTop`, and does **not** create the
+focus-halo glow window (Win32-only today). Global summon shortcuts remain
+unavailable on native Wayland.
+
 Screen capture on Wayland goes through the desktop portal, which asks
 "Share screen?" for consent — and Electron has no persisted-consent path, so
 *continuous* Rewind capture would re-prompt every frame. Therefore, on a Wayland

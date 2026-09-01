@@ -51,8 +51,8 @@ for this alone.
 - **Linux Wayland compositors (niri/Sway/Hyprland)**: `pnpm dev` auto-detects
   these and defaults to native Wayland instead of XWayland; see
   `docs/multi-worktree-dev.md`'s environment-overrides and troubleshooting
-  sections for the detection mechanism, `OMI_OZONE` override, and known
-  limitations.
+  sections for the detection mechanism, `OMI_OZONE` override, floating-bar
+  strip, and known limitations.
 
 ## CI
 

@@ -42,7 +42,7 @@ import iconPath from '../../../resources/icon.png?asset'
 import { rendererBaseUrl } from '../rendererServer'
 import { isQuitting } from '../lifecycle'
 import {
-  computeBarBounds,
+  computeBarWindowBounds,
   offscreenStageBounds,
   boundsSizeDrifted,
   isCursorInPeekFootprint,
@@ -50,6 +50,11 @@ import {
   type DisplayLike,
   type Rect
 } from './placement'
+import {
+  linuxBarParkStrategy,
+  linuxBarSkipAlwaysOnTop,
+  linuxBarUsesShellBounds
+} from '../linux/nativeWayland'
 import { SummonGesture, type GestureKind } from './gesture'
 import { recordVoiceFlight } from '../voice/flightRecorder'
 import {
@@ -118,13 +123,17 @@ const REVEAL_ACK_FALLBACK_MS = 150
 // CSS grow is ever visible. Logical visibility is tracked by `barOnScreen` (the
 // HWND is always technically visible after priming, so win.isVisible() can't be
 // the source of truth anymore).
-type ParkMode = 'offscreen' | 'opacity'
-// Evaluated live on 2026-07-12 (GDI frame capture of a real summon): 'offscreen'
-// moves the window to a far off-desktop point and back — instant, no fade, no
-// smear, and safe on every display layout (no real monitor is near the park
-// point). 'opacity' (setOpacity 0/1) was the alternative; see the evaluation note
-// in the PR for why 'offscreen' won.
-const PARK_MODE: ParkMode = 'offscreen'
+type ParkMode = 'offscreen' | 'opacity' | 'hide'
+
+function getParkMode(): ParkMode {
+  const linux = linuxBarParkStrategy()
+  if (linux === 'hide') return 'hide'
+  return 'offscreen'
+}
+
+function barBoundsForDisplay(display: Electron.Display): Rect {
+  return computeBarWindowBounds(displayLike(display), { shell: linuxBarUsesShellBounds() })
+}
 // Far outside any physical display (the classic Win32 "hidden window" corner). A
 // window here is fully off every monitor on any multi-display layout; moving it
 // back on-screen is a single atomic SetWindowPos (no slide, no smear).
@@ -204,9 +213,13 @@ function broadcastVisibility(): void {
 }
 
 export function createBarWindow(): BrowserWindow {
+  const initialDisplay = displayLike(screen.getPrimaryDisplay())
+  const initialBounds = computeBarWindowBounds(initialDisplay, { shell: linuxBarUsesShellBounds() })
   const win = new BrowserWindow({
-    width: 560,
-    height: 400,
+    width: initialBounds.width,
+    height: initialBounds.height,
+    x: initialBounds.x,
+    y: initialBounds.y,
     show: false,
     frame: false,
     transparent: true,
@@ -228,9 +241,12 @@ export function createBarWindow(): BrowserWindow {
     }
   })
 
-  // Float above fullscreen-ish surfaces; the strip suppression keeps us out of
-  // real fullscreen apps.
-  win.setAlwaysOnTop(true, 'screen-saver')
+  // Float above fullscreen-ish surfaces on Windows/XWayland. Native Wayland
+  // ignores this call and tiling compositors treat always-on-top floats as
+  // intrusive — skip it there (see linux/nativeWayland.ts).
+  if (!linuxBarSkipAlwaysOnTop()) {
+    win.setAlwaysOnTop(true, 'screen-saver')
+  }
   // Default: click-through, but keep receiving mousemove (forward) so the
   // renderer can manage its interactive islands + hover grace.
   win.setIgnoreMouseEvents(true, { forward: true })
@@ -328,7 +344,7 @@ export function showBar(mode: BarMode, reveal: BarReveal, display?: Electron.Dis
   const win = ensureBarWindow()
   const target = display ?? screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
   activeDisplayId = target.id
-  const bounds = computeBarBounds(displayLike(target))
+  const bounds = barBoundsForDisplay(target)
   // Do NOT move on-screen here — the window stays parked until commitReveal
   // unparks it (after the paint ack), so a blank pre-reveal frame can't flash.
   if (!barReady) {
@@ -356,13 +372,20 @@ function applyClickThrough(win: BrowserWindow): void {
 function primeBarWindow(win: BrowserWindow): void {
   if (barPrimed) return
   barPrimed = true
+  const parkMode = getParkMode()
+  if (parkMode === 'hide') {
+    // Native Wayland: stay unmapped until the first reveal. No Windows show-fade.
+    barOnScreen = false
+    diag('prime (hide): deferred show until first reveal')
+    return
+  }
   const b = win.getBounds()
-  if (PARK_MODE === 'opacity') win.setOpacity(0)
+  if (parkMode === 'opacity') win.setOpacity(0)
   else win.setBounds({ x: PARKED_POS.x, y: PARKED_POS.y, width: b.width, height: b.height })
   win.showInactive()
   win.setIgnoreMouseEvents(true, { forward: true })
   barOnScreen = false
-  diag(`prime (${PARK_MODE}): off-screen show — OS window-show fade spent invisibly`)
+  diag(`prime (${parkMode}): off-screen show — OS window-show fade spent invisibly`)
 }
 
 /** Park the window — the persistent-window replacement for win.hide(). Keeps it
@@ -371,19 +394,27 @@ function primeBarWindow(win: BrowserWindow): void {
 function parkWindow(win: BrowserWindow): void {
   barOnScreen = false
   win.setIgnoreMouseEvents(true, { forward: true })
-  if (PARK_MODE === 'opacity') {
+  const parkMode = getParkMode()
+  if (parkMode === 'hide') {
+    win.setOpacity(1)
+    win.hide()
+  } else if (parkMode === 'opacity') {
     win.setOpacity(0)
   } else {
     const b = win.getBounds()
     win.setBounds({ x: PARKED_POS.x, y: PARKED_POS.y, width: b.width, height: b.height })
   }
-  diag(`park (${PARK_MODE})`)
+  diag(`park (${parkMode})`)
 }
 
 /** Reveal the window on-screen at `bounds` — the persistent-window replacement
  *  for win.showInactive(). A single atomic setBounds (offscreen) or opacity snap:
  *  instant and un-animated, so only the intended CSS grow is ever visible. */
 function unparkWindow(win: BrowserWindow, bounds: Rect): void {
+  const parkMode = getParkMode()
+  if (parkMode === 'hide' && !win.isVisible()) {
+    win.showInactive()
+  }
   win.setBounds(bounds)
   // Windows cross-DPI setBounds guard: if this on-screen move sized the window
   // under the wrong monitor's scale (oversized/blurry/off-center — happens when
@@ -412,9 +443,9 @@ function unparkWindow(win: BrowserWindow, bounds: Rect): void {
         `${corrected.width}x${corrected.height}`
     )
   }
-  if (PARK_MODE === 'opacity') win.setOpacity(1)
+  if (parkMode === 'opacity' || (parkMode === 'hide' && win.getOpacity() < 1)) win.setOpacity(1)
   barOnScreen = true
-  diag(`unpark (${PARK_MODE}) -> ${bounds.x},${bounds.y} ${bounds.width}x${bounds.height}`)
+  diag(`unpark (${parkMode}) -> ${bounds.x},${bounds.y} ${bounds.width}x${bounds.height}`)
 }
 
 /** Invalidate an armed-but-not-yet-shown reveal (its token + fallback timer). */
@@ -456,7 +487,14 @@ function presentBar(win: BrowserWindow, mode: BarMode, reveal: BarReveal, bounds
   // ~1.5× too large (off-center + blurry) on a lower-DPI main monitor. Staging
   // just above the target's top edge keeps it on the target monitor; commitReveal
   // then moves it on-screen within that same monitor (no cross-DPI resize).
-  if (PARK_MODE === 'opacity') {
+  const parkMode = getParkMode()
+  if (parkMode === 'hide') {
+    win.setBounds(bounds)
+    if (!win.isVisible()) {
+      win.setOpacity(0)
+      win.showInactive()
+    }
+  } else if (parkMode === 'opacity') {
     win.setBounds(bounds)
     win.setOpacity(0)
   } else {
@@ -786,9 +824,9 @@ function hideBarNow(): void {
   stopPeekWatch()
   const win = barWindow
   if (!win || win.isDestroyed()) return
-  // Park (off-screen / opacity 0), NEVER win.hide() — hiding then re-showing the
-  // HWND is exactly what triggers the OS window-show fade (the "plummet"). The
-  // window stays shown; parking makes it invisible without a future fade.
+  // Park (off-screen / opacity 0 / hide), NEVER win.hide() on Windows/XWayland —
+  // hiding then re-showing the HWND is exactly what triggers the OS window-show
+  // fade (the "plummet"). Native Wayland uses real hide() instead; see getParkMode().
   parkWindow(win)
   // Stop the renderer's orb loop now that the window is parked off-screen — the
   // orb costs nothing while invisible (the whole point of hotspot #2).

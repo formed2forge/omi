@@ -143,16 +143,12 @@ port in 5180-5279>` on this one.
   Chromium's software-compositing path has known presentation bugs on native
   Wayland. Run with `OMI_DEV_HW_GPU=1` too. Confirmed fix on Asahi Fedora Remix
   (aarch64) + niri.
-- **Two extra floating windows appear under native Wayland** — the
-  companion bar (`src/main/bar/window.ts`) and the focus-halo glow window
-  (`src/main/glow/glowWindow.ts`, created eagerly at startup) both position
-  themselves with explicit `setBounds({ x, y, ... })` intending to stay
-  parked off-screen; native Wayland doesn't support client-requested
-  top-level placement (only XWayland does), so both float in the screen
-  center instead. Both stay functional (bar right-click menu works; glow
-  still renders its ring when triggered) — tile or ignore them. A real fix
-  needs Wayland layer-shell-aware positioning, which niri supports
-  (wlr-layer-shell) but neither window currently uses.
+- **Floating bar on native Wayland (niri, etc.)** — the bar uses a full-width
+  top strip (`computeBarShellBounds`), hides with `win.hide()` when dismissed
+  (no off-screen park ghost), skips `setAlwaysOnTop`, and the focus-halo glow
+  window is not created. Summon still needs a working global shortcut or an
+  in-app/tray path. Layer-shell anchoring remains a follow-up if a compositor
+  still centers the strip vertically.
 
 ## Notes
 
