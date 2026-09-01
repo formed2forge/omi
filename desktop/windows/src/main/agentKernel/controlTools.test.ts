@@ -900,7 +900,7 @@ describe('DARK invariant: managed-cloud pi-mono is un-spawnable via control tool
 // asking the user to connect Claude Code — explicit adapterId / host-picked
 // pi-mono still hit the DARK managed-cloud refusal.
 describe('spawn_agent host-picked fallback from a managed-cloud (pi-mono) caller', () => {
-  function fakeAdapter(adapterId: 'acp' | 'pi-mono'): RuntimeAdapter {
+  function fakeAdapter(adapterId: 'acp' | 'pi-mono' | 'hermes'): RuntimeAdapter {
     return {
       adapterId,
       capabilities: adapterCapabilitiesFor(adapterId),
@@ -941,7 +941,10 @@ describe('spawn_agent host-picked fallback from a managed-cloud (pi-mono) caller
     }
   }
 
-  function newKernelWithAdapters(): { kernel: AgentRuntimeKernel; store: SqliteAgentStore } {
+  function newKernelWithAdapters(extra: Array<'hermes'> = []): {
+    kernel: AgentRuntimeKernel
+    store: SqliteAgentStore
+  } {
     const dir = mkdtempSync(join(tmpdir(), 'omi-spawn-fallback-'))
     createdDirs.push(dir)
     const store = new SqliteAgentStore({
@@ -952,6 +955,9 @@ describe('spawn_agent host-picked fallback from a managed-cloud (pi-mono) caller
     const registry = new AdapterRegistry()
     registry.register('acp', () => fakeAdapter('acp'))
     registry.register('pi-mono', () => fakeAdapter('pi-mono'))
+    for (const id of extra) {
+      registry.register(id, () => fakeAdapter(id))
+    }
     const kernel = new AgentRuntimeKernel({ store, registry })
     return { kernel, store }
   }
@@ -1013,6 +1019,52 @@ describe('spawn_agent host-picked fallback from a managed-cloud (pi-mono) caller
     expect(JSON.stringify(result)).not.toMatch(/No coding agent is connected/)
   })
 
+  it('leaf-falls-back when the model names an unregistered provider (hermes)', async () => {
+    // Live: Ask Omi / default chat often passed provider:'hermes' even with no
+    // coding CLI connected. That used to create a floating-bar run that died
+    // immediately with "Adapter not registered: hermes" and never showed a
+    // live pill. Same no-CLI leaf as omitting provider.
+    const { kernel } = newKernelWithAdapters()
+    const context = piMonoChatContext(kernel, async () => null)
+
+    const result = await call(context, 'spawn_agent', {
+      objective: 'research the latest news',
+      provider: 'hermes'
+    })
+
+    expect(result.ok).toBe(true)
+    const session = result.session as {
+      defaultAdapterId?: string
+      executionRole?: string
+      surfaceKind?: string
+    }
+    const run = result.run as { input?: { metadata?: { ignoredDirectedAdapter?: string } } }
+    expect(session.defaultAdapterId).toBe('pi-mono')
+    expect(session.executionRole).toBe('leaf')
+    expect(session.surfaceKind).toBe('floating_bar')
+    expect(run.input?.metadata?.ignoredDirectedAdapter).toBe('hermes')
+    expect(JSON.stringify(result)).not.toMatch(/Adapter not registered/)
+  })
+
+  it('uses a directed hermes provider when that adapter is already registered', async () => {
+    const { kernel } = newKernelWithAdapters(['hermes'])
+    const context = piMonoChatContext(kernel, async () => null)
+    expect(kernel.isAdapterRegistered('hermes')).toBe(true)
+
+    const result = await call(context, 'spawn_agent', {
+      objective: 'research the latest news',
+      provider: 'hermes'
+    })
+
+    expect(result.ok).toBe(true)
+    const session = result.session as { defaultAdapterId?: string }
+    const run = result.run as {
+      input?: { metadata?: { ignoredDirectedAdapter?: string | null } }
+    }
+    expect(session.defaultAdapterId).toBe('hermes')
+    expect(run.input?.metadata?.ignoredDirectedAdapter ?? null).toBeNull()
+  })
+
   it('also spawns a leaf pi-mono worker when the host hook is absent entirely', async () => {
     const { kernel } = newKernelWithAdapters()
     const result = await call(piMonoChatContext(kernel), 'spawn_agent', { objective: 'x' })
@@ -1034,10 +1086,14 @@ describe('spawn_agent host-picked fallback from a managed-cloud (pi-mono) caller
       prompt: 'hello',
       mode: 'act'
     })
-    const result = await call(piMonoChatContext(kernel, async () => null), 'spawn_agent', {
-      objective: 'summarize this week in AI',
-      parentRunId: parent.run.runId
-    })
+    const result = await call(
+      piMonoChatContext(kernel, async () => null),
+      'spawn_agent',
+      {
+        objective: 'summarize this week in AI',
+        parentRunId: parent.run.runId
+      }
+    )
     expect(result.ok).toBe(true)
     expect(result.delegation).toBeUndefined()
     const session = result.session as { defaultAdapterId?: string; executionRole?: string }

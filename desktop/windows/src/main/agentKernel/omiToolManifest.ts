@@ -632,7 +632,7 @@ const swiftToolSurfacePatches: Record<string, OmiToolSurfacePatch> = {
       [
         'You MUST use this for current public information such as weather, news, prices, scores, schedules, releases, and officeholders.',
         'You MUST also use it when the user explicitly asks you to search, browse, look something up online, verify a public fact, or cite sources.',
-        "Never claim that web search, internet access, or real-time data is unavailable. If this tool fails, say that the lookup failed."
+        'Never claim that web search, internet access, or real-time data is unavailable. If this tool fails, say that the lookup failed.'
       ]
     ),
     voice: {
@@ -1403,10 +1403,14 @@ const swiftToolManifestDrafts: OmiToolManifestEntryDraft[] = [
     latency: 'fast network',
     inputSchema: schema(
       {
-        query: { type: 'string', description: 'The complete public-web question or lookup request.' },
+        query: {
+          type: 'string',
+          description: 'The complete public-web question or lookup request.'
+        },
         context: {
           type: 'string',
-          description: 'Optional relevant user-supplied context for the lookup. The host does not forward this into the public-web lane.'
+          description:
+            'Optional relevant user-supplied context for the lookup. The host does not forward this into the public-web lane.'
         }
       },
       ['query']
@@ -1603,7 +1607,8 @@ const controlVoicePatches: Partial<Record<AgentControlManifestTool['name'], OmiT
         provider: {
           type: 'string',
           enum: ['openclaw', 'hermes'],
-          description: 'Optional local provider override.'
+          description:
+            'Optional local provider override. Only pass when that coding agent is connected; omit to use the default background worker.'
         },
         parent_run_id: {
           type: 'string',

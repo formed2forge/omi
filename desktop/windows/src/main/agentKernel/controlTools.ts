@@ -22,6 +22,7 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { adapterCredentialScopeFor, isProductionAdapterId } from '../codingAgent/interface'
+import { recordFallback } from '../observability/fallback'
 import type {
   AdapterBinding,
   AgentArtifact,
@@ -449,6 +450,14 @@ export interface AgentControlToolContext {
    * unchanged: this widens nothing a `provider` selector could not already do).
    */
   resolveSpawnableAdapterId?: () => Promise<string | null>
+  /**
+   * Host hook for a directed `spawn_agent` provider/adapterId (hermes/openclaw/…):
+   * register that coding agent into the kernel if it is actually connected.
+   * Returns false when the agent is not connected — the caller then uses the
+   * same no-CLI leaf fallback as omitting provider, instead of creating a
+   * floating-bar run that immediately dies with "Adapter not registered".
+   */
+  ensureSpawnAdapterRegistered?: (adapterId: string) => Promise<boolean> | boolean
 }
 
 function controlRunRecovery(
@@ -519,6 +528,68 @@ async function resolveSpawnAgentFallbackAdapter(
     return { adapterId: picked, hostPicked: true, managedCloudLeaf: false }
   }
   return { adapterId: inherited, hostPicked: false, managedCloudLeaf: true }
+}
+
+type SpawnAgentAdapterChoice = {
+  adapterId: string
+  hostPicked: boolean
+  managedCloudLeaf: boolean
+  /** Directed provider/adapter the model named but that is not connected. */
+  ignoredDirectedAdapter: string | null
+}
+
+/**
+ * Pick the adapter `spawn_agent` will actually run on.
+ *
+ * A directed local provider (`provider: 'hermes'` / `adapterId: 'openclaw'`)
+ * only wins when that adapter is already in the kernel registry or the host
+ * hook can register it (the agent is connected). Otherwise the same no-CLI
+ * leaf fallback as omitting provider applies — a named-but-unregistered
+ * adapter used to create a floating-bar run that died with
+ * "Adapter not registered: hermes" and never showed a live pill.
+ *
+ * Explicit `adapterId: 'pi-mono'` still returns as directed so the DARK
+ * managed-cloud refusal below can fire; this helper does not bypass it.
+ */
+async function resolveSpawnAgentAdapter(
+  context: AgentControlToolContext,
+  directedAdapterId: string | undefined,
+  inherited: string
+): Promise<SpawnAgentAdapterChoice> {
+  if (directedAdapterId && isManagedCloudAdapterId(directedAdapterId)) {
+    return {
+      adapterId: directedAdapterId,
+      hostPicked: false,
+      managedCloudLeaf: false,
+      ignoredDirectedAdapter: null
+    }
+  }
+  if (directedAdapterId) {
+    let ready = context.kernel.isAdapterRegistered(directedAdapterId)
+    if (!ready && context.ensureSpawnAdapterRegistered) {
+      ready = await context.ensureSpawnAdapterRegistered(directedAdapterId)
+    }
+    if (ready) {
+      return {
+        adapterId: directedAdapterId,
+        hostPicked: false,
+        managedCloudLeaf: false,
+        ignoredDirectedAdapter: null
+      }
+    }
+    const fallback = await resolveSpawnAgentFallbackAdapter(context, inherited)
+    recordFallback({
+      component: 'other',
+      from: directedAdapterId,
+      to: fallback.adapterId,
+      reason: 'other',
+      outcome: 'recovered',
+      detail: 'spawn_agent_unregistered_provider'
+    })
+    return { ...fallback, ignoredDirectedAdapter: directedAdapterId }
+  }
+  const fallback = await resolveSpawnAgentFallbackAdapter(context, inherited)
+  return { ...fallback, ignoredDirectedAdapter: null }
 }
 
 function assertAdapterAllowedForControlRun(
@@ -863,14 +934,10 @@ export async function handleAgentControlToolCall(
             : parsed.provider === 'hermes'
               ? 'hermes'
               : undefined)
-        const fallback = directedAdapterId
-          ? { adapterId: directedAdapterId, hostPicked: false, managedCloudLeaf: false }
-          : await resolveSpawnAgentFallbackAdapter(
-              context,
-              parsed.parentRunId
-                ? context.kernel.defaultAdapterIdForRun(parsed.parentRunId)
-                : defaultControlAdapterId(context)
-            )
+        const inherited = parsed.parentRunId
+          ? context.kernel.defaultAdapterIdForRun(parsed.parentRunId)
+          : defaultControlAdapterId(context)
+        const fallback = await resolveSpawnAgentAdapter(context, directedAdapterId, inherited)
         const adapterId = fallback.adapterId
         // A managed-cloud parent run (the pi-mono chat turn itself) cannot own a
         // delegation of a local adapter — its provider boundary can never contain
@@ -974,6 +1041,7 @@ export async function handleAgentControlToolCall(
             // delegation into a top-level background spawn (see above).
             requestedParentRunId: parsed.parentRunId ?? null,
             managedCloudLeafFallback: fallback.managedCloudLeaf ? true : null,
+            ignoredDirectedAdapter: fallback.ignoredDirectedAdapter,
             ...cardStampMetadata
           }
         })
