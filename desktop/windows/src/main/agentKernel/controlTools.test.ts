@@ -895,8 +895,10 @@ describe('DARK invariant: managed-cloud pi-mono is un-spawnable via control tool
 // inherited that pi-mono default and died on the managed-cloud guard with
 // "pi-mono is a managed-cloud adapter…", even with Claude Code connected. The
 // fix routes the fallback through the HOST's resolveSpawnableAdapterId hook
-// (the connected coding agent, macOS defaults 'acp' here) and turns the
-// no-agent-connected case into an actionable error.
+// (the connected coding agent, macOS defaults 'acp' here). When no coding CLI
+// is connected, the same fallback now starts a LEAF pi-mono worker instead of
+// asking the user to connect Claude Code — explicit adapterId / host-picked
+// pi-mono still hit the DARK managed-cloud refusal.
 describe('spawn_agent host-picked fallback from a managed-cloud (pi-mono) caller', () => {
   function fakeAdapter(adapterId: 'acp' | 'pi-mono'): RuntimeAdapter {
     return {
@@ -990,24 +992,57 @@ describe('spawn_agent host-picked fallback from a managed-cloud (pi-mono) caller
     expect(result.run).toBeTruthy()
   })
 
-  it('returns an actionable connect-an-agent error when no coding agent is connected', async () => {
+  it('spawns a leaf pi-mono worker when no coding agent is connected', async () => {
     const { kernel } = newKernelWithAdapters()
     const context = piMonoChatContext(kernel, async () => null)
 
-    const result = await call(context, 'spawn_agent', { objective: 'build a snake game' })
+    const result = await call(context, 'spawn_agent', { objective: 'research the latest news' })
 
-    expect(result.ok).toBe(false)
-    expect(result.error?.message).toMatch(/No coding agent is connected/)
-    expect(result.error?.message).toMatch(/Claude Code/)
-    // NOT the misleading pre-fix managed-cloud refusal.
-    expect(result.error?.message).not.toMatch(/managed-cloud/)
+    expect(result.ok).toBe(true)
+    const session = result.session as {
+      defaultAdapterId?: string
+      executionRole?: string
+      surfaceKind?: string
+    }
+    expect(session.defaultAdapterId).toBe('pi-mono')
+    expect(session.executionRole).toBe('leaf')
+    expect(session.surfaceKind).toBe('floating_bar')
+    expect(result.run).toBeTruthy()
+    // NOT the DARK managed-cloud refusal and NOT the old connect-Claude-Code error.
+    expect(JSON.stringify(result)).not.toMatch(/managed-cloud adapter and cannot be spawned/)
+    expect(JSON.stringify(result)).not.toMatch(/No coding agent is connected/)
   })
 
-  it('also gives the actionable error when the host hook is absent entirely', async () => {
+  it('also spawns a leaf pi-mono worker when the host hook is absent entirely', async () => {
     const { kernel } = newKernelWithAdapters()
     const result = await call(piMonoChatContext(kernel), 'spawn_agent', { objective: 'x' })
-    expect(result.ok).toBe(false)
-    expect(result.error?.message).toMatch(/No coding agent is connected/)
+    expect(result.ok).toBe(true)
+    const session = result.session as { defaultAdapterId?: string; executionRole?: string }
+    expect(session.defaultAdapterId).toBe('pi-mono')
+    expect(session.executionRole).toBe('leaf')
+  })
+
+  it('reroutes a pi-mono parentRunId with no coding CLI into a top-level leaf spawn', async () => {
+    const { kernel } = newKernelWithAdapters()
+    const parent = await kernel.executeRun({
+      ownerId: OWNER,
+      surfaceKind: 'main_chat',
+      defaultAdapterId: 'pi-mono',
+      adapterId: 'pi-mono',
+      requestId: 'req-parent-leaf',
+      clientId: 'test',
+      prompt: 'hello',
+      mode: 'act'
+    })
+    const result = await call(piMonoChatContext(kernel, async () => null), 'spawn_agent', {
+      objective: 'summarize this week in AI',
+      parentRunId: parent.run.runId
+    })
+    expect(result.ok).toBe(true)
+    expect(result.delegation).toBeUndefined()
+    const session = result.session as { defaultAdapterId?: string; executionRole?: string }
+    expect(session.defaultAdapterId).toBe('pi-mono')
+    expect(session.executionRole).toBe('leaf')
   })
 
   it('reroutes a pi-mono parentRunId delegation into a top-level background spawn', async () => {

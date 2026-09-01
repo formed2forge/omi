@@ -1,0 +1,6 @@
+{
+  "changes": [
+    "Chat and voice can now search the live public web with web_search — the same isolated managed lane macOS uses — so current facts like weather, news, and prices are looked up instead of guessed.",
+    "Asking Omi to start a background agent from chat or voice no longer requires a connected coding CLI: when Claude Code (or another coding agent) is not connected, the work runs as a leaf Omi worker instead of asking you to connect one in Settings."
+  ]
+}
