@@ -51,6 +51,12 @@ def test_trigger_argv_omits_skip_update():
     assert "--skip-update" not in argv
 
 
+def test_checkout_write_denied_is_detected():
+    msg = "Enabling Checkout Sessions Write ('checkout_session_write') permissions"
+    assert wh._is_checkout_write_denied(msg) is True
+    assert wh._is_checkout_write_denied("customer_write missing") is False
+
+
 def test_cli_session_denied_is_detected():
     msg = "Enabling Debugging Tools Write ('stripecli_session_write') permissions"
     assert wh._is_cli_session_denied(msg) is True
