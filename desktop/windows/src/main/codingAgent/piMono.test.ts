@@ -19,7 +19,8 @@ import {
   resolveBundledPi,
   piCliCandidates,
   resolveBundledExtension,
-  piExtensionCandidates
+  piExtensionCandidates,
+  routePromptForPublicWeb
 } from './piMono'
 import type { AdapterAttemptContext, AdapterStreamEvent } from './interface'
 import { AdapterWorkerPool } from '../agentKernel/workerPool'
@@ -57,7 +58,9 @@ function newFakeProc(): FakeProc {
 // Typed view of the adapter's private surface so tests can drive RPC handlers
 // and inspect internal state without `any` (lint forbids explicit any).
 interface PiInternals {
-  sendCommand: (cmd: Record<string, unknown>) => void
+  sendCommand: ((cmd: Record<string, unknown>) => void) & {
+    mock?: { calls: unknown[][] }
+  }
   handleEvent: (line: string) => void
   handleTurnEnd: (event: Record<string, unknown>) => void
   handleToolStart: (event: Record<string, unknown>) => void
@@ -425,6 +428,103 @@ describe('PiMonoAdapter prompt correlation', () => {
     internals(adapter).handleTurnEnd(makeTurnEndEvent('authoritative terminal result'))
 
     await expect(prompt).resolves.toMatchObject({ text: 'authoritative terminal result' })
+  })
+
+  it('prepends the public-web routing instruction for a research question', async () => {
+    const { adapter, events } = createAdapter()
+    seedSessions(adapter, 'session-1')
+    const query = "What's the weather in NYC right now?"
+    const prompt = adapter.sendPrompt(
+      'session-1',
+      [{ type: 'text', text: query }],
+      [],
+      'act',
+      (event) => events.push(event as Record<string, unknown>),
+      async () => ''
+    )
+    const command = internals(adapter).sendCommand.mock?.calls.at(-1)?.[0] as {
+      message?: string
+    }
+    expect(command.message).toContain('<omi_retrieval_policy>')
+    expect(command.message).toContain(query)
+    expect(events.filter((event) => event.type === 'tool_activity')).toEqual([
+      {
+        type: 'tool_activity',
+        name: 'web_search',
+        status: 'started',
+        toolUseId: 'gateway-public-web-1',
+        input: { executor: 'gateway' }
+      }
+    ])
+    internals(adapter).handleTurnEnd(makeTurnEndEvent('Sunny, 73 F.'))
+    await expect(prompt).resolves.toMatchObject({ text: 'Sunny, 73 F.' })
+    expect(events.filter((event) => event.type === 'tool_activity')).toEqual([
+      {
+        type: 'tool_activity',
+        name: 'web_search',
+        status: 'started',
+        toolUseId: 'gateway-public-web-1',
+        input: { executor: 'gateway' }
+      },
+      {
+        type: 'tool_activity',
+        name: 'web_search',
+        status: 'completed',
+        toolUseId: 'gateway-public-web-1'
+      }
+    ])
+  })
+
+  it('does not project gateway search activity for an explicit model-only response', async () => {
+    const { adapter, events } = createAdapter()
+    seedSessions(adapter, 'session-1')
+    const message = "Don't use web search results; answer from memory."
+    expect(routePromptForPublicWeb(message)).toBe(message)
+    const prompt = adapter.sendPrompt(
+      'session-1',
+      [{ type: 'text', text: message }],
+      [],
+      'act',
+      (event) => events.push(event as Record<string, unknown>),
+      async () => ''
+    )
+    const command = internals(adapter).sendCommand.mock?.calls.at(-1)?.[0] as {
+      message?: string
+    }
+    expect(command.message).toBe(message)
+    expect(events.filter((event) => event.type === 'tool_activity')).toEqual([])
+    internals(adapter).handleTurnEnd(makeTurnEndEvent('from memory'))
+    await expect(prompt).resolves.toMatchObject({ text: 'from memory' })
+  })
+
+  it('closes gateway web-search progress as failed when the public lookup fails', async () => {
+    const { adapter, events } = createAdapter()
+    seedSessions(adapter, 'session-1')
+    const prompt = adapter.sendPrompt(
+      'session-1',
+      [{ type: 'text', text: "what's the weather in NYC right now?" }],
+      [],
+      'act',
+      (event) => events.push(event as Record<string, unknown>),
+      async () => ''
+    )
+    internals(adapter).handleTurnEnd(makeErrorTurnEndEvent('500'))
+    await expect(prompt).rejects.toThrow('500')
+    expect(events.filter((event) => event.type === 'tool_activity')).toEqual([
+      {
+        type: 'tool_activity',
+        name: 'web_search',
+        status: 'started',
+        toolUseId: 'gateway-public-web-1',
+        input: { executor: 'gateway' }
+      },
+      {
+        type: 'tool_activity',
+        name: 'web_search',
+        status: 'failed',
+        toolUseId: 'gateway-public-web-1'
+      }
+    ])
   })
 
   it('rejects turn_end errors instead of resolving success', async () => {

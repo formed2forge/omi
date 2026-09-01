@@ -1420,7 +1420,13 @@ const swiftToolManifestDrafts: OmiToolManifestEntryDraft[] = [
     executor: { kind: 'swiftTool' },
     intendedForAgents: true,
     runtimePreconditions: ['Requires authenticated desktop-backend public-web retrieval lane.'],
-    adapters: piAndStdio()
+    // Voice + stdio keep the isolated host executor. Typed-chat pi-mono must
+    // NOT advertise a client function named `web_search` — that name is reserved
+    // for the backend's server-side search tool, and a custom function with the
+    // same name 500s the managed-cloud completions turn (research questions in
+    // the main chat window). Mac: adapters {}. Windows keeps stdio so coding
+    // MCP can still call the isolated POST.
+    adapters: stdioOnly()
   },
   {
     name: 'ask_higher_model',
