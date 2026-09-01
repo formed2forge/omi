@@ -15,6 +15,9 @@ The key needs Products Read + Prices Read. It must never have write.
 This script only issues HTTP GET to /v1/products and /v1/prices. It never
 creates, updates, or deletes. It never writes recognized_stripe_prices.
 
+For a GET-only census of prices that currently have billed subscriptions
+(the hung-out-to-dry check), use ``census_stripe_billed_prices.py``.
+
 Stripe ids are account-scoped. Recreate matching Products + Prices on the
 destination account; do not paste these ids there.
 """
