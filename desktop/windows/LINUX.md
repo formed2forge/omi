@@ -44,6 +44,12 @@ The app targets X11. On a Wayland session it defaults to **XWayland**
 shortcuts (push-to-talk / overlay summon) and the X11 active-window path. To run
 native Wayland anyway, set `OMI_OZONE=wayland` (accepting those limitations).
 
+On native Wayland the floating bar uses a **full-width top strip** (pill stays at
+the screen top via in-window layout), **hides with `win.hide()`** when dismissed
+instead of parking off-screen, skips `setAlwaysOnTop`, and does **not** create the
+focus-halo glow window (Win32-only today). Global summon shortcuts remain
+unavailable on native Wayland.
+
 Screen capture on Wayland goes through the desktop portal, which asks
 "Share screen?" for consent — and Electron has no persisted-consent path, so
 *continuous* Rewind capture would re-prompt every frame. Therefore, on a Wayland

@@ -1,0 +1,8 @@
+{
+  "changes": [
+    {
+      "platform": "linux",
+      "change": "Fixed the floating bar on native Wayland (niri and similar): it now anchors as a full-width top strip, hides completely when dismissed, and no longer spawns the always-on-top glow window"
+    }
+  ]
+}
