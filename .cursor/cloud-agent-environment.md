@@ -29,14 +29,16 @@ Do **not** run the whole `tests/unit` dir in one pytest process — many files m
 
 ## Running the backend live (manual API calls)
 
-Only needed when the hermetic harness isn't enough (e.g. poking endpoints with `curl`). Unlike the harness, a live `uvicorn` process has no fakes injected, so it needs the import-time clients satisfied. `backend/.env` is pre-seeded for this (gitignored, persists via snapshot): Firestore emulator (`FIRESTORE_EMULATOR_HOST=127.0.0.1:8081`, `GOOGLE_CLOUD_PROJECT=demo-omi`), a dummy `GOOGLE_APPLICATION_CREDENTIALS=google-credentials.json` so the GCS client constructs, placeholder `OPENAI_API_KEY`/`TYPESENSE_*`, `ENCRYPTION_SECRET`, `ADMIN_KEY=local_dev_admin_key`, and **Pinecone left unset** so `backend/database/vector_db.py` takes its `index = None` no-op path. If `backend/.env` is missing, recreate it from `.env.template` plus those values, and regenerate `google-credentials.json` as any syntactically valid service-account JSON (a generated RSA key — Firestore I/O goes to the emulator, not real GCP).
+Only needed when the hermetic harness isn't enough (e.g. poking endpoints with `curl`). Unlike the harness, a live `uvicorn` process has no fakes injected, so it needs the import-time clients satisfied. `backend/.env` is pre-seeded for this (gitignored, persists via snapshot): Firestore emulator (`FIRESTORE_EMULATOR_HOST` from repo-root `firebase.json`, currently `127.0.0.1:8085`, `GOOGLE_CLOUD_PROJECT=demo-omi`), a dummy `GOOGLE_APPLICATION_CREDENTIALS=google-credentials.json` so the GCS client constructs, placeholder `OPENAI_API_KEY`/`TYPESENSE_*`, `ENCRYPTION_SECRET`, `ADMIN_KEY=local_dev_admin_key`, and **Pinecone left unset** so `backend/database/vector_db.py` takes its `index = None` no-op path. If `backend/.env` is missing, recreate it from `.env.template` plus those values, and regenerate `google-credentials.json` as any syntactically valid service-account JSON (a generated RSA key — Firestore I/O goes to the emulator, not real GCP).
 
 ```bash
 redis-server --daemonize yes
-firebase emulators:start --only firestore --project demo-omi   # needs a firebase.json pinning firestore to :8081
+firebase emulators:start --only firestore --project demo-omi   # port from firebase.json (8085)
 cd backend && source .venv/bin/activate && python -m uvicorn main:app --host 0.0.0.0 --port 8080
 ```
 
 Auth: `Authorization: Bearer local_dev_admin_key<uid>` (the `<uid>` is taken verbatim), or set `LOCAL_DEVELOPMENT=true` and use `Bearer dev-token` → uid `123`. Verified hello-world: `POST /v3/memories` then `GET /v3/memories` round-trips through the emulator.
 
 Features needing real external services (Deepgram STT, LLM chat, GCS audio, Pinecone/Typesense search) fail at **call time** with placeholders — that's expected, not an env bug. Supply real keys / `SERVICE_ACCOUNT_JSON` to exercise them.
+
+Live Stripe webhook persist (test-mode only, not hermetic CI): `python backend/scripts/exercise_stripe_webhooks_backend.py --apply`. That starts `stripe listen`, boots uvicorn with the listen `STRIPE_WEBHOOK_SECRET` **before import** (`utils.stripe.parse_event` reads it at module import), creates an ephemeral Plus subscription with `metadata.uid`, and asserts the emulator user row. Requires test-mode `STRIPE_API_KEY` and `STRIPE_PLUS_MONTHLY_PRICE_ID`. Never writes `recognized_stripe_prices`. The CLI signature-only pass is `exercise_stripe_webhooks.py --apply` (stdlib receiver, no Firestore).

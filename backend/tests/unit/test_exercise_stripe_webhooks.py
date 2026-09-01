@@ -23,6 +23,7 @@ def test_dry_run_does_not_need_a_key(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "customer.subscription.updated" in out
     assert "Dry-run only" in out
+    assert "exercise_stripe_webhooks_backend.py" in out
 
 
 def test_dry_run_refuses_live_key(monkeypatch):
