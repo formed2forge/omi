@@ -320,6 +320,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"Missing subscription events: {missing}", file=sys.stderr)
         return 1
     print("Subscription events arrived livemode=false with a verified Stripe-Signature.")
+    if CHECKOUT_EVENT in types:
+        print("checkout.session.completed also arrived.")
+    elif CHECKOUT_EVENT in skipped:
+        print("checkout.session.completed skipped (checkout_session_write).")
     return 0
 
 
