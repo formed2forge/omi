@@ -66,6 +66,27 @@ probes whether the OS will accept it (`shortcuts:test-accelerator` — suspend l
 chords, register a noop probe, resume). On Linux, a read-only **Linux shortcut
 environment** row shows portal/ozone/session facts from `linuxSession.ts`.
 
+**niri / sway:** these compositors do not deliver in-app global shortcut events to
+Electron apps — registration (and the Test button) can succeed while key presses
+never reach Omi. Use compositor keybinds that spawn Omi with an action flag:
+
+```text
+omi-windows --omi-action summon
+omi-windows --omi-action record-mic
+```
+
+Example niri config:
+
+```kdl
+binds {
+    Mod+Shift+Space { spawn "omi-windows --omi-action summon"; }
+    Mod+Ctrl+Space { spawn "omi-windows --omi-action record-mic"; }
+}
+```
+
+Settings → Shortcuts shows the exact commands and a starter `binds { … }` block
+when niri or sway is detected.
+
 ## What works / what's next
 - ✅ Sign-in, mic → cloud transcription, chat, memory (inherited, cross-platform)
 - ⚠️ App-usage tracking (X11 active-window via `linuxForeground.ts`;
