@@ -36,6 +36,10 @@ Three modes
   to print exactly what it would create without calling Stripe (no key needed).
   It follows the catalog on the current branch, so it creates whatever plan set
   is checked out (main's 5 today, Core/Plus/Max once that merges).
+* ``--probe``: read-only ``Product.list`` / ``Price.list`` against test mode.
+  Reports what already exists (fixture-tagged vs other) without creating
+  anything. Needs a TEST-MODE key; fails closed on live. A read-only
+  ``rk_test_`` can probe; creating prices still needs Products+Prices write.
 
 The fixture never contains customer/subscription data — only Product/Price
 catalog objects, and only a field whitelist. `livemode: true` objects are
@@ -54,6 +58,9 @@ Usage
 
     # once the test-mode Price objects exist, (re)capture real amounts
     STRIPE_API_KEY=sk_test_... python backend/scripts/snapshot_stripe_catalog.py --from-stripe
+
+    # read-only: list what already exists in the test-mode account (no creates)
+    STRIPE_API_KEY=sk_test_... python backend/scripts/snapshot_stripe_catalog.py --probe
 """
 
 from __future__ import annotations
@@ -196,6 +203,19 @@ def _scrub_price(raw: Dict[str, Any]) -> Dict[str, Any]:
     return scrubbed
 
 
+def classify_key_kind(api_key: str) -> str:
+    """Return a coarse key kind. Never returns the secret itself."""
+    if api_key.startswith("sk_test_"):
+        return "sk_test"
+    if api_key.startswith("rk_test_"):
+        return "rk_test"
+    if api_key.startswith("pk_test_"):
+        return "pk_test"
+    if any(marker in api_key.lower() for marker in ("sk_live_", "rk_live_", "pk_live_", "_live_")):
+        return "live"
+    return "unknown"
+
+
 def _require_test_mode_key(purpose: str):
     """Import stripe, require a TEST-MODE key (fail closed on live), configure it, return the module."""
     import stripe  # imported lazily so --synthetic / --dry-run never need the SDK configured
@@ -203,8 +223,13 @@ def _require_test_mode_key(purpose: str):
     api_key = os.getenv("STRIPE_API_KEY", "")
     if not api_key:
         raise SystemExit(f"STRIPE_API_KEY is required for {purpose} (use a TEST-MODE key).")
-    if any(marker in api_key.lower() for marker in ("sk_live_", "rk_live_", "pk_live_", "_live_")):
+    kind = classify_key_kind(api_key)
+    if kind == "live" or any(marker in api_key.lower() for marker in ("sk_live_", "rk_live_", "pk_live_", "_live_")):
         raise SystemExit("Refusing to run against a LIVE Stripe key. Use a test-mode key (sk_test_/rk_test_).")
+    if kind not in ("sk_test", "rk_test"):
+        raise SystemExit(
+            "Refusing to run: STRIPE_API_KEY is not a test-mode secret/restricted key (sk_test_/rk_test_)."
+        )
     stripe.api_key = api_key
     return stripe
 
@@ -330,6 +355,139 @@ def _find_existing_price(stripe: Any, product_id: str, interval: str, currency: 
     return None
 
 
+_PROBE_LIST_CAP = 200
+
+
+def _stripe_field(obj: Any, key: str, default: Any = None) -> Any:
+    """Read a field from a StripeObject, a dict, or a test double."""
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    if hasattr(obj, "get"):
+        try:
+            return obj.get(key, default)
+        except TypeError:
+            pass
+    return getattr(obj, key, default)
+
+
+def _metadata_dict(obj: Any) -> Dict[str, Any]:
+    md = _stripe_field(obj, "metadata") or {}
+    if hasattr(md, "to_dict"):
+        md = md.to_dict()
+    return md if isinstance(md, dict) else {}
+
+
+def _is_fixture_metadata(metadata: Any) -> bool:
+    md = metadata or {}
+    if hasattr(md, "to_dict"):
+        md = md.to_dict()
+    return isinstance(md, dict) and md.get("omi_test_fixture") == "1"
+
+
+def _iter_capped(pager, cap: int = _PROBE_LIST_CAP) -> List[Any]:
+    out: List[Any] = []
+    try:
+        for item in pager.auto_paging_iter():
+            out.append(item)
+            if len(out) >= cap:
+                break
+    except Exception as exc:  # noqa: BLE001 - probe must report list failures, not crash mid-page
+        raise SystemExit(f"Stripe list failed: {exc}") from exc
+    return out
+
+
+def probe_test_catalog(*, stripe_client: Any = None) -> Dict[str, Any]:
+    """Read-only snapshot of test-mode Products/Prices. Never creates or mutates.
+
+    Returns a JSON-serializable summary (no secrets). ``stripe_client`` is a
+    test seam; production callers omit it and go through ``_require_test_mode_key``.
+    """
+    stripe = stripe_client or _require_test_mode_key("--probe")
+    key_kind = classify_key_kind(os.getenv("STRIPE_API_KEY", ""))
+
+    products = _iter_capped(stripe.Product.list(limit=100, active=True))
+    prices = _iter_capped(stripe.Price.list(limit=100, active=True))
+
+    fixture_products = []
+    other_products = []
+    for prod in products:
+        md = _metadata_dict(prod)
+        entry = {
+            "id": _stripe_field(prod, "id"),
+            "name": _stripe_field(prod, "name"),
+            "omi_plan_id": md.get("omi_plan_id"),
+        }
+        if _is_fixture_metadata(md):
+            fixture_products.append(entry)
+        else:
+            other_products.append(entry)
+
+    fixture_prices = []
+    other_prices = []
+    for price in prices:
+        rec = _stripe_field(price, "recurring") or {}
+        if not isinstance(rec, dict):
+            rec = {"interval": _stripe_field(rec, "interval")}
+        md = _metadata_dict(price)
+        entry = {
+            "id": _stripe_field(price, "id"),
+            "product": _stripe_field(price, "product"),
+            "interval": rec.get("interval"),
+            "currency": _stripe_field(price, "currency"),
+            "unit_amount": _stripe_field(price, "unit_amount"),
+            "omi_plan_id": md.get("omi_plan_id"),
+        }
+        if _is_fixture_metadata(md):
+            fixture_prices.append(entry)
+        else:
+            other_prices.append(entry)
+
+    write_hint = (
+        "secret key (sk_test_): Products+Prices write is available unless the account itself is restricted"
+        if key_kind == "sk_test"
+        else "restricted key (rk_test_): --create-test-prices needs Products + Prices write scope; a read-only key will fail on create"
+    )
+
+    return {
+        "key_kind": key_kind,
+        "livemode": False,
+        "write_hint": write_hint,
+        "products_listed": len(products),
+        "prices_listed": len(prices),
+        "capped_at": _PROBE_LIST_CAP,
+        "fixture_products": fixture_products,
+        "other_products": other_products,
+        "fixture_prices": fixture_prices,
+        "other_prices": other_prices,
+    }
+
+
+def print_probe_report(report: Dict[str, Any]) -> None:
+    print(f"Stripe TEST-MODE probe (key_kind={report['key_kind']}, livemode={report['livemode']})")
+    print(f"  {report['write_hint']}")
+    print(
+        f"  listed {report['products_listed']} active products, "
+        f"{report['prices_listed']} active prices (cap {report['capped_at']})"
+    )
+    print(f"  fixture-tagged products: {len(report['fixture_products'])}")
+    for prod in report["fixture_products"]:
+        print(f"    {prod['id']}  {prod['name']}  omi_plan_id={prod.get('omi_plan_id')}")
+    print(f"  fixture-tagged prices: {len(report['fixture_prices'])}")
+    for price in report["fixture_prices"]:
+        amount = price.get("unit_amount")
+        dollars = f"${amount / 100:.2f}" if isinstance(amount, int) else "?"
+        print(
+            f"    {price['id']}  {price.get('omi_plan_id')}/{price.get('interval')}  "
+            f"{price.get('currency')} {dollars}"
+        )
+    print(f"  other (non-fixture) products: {len(report['other_products'])}")
+    print(f"  other (non-fixture) prices: {len(report['other_prices'])}")
+    if not report["fixture_prices"]:
+        print("  No omi_test_fixture prices yet. Next: --create-test-prices --dry-run, then --create-test-prices.")
+
+
 def create_test_prices(catalog: Dict[str, Any], *, dry_run: bool = False) -> Optional[Dict[str, Any]]:
     """Idempotently create test-mode Products+Prices for every paid plan, then capture them.
 
@@ -409,6 +567,11 @@ def main() -> int:
         action="store_true",
         help="Idempotently create test-mode products/prices for each paid plan, then capture them.",
     )
+    mode.add_argument(
+        "--probe",
+        action="store_true",
+        help="Read-only: list test-mode Products/Prices (fixture-tagged vs other). Needs a TEST-MODE key.",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -421,6 +584,9 @@ def main() -> int:
         parser.error("--dry-run is only valid with --create-test-prices")
 
     catalog = _load_catalog()
+    if args.probe:
+        print_probe_report(probe_test_catalog())
+        return 0
     if args.create_test_prices:
         fixture = create_test_prices(catalog, dry_run=args.dry_run)
         if fixture is None:  # dry run already printed the plan
