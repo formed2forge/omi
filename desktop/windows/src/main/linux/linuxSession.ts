@@ -2,6 +2,7 @@
 // capability hints. Phase 0 of the Linux shortcuts work: give Electron a stable
 // portal app ID (desktopName + .desktop) and centralize session detection so
 // later phases (conflict scanners, Settings UX) read one source of truth.
+import { formatLinuxCliSpawnCommand } from './linuxCliAction'
 
 import { defaultOzonePlatform } from '../linuxCompositor'
 
@@ -18,12 +19,33 @@ export type LinuxSessionType = 'wayland' | 'x11' | 'unknown'
 
 export type LinuxOzonePlatform = 'x11' | 'wayland'
 
+export type LinuxCompositorKind = 'niri' | 'sway' | 'hyprland' | 'gnome' | 'kde' | 'unknown'
+
+export type LinuxCompositorKeybindWorkaround = {
+  compositor: LinuxCompositorKind
+  /** Example niri `binds { … }` stanza using `omi-windows --omi-action …`. */
+  niriConfigExample: string
+  summonCommand: string
+  recordMicCommand: string
+}
+
 export type LinuxGlobalShortcutsCapability =
-  | { available: true; mechanism: 'x11-grab' | 'wayland-portal' }
-  | { available: false; reason: string }
+  | {
+      available: true
+      mechanism: 'x11-grab' | 'wayland-portal'
+      /** false when register() may succeed but key events never reach the app. */
+      deliveryReliable: boolean
+      compositorWorkaround: LinuxCompositorKeybindWorkaround | null
+    }
+  | {
+      available: false
+      reason: string
+      compositorWorkaround: LinuxCompositorKeybindWorkaround | null
+    }
 
 export type LinuxSessionInfo = {
   sessionType: LinuxSessionType
+  compositor: LinuxCompositorKind
   /** Raw XDG_CURRENT_DESKTOP (colon-separated when multiple). */
   currentDesktop: string | null
   /** DESKTOP_SESSION when set (some distros only populate this). */
@@ -52,39 +74,90 @@ export function isLinuxWaylandSession(env: NodeJS.ProcessEnv = process.env): boo
   return normalizeSessionType(env.XDG_SESSION_TYPE) === 'wayland'
 }
 
+export function detectLinuxCompositor(env: NodeJS.ProcessEnv = process.env): LinuxCompositorKind {
+  if (env.NIRI_SOCKET?.trim()) return 'niri'
+  const desktop = (env.XDG_CURRENT_DESKTOP ?? '').toLowerCase()
+  if (desktop.includes('niri')) return 'niri'
+  if (env.SWAYSOCK?.trim()) return 'sway'
+  if (env.HYPRLAND_INSTANCE_SIGNATURE?.trim()) return 'hyprland'
+  if (desktop.includes('gnome') || desktop.includes('unity')) return 'gnome'
+  if (desktop.includes('kde') || desktop.includes('plasma')) return 'kde'
+  return 'unknown'
+}
+
+function buildCompositorWorkaround(
+  compositor: LinuxCompositorKind
+): LinuxCompositorKeybindWorkaround | null {
+  if (compositor !== 'niri' && compositor !== 'sway') return null
+  const summonCommand = formatLinuxCliSpawnCommand('summon')
+  const recordMicCommand = formatLinuxCliSpawnCommand('record-mic')
+  return {
+    compositor,
+    summonCommand,
+    recordMicCommand,
+    niriConfigExample: `binds {
+    Mod+Shift+Space { spawn "${summonCommand}"; }
+    Mod+Ctrl+Space { spawn "${recordMicCommand}"; }
+}`
+  }
+}
+
+/** Compositors where in-app globalShortcut does not deliver events (niri, sway). */
+export function compositorNeedsKeybindWorkaround(compositor: LinuxCompositorKind): boolean {
+  return compositor === 'niri' || compositor === 'sway'
+}
+
 export function detectLinuxSession(env: NodeJS.ProcessEnv = process.env): LinuxSessionInfo {
   const sessionType = normalizeSessionType(env.XDG_SESSION_TYPE)
+  const compositor = detectLinuxCompositor(env)
   const currentDesktop = env.XDG_CURRENT_DESKTOP?.trim() || null
   const desktopSession = env.DESKTOP_SESSION?.trim() || null
   const ozonePlatform = resolveLinuxOzonePlatform(env)
 
   return {
     sessionType,
+    compositor,
     currentDesktop,
     desktopSession,
     ozonePlatform,
     portalAppId: LINUX_PORTAL_APP_ID,
-    globalShortcuts: resolveGlobalShortcutsCapability(sessionType, ozonePlatform)
+    globalShortcuts: resolveGlobalShortcutsCapability(sessionType, ozonePlatform, compositor)
   }
 }
 
 export function resolveGlobalShortcutsCapability(
   sessionType: LinuxSessionType,
-  ozonePlatform: LinuxOzonePlatform
+  ozonePlatform: LinuxOzonePlatform,
+  compositor: LinuxCompositorKind = 'unknown'
 ): LinuxGlobalShortcutsCapability {
+  const compositorWorkaround = buildCompositorWorkaround(compositor)
+  const needsWorkaround = compositorNeedsKeybindWorkaround(compositor)
+
   if (ozonePlatform === 'x11') {
     // Default path: XWayland on a Wayland host still uses X11 grabs for
-    // Electron globalShortcut; native X11 sessions do too.
-    return { available: true, mechanism: 'x11-grab' }
+    // Electron globalShortcut; native X11 sessions do too. On niri/sway the grab
+    // can register without ever delivering key events — compositor binds are required.
+    return {
+      available: true,
+      mechanism: 'x11-grab',
+      deliveryReliable: !needsWorkaround,
+      compositorWorkaround
+    }
   }
   // Native Wayland (OMI_OZONE=wayland): Electron binds through the
   // org.freedesktop.portal.GlobalShortcuts portal when desktop identity is valid.
   if (sessionType === 'wayland' || sessionType === 'unknown') {
-    return { available: true, mechanism: 'wayland-portal' }
+    return {
+      available: true,
+      mechanism: 'wayland-portal',
+      deliveryReliable: !needsWorkaround,
+      compositorWorkaround
+    }
   }
   return {
     available: false,
-    reason: 'Native Wayland ozone on an X11 session is unsupported for global shortcuts.'
+    reason: 'Native Wayland ozone on an X11 session is unsupported for global shortcuts.',
+    compositorWorkaround
   }
 }
 
@@ -106,10 +179,12 @@ export function formatLinuxSessionSummary(info: LinuxSessionInfo): string {
   ]
   if (info.currentDesktop) parts.push(`desktop=${info.currentDesktop}`)
   if (info.globalShortcuts.available) {
-    parts.push(`shortcuts=${info.globalShortcuts.mechanism}`)
+    const delivery = info.globalShortcuts.deliveryReliable ? 'ok' : 'compositor-keybind'
+    parts.push(`shortcuts=${info.globalShortcuts.mechanism} delivery=${delivery}`)
   } else {
     parts.push(`shortcuts=unavailable (${info.globalShortcuts.reason})`)
   }
+  if (info.compositor !== 'unknown') parts.push(`compositor=${info.compositor}`)
   return parts.join(' ')
 }
 
