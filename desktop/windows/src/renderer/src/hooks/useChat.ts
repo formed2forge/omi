@@ -360,13 +360,19 @@ export function useChat(): UseChat {
             // Backend returns messages newest-first; reverse to chronological order
             // for display (same as mobile: messages.sort ascending by createdAt).
             setHistory(
-              [...msgs].reverse().map((m) => ({
-                id: m.id,
-                role: m.sender === 'ai' ? ('assistant' as const) : ('user' as const),
-                content: m.text,
-                ...(m.evidence ? { evidence: m.evidence } : {}),
-                ...(m.attachments?.length ? { attachments: m.attachments } : {})
-              }))
+              [...msgs].reverse().map((m) => {
+                // Always parse. A truthy `{sources}` payload is not a
+                // ChatEvidenceReferenceEnvelope; passing it through made
+                // ChatMessages read `evidence.references.length` and throw.
+                const evidence = parseChatEvidenceFromRecord(m)
+                return {
+                  id: m.id,
+                  role: m.sender === 'ai' ? ('assistant' as const) : ('user' as const),
+                  content: m.text,
+                  ...(evidence ? { evidence } : {}),
+                  ...(m.attachments?.length ? { attachments: m.attachments } : {})
+                }
+              })
             )
             return
           }
@@ -380,8 +386,7 @@ export function useChat(): UseChat {
       startedAtRef.current = c.startedAt || Date.now()
       setHistory(
         c.messages.map((m) => {
-          const rec = m as { evidence?: ChatMsg['evidence'] }
-          const evidence = rec.evidence ?? parseChatEvidenceFromRecord(m)
+          const evidence = parseChatEvidenceFromRecord(m)
           return {
             id: m.id ?? crypto.randomUUID(),
             role: m.role,
