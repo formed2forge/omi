@@ -200,6 +200,31 @@ def test_apply_scenarios_attaches_test_clock_when_create_succeeds(monkeypatch, c
     assert "no_clock" not in err
 
 
+def test_retire_open_subscriptions_cancels_then_clears():
+    canceled: list[str] = []
+    released: list[str] = []
+
+    class _Stripe:
+        class Subscription:
+            @staticmethod
+            def cancel(sub_id, **_kwargs):
+                canceled.append(sub_id)
+
+        class SubscriptionSchedule:
+            @staticmethod
+            def release(sched_id):
+                released.append(sched_id)
+
+    run = ex.LiveRun(stripe=_Stripe, price_map={})
+    run.created_sub_ids = ["sub_a", "sub_b"]
+    run.created_schedule_ids = ["sched_a"]
+    ex._retire_open_subscriptions(run)
+    assert canceled == ["sub_a", "sub_b"]
+    assert released == ["sched_a"]
+    assert run.created_sub_ids == []
+    assert run.created_schedule_ids == []
+
+
 def test_apply_scenarios_exits_sanitized_when_customer_write_denied(monkeypatch):
     class _Stripe:
         class test_helpers:
