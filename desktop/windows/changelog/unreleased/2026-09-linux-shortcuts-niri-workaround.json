@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "change": "Linux (niri/sway): compositor-keybind workaround for global shortcuts — `omi-windows --omi-action summon|record-mic` via second-instance IPC"
+    },
+    {
+      "change": "Linux: Settings → Shortcuts explains when Test succeeds but the compositor does not deliver shortcut events (niri/sway)"
+    }
+  ]
+}

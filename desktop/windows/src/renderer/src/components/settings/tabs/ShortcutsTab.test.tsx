@@ -163,15 +163,54 @@ describe('ShortcutsTab', () => {
   it('shows the Linux session diagnostic row when main returns session facts', async () => {
     getLinuxShortcutSession.mockResolvedValue({
       sessionType: 'wayland',
+      compositor: 'gnome',
       currentDesktop: 'GNOME',
       desktopSession: null,
       ozonePlatform: 'x11',
       portalAppId: 'com.omiwindows.app',
-      globalShortcuts: { available: true, mechanism: 'x11-grab' },
-      summary: 'session=wayland ozone=x11 portal=com.omiwindows.app shortcuts=x11-grab'
+      globalShortcuts: {
+        available: true,
+        mechanism: 'x11-grab',
+        deliveryReliable: true,
+        compositorWorkaround: null
+      },
+      summary: 'session=wayland ozone=x11 portal=com.omiwindows.app shortcuts=x11-grab delivery=ok'
     })
     renderTab()
     await waitFor(() => expect(screen.getByText('Linux shortcut environment')).toBeTruthy())
     expect(screen.getByText(/session=wayland/)).toBeTruthy()
+  })
+
+  it('shows niri compositor-keybind guidance when delivery is unreliable', async () => {
+    getLinuxShortcutSession.mockResolvedValue({
+      sessionType: 'wayland',
+      compositor: 'niri',
+      currentDesktop: null,
+      desktopSession: null,
+      ozonePlatform: 'x11',
+      portalAppId: 'com.omiwindows.app',
+      globalShortcuts: {
+        available: true,
+        mechanism: 'x11-grab',
+        deliveryReliable: false,
+        compositorWorkaround: {
+          compositor: 'niri',
+          summonCommand: 'omi-windows --omi-action summon',
+          recordMicCommand: 'omi-windows --omi-action record-mic',
+          niriConfigExample: 'binds { Mod+Shift+Space { spawn "omi-windows --omi-action summon"; } }'
+        }
+      },
+      summary:
+        'session=wayland ozone=x11 portal=com.omiwindows.app shortcuts=x11-grab delivery=compositor-keybind compositor=niri'
+    })
+    testShortcutAccelerator.mockResolvedValue({ available: true })
+    renderTab()
+    await waitFor(() =>
+      expect(screen.getByText(/does not deliver in-app global shortcuts to Electron apps/)).toBeTruthy()
+    )
+    fireEvent.click(screen.getAllByText('Test')[0])
+    await waitFor(() =>
+      expect(screen.getByText(/Use the compositor-keybind commands shown above/)).toBeTruthy()
+    )
   })
 })
