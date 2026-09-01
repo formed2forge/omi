@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   VoiceHubTurnDriver,
   RELEASE_WATCHDOG_HINT,
+  CHAT_LANE_VOICE_TOOLS,
   concatInt16,
   pcm16ToBytes,
   bytesToPcm16,
@@ -31,18 +32,21 @@ import type {
 
 /** A manual clock so the 1 s hubWarm deadline (and any other) fires on command. */
 class ManualScheduler implements VoiceTurnDeadlineScheduling {
-  private entries: { deadline: string; fire: () => void; cancelled: boolean }[] = []
+  private entries: { deadline: string; after: number; fire: () => void; cancelled: boolean }[] = []
   schedule(
     deadline: VoiceTurnDeadline,
-    _after: number,
+    after: number,
     fire: () => void
   ): VoiceTurnDeadlineCancellation {
-    const entry = { deadline: deadline as string, fire, cancelled: false }
+    const entry = { deadline: deadline as string, after, fire, cancelled: false }
     this.entries.push(entry)
     return { cancel: () => (entry.cancelled = true) }
   }
   fire(deadline: string): void {
     for (const e of this.entries) if (e.deadline === deadline && !e.cancelled) e.fire()
+  }
+  delayFor(deadline: string): number | null {
+    return this.entries.find((e) => e.deadline === deadline && !e.cancelled)?.after ?? null
   }
 }
 
@@ -782,6 +786,39 @@ describe('hub tool loop (PR-C)', () => {
     ev.onTurnDone?.(null)
     ev.onSpeakingEnd?.()
     expect(h.hub.calls.didTerminate).toHaveLength(1)
+  })
+
+  it('upgrades web_search to the 180s chat-lane pending-tools budget', async () => {
+    // Mac SessionDelegate selects .chatLane for web_search. Without this, the
+    // 30s standard deadline kills a still-running public-web lookup (45s HTTP
+    // budget) as toolTimeout and the spoken answer falls to cascade/system TTS.
+    expect(CHAT_LANE_VOICE_TOOLS.has('web_search')).toBe(true)
+    expect(CHAT_LANE_VOICE_TOOLS.has('ask_higher_model')).toBe(true)
+    expect(CHAT_LANE_VOICE_TOOLS.has('list_agent_sessions')).toBe(false)
+
+    const executeTool = vi.fn(async () => 'lookup result')
+    const h = makeDriver({ pttHubEnabled: true, executeTool })
+    await driveToAwaitingResponse(h)
+
+    h.hub
+      .events()
+      .onToolRequest?.(
+        { name: 'web_search', callId: 'ws-1', argumentsJSON: '{"query":"weather"}' },
+        null
+      )
+    expect(executeTool).toHaveBeenCalledWith('web_search', '{"query":"weather"}')
+    expect(h.scheduler.delayFor('pendingTools')).toBe(180)
+  })
+
+  it('keeps a standard voice tool on the 30s pending-tools budget', async () => {
+    const executeTool = vi.fn(async () => '{"ok":true}')
+    const h = makeDriver({ pttHubEnabled: true, executeTool })
+    await driveToAwaitingResponse(h)
+
+    h.hub
+      .events()
+      .onToolRequest?.({ name: 'list_agent_sessions', callId: 'call-1', argumentsJSON: '{}' }, null)
+    expect(h.scheduler.delayFor('pendingTools')).toBe(30)
   })
 
   it('drops a stale tool result when the turn was superseded (turn-epoch gate)', async () => {

@@ -506,6 +506,95 @@ describe('VoiceTurnReducer', () => {
     expect(result.model.turn?.phase).toEqual({ kind: 'terminal', reason: 'toolTimeout' })
   })
 
+  it('testChatLaneToolDeadlineClassStretchesPendingToolsTo180s', () => {
+    // Mac VoiceTurnReducerTests: selecting .chatLane reschedules pendingTools
+    // from the 30s standard budget to Deadlines.chatLaneTool (180s). Without
+    // this, a live web_search (45s HTTP budget) is killed as toolTimeout and
+    // the spoken answer falls to cascade/system TTS.
+    const { model: starting, turnID, sessionID, responseID } = awaitingHubResponse()
+    const callID = tool('web_search')
+    let model = reduce(starting, {
+      type: 'providerResponseStarted',
+      turnID,
+      sessionID,
+      responseID
+    }).model
+    const started = reduce(model, { type: 'toolStarted', turnID, callID })
+    expect(started.effects).toContainEqual({
+      kind: 'scheduleDeadline',
+      turnID,
+      deadline: 'pendingTools',
+      after: 30
+    })
+    expect(started.model.turn?.toolDeadlineClasses.get(callID)).toBe('standard')
+
+    const selected = reduce(started.model, {
+      type: 'toolDeadlineClassSelected',
+      turnID,
+      callID,
+      deadlineClass: 'chatLane'
+    })
+    expect(selected.effects).toContainEqual({
+      kind: 'cancelDeadline',
+      turnID,
+      deadline: 'pendingTools'
+    })
+    expect(selected.effects).toContainEqual({
+      kind: 'scheduleDeadline',
+      turnID,
+      deadline: 'pendingTools',
+      after: 180
+    })
+    expect(selected.model.turn?.toolDeadlineClasses.get(callID)).toBe('chatLane')
+    expect(selected.model.turn?.phase).toEqual({ kind: 'awaitingTools' })
+  })
+
+  it('testChatLaneDeadlineStays180sWhenAStandardToolIsAlsoPending', () => {
+    const { model: starting, turnID, sessionID, responseID } = awaitingHubResponse()
+    const chatCall = tool('web_search')
+    const standardCall = tool('list_agent_sessions')
+    let model = reduce(starting, {
+      type: 'providerResponseStarted',
+      turnID,
+      sessionID,
+      responseID
+    }).model
+    model = reduce(model, { type: 'toolStarted', turnID, callID: chatCall }).model
+    model = reduce(model, {
+      type: 'toolDeadlineClassSelected',
+      turnID,
+      callID: chatCall,
+      deadlineClass: 'chatLane'
+    }).model
+    const mixed = reduce(model, { type: 'toolStarted', turnID, callID: standardCall })
+    expect(mixed.effects).toContainEqual({
+      kind: 'scheduleDeadline',
+      turnID,
+      deadline: 'pendingTools',
+      after: 180
+    })
+    expect(mixed.model.turn?.toolDeadlineClasses.get(chatCall)).toBe('chatLane')
+    expect(mixed.model.turn?.toolDeadlineClasses.get(standardCall)).toBe('standard')
+  })
+
+  it('testToolDeadlineClassSelectedForUnknownCallIsStale', () => {
+    const { model: starting, turnID, sessionID, responseID } = awaitingHubResponse()
+    let model = reduce(starting, {
+      type: 'providerResponseStarted',
+      turnID,
+      sessionID,
+      responseID
+    }).model
+    const stale = reduce(model, {
+      type: 'toolDeadlineClassSelected',
+      turnID,
+      callID: tool('never-started'),
+      deadlineClass: 'chatLane'
+    })
+    expect(stale.model.staleEventCount).toBe(1)
+    expect(stale.effects.some((e) => e.kind === 'scheduleDeadline')).toBe(false)
+  })
+
   it('testCaptureTranscriptionAndPlaybackDeadlinesHaveDistinctTerminalReasons', () => {
     const captureTurnID = newTurnID()
     const capturing = reduce(IDLE, { type: 'start', turnID: captureTurnID, intent: 'hold' }).model
