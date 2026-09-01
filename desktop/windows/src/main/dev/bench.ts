@@ -9,7 +9,7 @@ import { join } from 'path'
 import { rmSync } from 'fs'
 import { perfMark, flushPerfMarks } from '../../shared/perf'
 import { resolveDevInstance } from '../devInstance'
-import { defaultOzonePlatform } from '../linuxCompositor'
+import { resolveLinuxOzonePlatform } from '../linux/linuxSession'
 
 // OMI_BENCH drives a fixed startup-timing run that quits when done; OMI_ANIM_BENCH
 // records the renderer's animation-jank summary instead. Both are dev-only: a
@@ -130,7 +130,7 @@ export function applyDevGpuStability(): void {
   // presentation bugs on Wayland (window maps but never paints). Mirrors the same
   // platform expression used in index.ts so both resolve consistently.
   if (process.platform === 'linux') {
-    if ((process.env.OMI_OZONE || defaultOzonePlatform()) === 'wayland') return
+    if (resolveLinuxOzonePlatform() === 'wayland') return
   }
   // Software compositing: the GPU process can't crash the UI…
   app.disableHardwareAcceleration()
