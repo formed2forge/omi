@@ -166,19 +166,29 @@ def test_client_refuses_non_census_get():
 
 def test_http_error_redacts_key_and_hints_subscriptions_read():
     secret = "rk_live_SUPERSECRETVALUE"
+    truncated = "rk_live_" + ("*" * 80) + "abc"
+    body = json.dumps(
+        {
+            "error": {
+                "code": "more_permissions_needed",
+                "type": "invalid_request_error",
+                "message": (
+                    f"The provided key '{truncated}' does not have the required permissions. "
+                    "Missing permission: Subscriptions."
+                ),
+            }
+        }
+    )
 
     def opener(req, timeout=0):
-        raise HTTPError(
-            req.full_url,
-            403,
-            "Forbidden",
-            hdrs=None,
-            fp=io.BytesIO(f"key {secret} denied".encode("utf-8")),
-        )
+        raise HTTPError(req.full_url, 403, "Forbidden", hdrs=None, fp=io.BytesIO(body.encode("utf-8")))
 
     client = census.StripeCensusClient(secret, opener=opener)
     with pytest.raises(SystemExit) as exc:
         client.get("/v1/subscriptions")
     message = str(exc.value)
     assert secret not in message
+    assert truncated not in message
     assert "Subscriptions Read" in message
+    assert "more_permissions_needed" in message
+    assert "Prices Read alone is not enough" in message

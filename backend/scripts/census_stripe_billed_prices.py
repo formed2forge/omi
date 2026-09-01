@@ -42,6 +42,7 @@ from scripts.dump_stripe_live_readonly import (  # noqa: E402
     classify_key_kind,
     load_api_key,
     redact,
+    stripe_error_detail,
 )
 
 DEFAULT_CATALOG = BACKEND_DIR / "config" / "plan_catalog.json"
@@ -195,13 +196,17 @@ class StripeCensusClient:
                 status = getattr(resp, "status", 200)
         except urllib.error.HTTPError as exc:
             err_body = exc.read().decode("utf-8", errors="replace")
+            detail = stripe_error_detail(err_body)
             hint = ""
             if exc.code == 403 and path.startswith("/v1/subscriptions"):
                 hint = (
                     " Grant Subscriptions Read on this LIVE restricted key "
-                    "(Dashboard → API keys → restricted key → Subscriptions Read)."
+                    "(live-mode Dashboard → Developers → API keys → that key → "
+                    "Subscriptions: Read). Prices Read alone is not enough."
                 )
-            raise SystemExit(redact(f"Stripe GET {path} failed HTTP {exc.code}: {err_body}.{hint}", self.api_key)) from None
+            raise SystemExit(
+                redact(f"Stripe GET {path} failed HTTP {exc.code}: {detail}.{hint}", self.api_key)
+            ) from None
         except Exception as exc:  # noqa: BLE001
             raise SystemExit(redact(f"Stripe GET {path} failed: {exc}", self.api_key)) from None
         if status >= 400:

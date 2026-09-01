@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "FC-redact-replacement-rematches-marker",
+  "violated_contract": "When stripping live/test Stripe key prefixes from error text, each replacement must advance the search cursor past the replacement. Substituting rk_live_[redacted] (or the sk_/pk_ equivalents) and searching from index 0 rematches the marker forever, so a 403 that echoes a truncated or asterisk-masked key hangs instead of printing the permission failure.",
+  "canonical_prevention": "redact() finds each marker from an advancing start index (past marker + [redacted]), consumes asterisk-masked tails, and caps replacements so a regress cannot hang. Census and dump GET paths parse Stripe error JSON before redacting.",
+  "evidence_prs": [],
+  "scope_hints": [
+    "backend/scripts/dump_stripe_live_readonly.py",
+    "backend/scripts/census_stripe_billed_prices.py"
+  ],
+  "canonical_prevention_artifact": [
+    "backend/scripts/dump_stripe_live_readonly.py",
+    "backend/tests/unit/test_dump_stripe_live_readonly.py",
+    "backend/tests/unit/test_census_stripe_billed_prices.py"
+  ],
+  "status": "open"
+}
