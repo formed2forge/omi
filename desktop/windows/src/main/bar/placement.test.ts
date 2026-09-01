@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   computeBarBounds,
+  computeBarShellBounds,
+  computeBarWindowBounds,
   offscreenStageBounds,
   boundsSizeDrifted,
   OFFSCREEN_STAGE_MARGIN,
@@ -98,6 +100,18 @@ describe('computeBarBounds', () => {
     const b = computeBarBounds(tiny)
     expect(b.width).toBe(500)
     expect(b.height).toBe(Math.round(360 * 0.7))
+  })
+})
+
+describe('computeBarShellBounds (native Wayland top strip)', () => {
+  it('spans the full display width at the physical top edge', () => {
+    const b = computeBarShellBounds(primary)
+    expect(b).toEqual({ x: 0, y: 0, width: 2560, height: computeBarBounds(primary).height })
+  })
+
+  it('computeBarWindowBounds selects shell vs compact', () => {
+    expect(computeBarWindowBounds(primary, { shell: true }).width).toBe(2560)
+    expect(computeBarWindowBounds(primary, { shell: false }).width).toBe(BAR_WINDOW_WIDTH)
   })
 })
 
