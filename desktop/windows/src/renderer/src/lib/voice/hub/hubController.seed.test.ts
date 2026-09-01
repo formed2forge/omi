@@ -4,6 +4,9 @@
 //  2. refreshSeedContext() reconnects the warm session ONLY when the fresh seed
 //     carries a turn the session hasn't seen (a typed turn) — a self-produced voice
 //     turn (marked known) does NOT thrash a reconnect, and it never runs mid-turn.
+//  3. That reconnect is make-before-break: the live hub stays warm (and remains
+//     the PTT route) until the successor is connected, so a typed-then-voice press
+//     does not fall to cascade.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { VoiceProvider } from '../sessionMachine'
@@ -36,7 +39,9 @@ class FakeSession implements HubSession {
   readonly bargeInStrategy: HubBargeInStrategy = 'inSessionCancel'
   warm = false
   toreDown = 0
+  begun = 0
   private resolveWarm: (() => void) | null = null
+  private rejectWarm: ((e: Error) => void) | null = null
   constructor(
     readonly sessionID: VoiceSessionID,
     readonly instructions: string,
@@ -44,19 +49,30 @@ class FakeSession implements HubSession {
   ) {}
   ensureWarm(): Promise<void> {
     if (this.warm) return Promise.resolve()
-    return new Promise((resolve) => (this.resolveWarm = resolve))
+    return new Promise((resolve, reject) => {
+      this.resolveWarm = resolve
+      this.rejectWarm = reject
+    })
   }
   connect(): void {
     this.warm = true
     this.events.onConnected?.(this.sessionID)
     this.resolveWarm?.()
     this.resolveWarm = null
+    this.rejectWarm = null
+  }
+  fail(message: string, retryable = true): void {
+    this.warm = false
+    this.events.onError?.(message, retryable)
+    this.rejectWarm?.(new Error(message))
+    this.rejectWarm = null
+    this.resolveWarm = null
   }
   isWarm(): boolean {
     return this.warm
   }
   beginTurn(): void {
-    /* unused in seed tests */
+    this.begun += 1
   }
   appendAudio(): void {
     /* unused in seed tests */
@@ -81,12 +97,12 @@ const SID = 'sess' as VoiceSessionID
 
 type SeedSnapshot = { context: string; idempotencyKeys: string[] }
 
-function harness(fetchSeed?: () => Promise<SeedSnapshot>) {
+function harness(fetchSeed?: () => Promise<SeedSnapshot>, mintToken?: () => Promise<string>) {
   const sessions: FakeSession[] = []
   let seq = 0
   const controller = new HubController({
     fetchSeed,
-    mintToken: async () => 'ek_token',
+    mintToken: mintToken ?? (async () => 'ek_token'),
     createSession: (spec) => {
       const s = new FakeSession(`${SID}-${++seq}` as VoiceSessionID, spec.instructions, spec.events)
       sessions.push(s)
@@ -143,14 +159,101 @@ describe('HubController — refreshSeedContext reconnect policy', () => {
     expect(h.sessions).toHaveLength(1)
 
     h.controller.refreshSeedContext()
-    await tick() // fetch resolves → teardown + ensureWarm
+    await tick() // fetch resolves → keep-live ensureWarm
     await tick() // new session minted
+    expect(h.controller.isWarm()).toBe(true) // predecessor still live
+    expect(h.sessions[0].toreDown).toBe(0)
     h.latest().connect()
     await tick()
 
     expect(h.sessions).toHaveLength(2) // rebuilt
-    expect(h.sessions[0].toreDown).toBe(1)
+    expect(h.sessions[0].toreDown).toBe(1) // swapped after successor ready
     expect(h.sessions[1].instructions).toContain('hello')
+    expect(h.controller.isWarm()).toBe(true)
+  })
+
+  it('keeps the live hub warm while the seed successor is still minting (first PTT stays hub)', async () => {
+    let resolveSecondMint: (token: string) => void = () => {}
+    let mintCount = 0
+    const mintToken = (): Promise<string> => {
+      mintCount += 1
+      if (mintCount === 1) return Promise.resolve('ek_token')
+      return new Promise((resolve) => {
+        resolveSecondMint = resolve
+      })
+    }
+    const h = harness(
+      async () => ({
+        context: '[live:typed] User: hello',
+        idempotencyKeys: ['typed-1']
+      }),
+      mintToken
+    )
+    await warm(h)
+    h.controller.refreshSeedContext()
+    await tick() // fetch
+    await tick() // parked on the successor mint
+
+    expect(h.controller.isWarm()).toBe(true)
+    expect(h.controller.isAvailable()).toBe(true)
+    expect(h.sessions).toHaveLength(1) // successor not constructed yet
+    expect(h.sessions[0].toreDown).toBe(0)
+
+    const turn = 'turn-ptt' as VoiceTurnID
+    h.controller.beginTurn(turn)
+    expect(h.sessions[0].begun).toBe(1) // live predecessor took the press
+
+    resolveSecondMint('ek_token_2')
+    await tick()
+    await tick()
+    expect(h.sessions).toHaveLength(2)
+    expect(h.sessions[0].toreDown).toBe(0) // still in the PTT turn
+    h.latest().connect()
+    await tick()
+    expect(h.sessions[0].toreDown).toBe(0) // swap deferred until the turn ends
+    expect(h.controller.isWarm()).toBe(true)
+
+    h.controller.voiceTurnDidTerminate(turn)
+    await tick()
+    expect(h.sessions[0].toreDown).toBe(1)
+    expect(h.controller.isWarm()).toBe(true)
+  })
+
+  it('an incoming seed-rebuild error does not drop the live hub', async () => {
+    const h = harness(async () => ({
+      context: '[live:typed] User: hello',
+      idempotencyKeys: ['typed-1']
+    }))
+    await warm(h)
+    h.controller.refreshSeedContext()
+    await tick()
+    await tick()
+    const incoming = h.latest()
+    incoming.fail('minted socket died')
+    await tick()
+
+    expect(h.sessions[0].toreDown).toBe(0)
+    expect(h.controller.isWarm()).toBe(true)
+    expect(h.sessions[0].isWarm()).toBe(true)
+  })
+
+  it('a retired predecessor close after swap does not drop the live successor', async () => {
+    const h = harness(async () => ({
+      context: '[live:typed] User: hello',
+      idempotencyKeys: ['typed-1']
+    }))
+    await warm(h)
+    h.controller.refreshSeedContext()
+    await tick()
+    await tick()
+    h.latest().connect()
+    await tick()
+    expect(h.controller.isWarm()).toBe(true)
+
+    h.sessions[0].fail('late close from torn-down socket')
+    await tick()
+    expect(h.controller.isWarm()).toBe(true)
+    expect(h.sessions[1].isWarm()).toBe(true)
   })
 
   it('does NOT reconnect when every key is already known (no thrash)', async () => {

@@ -254,6 +254,18 @@ export class HubController {
   /** A seed refresh that arrived mid-turn is deferred (never reconnect a live turn),
    *  then applied on termination — mirrors the wake-refresh defer above. */
   private pendingSeedRefresh = false
+  /** Make-before-break successor for a seed rebuild. The live `session` stays warm
+   *  (and remains the PTT route) until this incoming socket is connected and idle
+   *  to swap. Null when no rebuild is in flight. */
+  private incoming: {
+    session: HubSession
+    provider: VoiceProvider
+    sessionID: VoiceSessionID | null
+  } | null = null
+  /** Idempotency keys the in-flight keep-live successor will reflect once installed.
+   *  Held off `knownSeedKeys` so a failed incoming mint does not mark the live
+   *  (stale) session as already seeded. */
+  private pendingKnownSeedKeys: string[] | null = null
 
   // Per-turn state (all reset by voiceTurnDidTerminate) ------------------------
   private activeTurnID: VoiceTurnID | null = null
@@ -340,8 +352,18 @@ export class HubController {
       }
       this.circuitOpenUntil = this.now() + HubController.CIRCUIT_COOLDOWN_MS
     }
-    this.warming = this.createAndWarm(provider)
+    this.warming = this.createAndWarm(provider, 'replace')
     return this.warming
+  }
+
+  /** Rebuild the warm socket for a stale continuity seed without dropping the live
+   *  session first. Mint + connect the successor in parallel; `isWarm()` stays true
+   *  on the predecessor so a PTT press during the rebuild takes the hub lane instead
+   *  of cascading. Coalesces with an in-flight warm / already-queued incoming. */
+  private rebuildWarmKeepingLive(): void {
+    if (this.warming !== null || this.incoming !== null) return
+    this.warming = this.createAndWarm(this.effectiveProvider(), 'keepLive')
+    void this.warming.catch(() => {})
   }
 
   /** The realtime provider to actually warm: the failover pick if we've switched to
@@ -350,19 +372,26 @@ export class HubController {
     return this.fallbackProvider ?? this.resolveProvider()
   }
 
-  private async createAndWarm(provider: VoiceProvider): Promise<VoiceSessionID> {
+  private async createAndWarm(
+    provider: VoiceProvider,
+    mode: 'replace' | 'keepLive' = 'replace'
+  ): Promise<VoiceSessionID> {
     // Capture the generation this warm belongs to. A teardownSession() that runs at
     // any await point below bumps it, and the commit-point checks then discard this
     // warm instead of installing an orphaned socket (M1).
     const gen = this.warmGeneration
+    // Seed rebuilds keep the live socket until the successor is ready. Wake / provider
+    // switch / first-warm still drop first — those predecessors are dead or wrong.
+    const keepLive = mode === 'keepLive' && this.session !== null && this.session.isWarm()
     try {
       // Refresh the daily A8 pick and the <about_user> card OFF the hot path — this
       // session uses whatever is cached now; the next one gets the fresh values.
       refreshAutoModelIfStale()
       refreshAboutUserCard()
 
-      // Tear down a stale / other-provider session before minting a fresh token.
-      if (this.session) {
+      // Tear down a stale / other-provider session before minting a fresh token —
+      // unless this is a keep-live seed rebuild, which holds the predecessor.
+      if (!keepLive && this.session) {
         const stale = this.session
         this.session = null
         this.sessionProvider = null
@@ -401,22 +430,30 @@ export class HubController {
       // on a now-torn-down hub (M1), matching the mint/connect commit points.
       if (this.warmGeneration !== gen) throw new HubWarmAbortedError()
       const instructions = this.buildInstructions()
+      // Bind events to THIS session instance so a retired socket's late close/error
+      // cannot mutate the live successor (FC-live-session-dropped-before-successor-ready).
+      const owner: { current: HubSession | null } = { current: null }
       const session = this.createSession({
         provider: activeProvider,
         token,
         instructions,
-        events: this.sessionEvents(),
+        events: this.bindSessionEvents(owner),
         tools
       })
-      this.session = session
-      this.sessionProvider = activeProvider
+      owner.current = session
 
-      // A turn that began before the session existed (cold press, no summon) now
-      // gets its provider begin frames.
-      if (this.pendingBegin && this.pendingBegin.turnID === this.activeTurnID) {
-        const begin = this.pendingBegin
-        this.pendingBegin = null
-        session.beginTurn(begin)
+      if (keepLive) {
+        this.incoming = { session, provider: activeProvider, sessionID: null }
+      } else {
+        this.session = session
+        this.sessionProvider = activeProvider
+        // A turn that began before the session existed (cold press, no summon) now
+        // gets its provider begin frames.
+        if (this.pendingBegin && this.pendingBegin.turnID === this.activeTurnID) {
+          const begin = this.pendingBegin
+          this.pendingBegin = null
+          session.beginTurn(begin)
+        }
       }
 
       await session.ensureWarm()
@@ -430,10 +467,13 @@ export class HubController {
       // double close (teardownSession already closed it) is safe.
       if (this.warmGeneration !== gen) {
         session.teardown()
+        if (this.incoming?.session === session) this.incoming = null
         throw new HubWarmAbortedError()
       }
+      if (keepLive) this.installIncomingIfIdle()
       // onConnected (wired below) set `sessionID` synchronously inside markReady,
-      // before this promise resolves.
+      // before this promise resolves. A deferred keep-live swap still has the
+      // predecessor's sessionID.
       if (this.sessionID === null) throw new Error('hub session connected without a session id')
       return this.sessionID
     } finally {
@@ -481,9 +521,10 @@ export class HubController {
   }
 
   /** Whether the resolved provider currently has a session object at all (warm or
-   *  connecting). PR-6's route selection uses `isWarm()`; this is the coarser gate. */
+   *  connecting), or a keep-live successor is already constructed. PR-6's route
+   *  selection uses `isWarm()`; this is the coarser gate. */
   isAvailable(): boolean {
-    return this.session !== null
+    return this.session !== null || this.incoming !== null
   }
 
   /** PCM16 rate the host must resample mic frames to before `appendAudio`
@@ -509,6 +550,7 @@ export class HubController {
     // An explicit drop also cancels any wake refresh that was deferred behind a turn —
     // re-warming a hub that was just told to close (kill-switch off / sign-out) is wrong.
     this.pendingRefreshReason = null
+    this.discardIncoming()
     const s = this.session
     this.session = null
     this.sessionProvider = null
@@ -664,7 +706,11 @@ export class HubController {
     if (this.pendingRefreshReason !== null) {
       const reason = this.pendingRefreshReason
       this.pendingRefreshReason = null
+      this.discardIncoming()
       this.requestSessionRefresh(reason)
+    } else {
+      // A keep-live seed successor that connected mid-turn now becomes the live socket.
+      this.installIncomingIfIdle()
     }
     // A seed refresh deferred behind this turn now runs idle (may reconnect if a
     // typed turn appeared while this voice turn was live).
@@ -686,7 +732,12 @@ export class HubController {
    *  session hasn't seen (e.g. a typed turn), rebuild the session so the NEXT voice
    *  turn is seeded with it (macOS refreshes the seed via a full reconnect when
    *  stale — the hub instruction is single-shot, so there is no mid-session patch).
-   *  Idle-only: deferred while a turn is active. Fire-and-forget. */
+   *  Idle-only: deferred while a turn is active. Fire-and-forget.
+   *
+   *  The rebuild is make-before-break: the live socket stays warm until the successor
+   *  is connected. Tearing down first left a 1–3 s gap where `isWarm()` was false and
+   *  the first PTT presses after a typed turn fell to cascade (live: first couple of
+   *  floating-bar voice attempts failed, third worked). */
   refreshSeedContext(): void {
     void this.doRefreshSeedContext().catch(() => {})
   }
@@ -716,12 +767,14 @@ export class HubController {
     // Stage the fresh seed for the next session build either way.
     this.seedContext = snapshot.context
     if (hasUnseenTurn) {
-      // The warm session is missing a turn — rebuild it so it carries the seed. The
-      // rebuilt session reflects exactly the fresh snapshot's keys.
-      this.knownSeedKeys = new Set(snapshot.idempotencyKeys)
+      // The warm session is missing a turn — rebuild it so it carries the seed. Keys
+      // commit only when the successor is installed, so a failed incoming mint does
+      // not pretend the live (stale) session already reflects them.
       if (this.session !== null) {
-        this.teardownSession()
-        void this.ensureWarm().catch(() => {})
+        this.rebuildWarmKeepingLive()
+        this.pendingKnownSeedKeys = snapshot.idempotencyKeys
+      } else {
+        this.knownSeedKeys = new Set(snapshot.idempotencyKeys)
       }
     } else {
       // Text changed but every key is already reflected (e.g. our own turn's
@@ -732,24 +785,91 @@ export class HubController {
 
   // MARK: Session event wiring (pass-through + connect/error enrichment)
 
-  private sessionEvents(): HubSessionEvents {
+  /** Event handlers bound to one session instance. Late events from a session that
+   *  is no longer `this.session` (or the in-flight incoming) are dropped so a
+   *  retired socket cannot mutate the live successor. */
+  private bindSessionEvents(owner: { current: HubSession | null }): HubSessionEvents {
+    const isLive = (): boolean => this.session !== null && this.session === owner.current
+    const isIncoming = (): boolean =>
+      this.incoming !== null && this.incoming.session === owner.current
     return {
-      onConnected: (sessionID) => this.handleConnected(sessionID),
-      onError: (message, retryable, closeCode) => this.handleError(message, retryable, closeCode),
-      onInputTranscript: (text, isFinal, identity) =>
-        this.events.onInputTranscript?.(text, isFinal, identity),
-      onAssistantText: (text, isFinal, identity) =>
-        this.events.onAssistantText?.(text, isFinal, identity),
-      onSpeakingStart: () => this.events.onSpeakingStart?.(),
-      onSpeakingEnd: () => this.events.onSpeakingEnd?.(),
-      onToolRequest: (call, identity) => this.events.onToolRequest?.(call, identity),
+      onConnected: (sessionID) => {
+        if (isIncoming() && this.incoming) {
+          this.incoming = { ...this.incoming, sessionID }
+          this.installIncomingIfIdle()
+          return
+        }
+        if (!isLive()) return
+        this.handleConnected(sessionID)
+      },
+      onError: (message, retryable, closeCode) => {
+        if (isIncoming()) {
+          this.discardIncoming()
+          return
+        }
+        if (!isLive()) return
+        this.handleError(message, retryable, closeCode)
+      },
+      onInputTranscript: (text, isFinal, identity) => {
+        if (!isLive()) return
+        this.events.onInputTranscript?.(text, isFinal, identity)
+      },
+      onAssistantText: (text, isFinal, identity) => {
+        if (!isLive()) return
+        this.events.onAssistantText?.(text, isFinal, identity)
+      },
+      onSpeakingStart: () => {
+        if (!isLive()) return
+        this.events.onSpeakingStart?.()
+      },
+      onSpeakingEnd: () => {
+        if (!isLive()) return
+        this.events.onSpeakingEnd?.()
+      },
+      onToolRequest: (call, identity) => {
+        if (!isLive()) return
+        this.events.onToolRequest?.(call, identity)
+      },
       onTurnDone: (identity) => {
+        if (!isLive()) return
         // A completed turn proves the hub works — reset the strike budget (Mac :3328)
         // and close any open circuit.
         this.reconnectStrikes = 0
         this.circuitOpenUntil = null
         this.events.onTurnDone?.(identity)
       }
+    }
+  }
+
+  /** Close an in-flight keep-live successor without touching the live session. */
+  private discardIncoming(): void {
+    const incoming = this.incoming
+    this.incoming = null
+    this.pendingKnownSeedKeys = null
+    incoming?.session.teardown()
+  }
+
+  /** Promote a connected keep-live successor to the live session once no turn is
+   *  using the predecessor. No-op until the successor has a sessionID, or while a
+   *  turn is still fenced on the old socket. */
+  private installIncomingIfIdle(): void {
+    const incoming = this.incoming
+    if (!incoming || incoming.sessionID === null) return
+    if (this.activeTurnID !== null) return
+    this.incoming = null
+    const outgoing = this.session
+    this.session = incoming.session
+    this.sessionProvider = incoming.provider
+    if (this.pendingKnownSeedKeys) {
+      this.knownSeedKeys = new Set(this.pendingKnownSeedKeys)
+      this.pendingKnownSeedKeys = null
+    }
+    if (outgoing && outgoing !== incoming.session) outgoing.teardown()
+    this.handleConnected(incoming.sessionID)
+    if (this.pendingBegin && this.pendingBegin.turnID === this.activeTurnID) {
+      const begin = this.pendingBegin
+      this.pendingBegin = null
+      incoming.session.beginTurn(begin)
     }
   }
 
