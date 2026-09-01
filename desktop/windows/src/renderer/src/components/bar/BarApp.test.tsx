@@ -229,3 +229,62 @@ describe('BarApp reveal/expand view reset (peek-landing bug)', () => {
     expect(conversationInput()).toBeNull()
   })
 })
+
+describe('BarApp collapsed agent-status glow', () => {
+  const failedPill: AgentPill = {
+    id: 'p1',
+    runId: 'r1',
+    sessionId: 's1',
+    title: 'My Agent Run',
+    displayStatus: 'failed',
+    latestActivity: 'Agent failed',
+    query: 'do a thing',
+    createdAtMs: 1,
+    completedAtMs: 2,
+    errorMessage: 'boom',
+    provider: null,
+    viewedAtMs: null
+  }
+
+  it('peek with an unviewed failed pill tints the collapsed surface red', async () => {
+    mockPills = [failedPill]
+    await mountBar()
+    await fire('onShow', { mode: 'peek', token: 1 })
+    const surface = document.querySelector('.bar-surface')
+    expect(surface?.getAttribute('data-agent-status')).toBe('failed')
+    expect(surface?.className).toContain('bar-surface-agent-failed')
+    expect(screen.getByLabelText('Open Omi, subagents failed')).toBeTruthy()
+  })
+
+  it('peek with a viewed finished pill stays untinted (done work goes quiet)', async () => {
+    mockPills = [{ ...failedPill, viewedAtMs: 9_000 }]
+    await mountBar()
+    await fire('onShow', { mode: 'peek', token: 1 })
+    const surface = document.querySelector('.bar-surface')
+    expect(surface?.getAttribute('data-agent-status')).toBeNull()
+    expect(surface?.className).not.toContain('bar-surface-agent')
+  })
+
+  it('a spoken reply suppresses the agent glow (voice owns the pill)', async () => {
+    mockPills = [failedPill]
+    await mountBar()
+    await fire('onShow', { mode: 'peek', token: 1 })
+    await fire('onChatState', {
+      messages: [],
+      sending: false,
+      status: 'speaking',
+      agentsActive: false
+    })
+    const surface = document.querySelector('.bar-surface')
+    expect(surface?.getAttribute('data-agent-status')).toBeNull()
+  })
+
+  it('expanded panel does not carry the collapsed glow class', async () => {
+    mockPills = [failedPill]
+    await mountBar()
+    await fire('onShow', { mode: 'expanded', token: 1 })
+    const surface = document.querySelector('.bar-surface')
+    expect(surface?.className).toContain('bar-surface-expanded')
+    expect(surface?.getAttribute('data-agent-status')).toBeNull()
+  })
+})
