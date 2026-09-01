@@ -54,6 +54,12 @@ native Wayland. That requires a stable app ID:
 Session facts are centralized in `src/main/linux/linuxSession.ts` and logged at
 startup as `[linux] session=… ozone=… portal=… shortcuts=…`.
 
+On native Wayland the floating bar uses a **full-width top strip** (pill stays at
+the screen top via in-window layout), **hides with `win.hide()`** when dismissed
+instead of parking off-screen, skips `setAlwaysOnTop`, and does **not** create the
+focus-halo glow window (Win32-only today). Global summon shortcuts remain
+unavailable on native Wayland.
+
 Screen capture on Wayland goes through the desktop portal, which asks
 "Share screen?" for consent — and Electron has no persisted-consent path, so
 *continuous* Rewind capture would re-prompt every frame. Therefore, on a Wayland
