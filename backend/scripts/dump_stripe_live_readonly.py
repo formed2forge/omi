@@ -171,21 +171,52 @@ PRICE_FIELDS = (
 )
 
 
+_REDACT_MARKERS = ("sk_live_", "rk_live_", "sk_test_", "rk_test_", "pk_live_", "pk_test_")
+_REDACT_TOKEN_EXTRA = "_-*"
+_REDACT_MAX_REPLACEMENTS = 256
+
+
 def redact(text: str, api_key: str = "") -> str:
-    """Strip a secret from error text. Never print the key."""
+    """Strip a secret from error text. Never print the key.
+
+    Advance past each replacement. Searching from index 0 after substituting
+    ``rk_live_[redacted]`` rematches the marker forever. Stripe 403 bodies echo
+    a truncated live key (often asterisk-masked), which hung the billed-price
+    census on Ctrl+C inside this loop.
+    """
     out = text
     if api_key:
         out = out.replace(api_key, "[redacted]")
-    for marker in ("sk_live_", "rk_live_", "sk_test_", "rk_test_", "pk_live_", "pk_test_"):
+    for marker in _REDACT_MARKERS:
+        start = 0
+        replacements = 0
         while True:
-            idx = out.find(marker)
+            idx = out.find(marker, start)
             if idx < 0:
                 break
-            end = idx
-            while end < len(out) and (out[end].isalnum() or out[end] in "_-"):
+            replacements += 1
+            if replacements > _REDACT_MAX_REPLACEMENTS:
+                out = out[:idx] + marker + "[redacted]"
+                break
+            end = idx + len(marker)
+            while end < len(out) and (out[end].isalnum() or out[end] in _REDACT_TOKEN_EXTRA):
                 end += 1
             out = out[:idx] + marker + "[redacted]" + out[end:]
+            start = idx + len(marker) + len("[redacted]")
     return out
+
+
+def stripe_error_detail(err_body: str) -> str:
+    """Short Stripe error code + message. Caps length so we do not dump a key blob."""
+    try:
+        payload = json.loads(err_body)
+    except json.JSONDecodeError:
+        return err_body[:300]
+    err = payload.get("error") if isinstance(payload, dict) else None
+    if not isinstance(err, dict):
+        return err_body[:300]
+    parts = [str(err[key]) for key in ("code", "type", "message") if err.get(key)]
+    return " ".join(parts)[:300] if parts else err_body[:300]
 
 
 def classify_key_kind(api_key: str) -> str:
@@ -280,7 +311,8 @@ class StripeReadonlyClient:
                 status = getattr(resp, "status", 200)
         except urllib.error.HTTPError as exc:
             err_body = exc.read().decode("utf-8", errors="replace")
-            raise SystemExit(redact(f"Stripe GET {path} failed HTTP {exc.code}: {err_body}", self.api_key)) from None
+            detail = stripe_error_detail(err_body)
+            raise SystemExit(redact(f"Stripe GET {path} failed HTTP {exc.code}: {detail}", self.api_key)) from None
         except Exception as exc:  # noqa: BLE001 - surface transport errors without the key
             raise SystemExit(redact(f"Stripe GET {path} failed: {exc}", self.api_key)) from None
         if status >= 400:

@@ -42,6 +42,7 @@ from scripts.dump_stripe_live_readonly import (  # noqa: E402
     classify_key_kind,
     load_api_key,
     redact,
+    stripe_error_detail,
 )
 
 DEFAULT_CATALOG = BACKEND_DIR / "config" / "plan_catalog.json"
@@ -195,13 +196,19 @@ class StripeCensusClient:
                 status = getattr(resp, "status", 200)
         except urllib.error.HTTPError as exc:
             err_body = exc.read().decode("utf-8", errors="replace")
+            detail = stripe_error_detail(err_body)
             hint = ""
             if exc.code == 403 and path.startswith("/v1/subscriptions"):
                 hint = (
-                    " Grant Subscriptions Read on this LIVE restricted key "
-                    "(Dashboard → API keys → restricted key → Subscriptions Read)."
+                    " Prices Read alone is not enough. Grant Subscriptions: Read "
+                    "on this LIVE restricted key (no writes, no sk_live_). "
+                    "If you cannot open the live Dashboard, ask the Stripe account "
+                    "owner to add Subscriptions: Read to this same key or to run "
+                    "this GET-only census and paste the price-id table."
                 )
-            raise SystemExit(redact(f"Stripe GET {path} failed HTTP {exc.code}: {err_body}.{hint}", self.api_key)) from None
+            raise SystemExit(
+                redact(f"Stripe GET {path} failed HTTP {exc.code}: {detail}.{hint}", self.api_key)
+            ) from None
         except Exception as exc:  # noqa: BLE001
             raise SystemExit(redact(f"Stripe GET {path} failed: {exc}", self.api_key)) from None
         if status >= 400:
@@ -380,6 +387,7 @@ def _print_dry_run(catalog_path: Path) -> None:
     print(f"  billed statuses: {', '.join(BILLED_STATUSES)}")
     print("  cancel_at_period_end still counts (status remains active).")
     print("Restricted live key needs Subscriptions Read + Prices Read. Never write.")
+    print("No live Dashboard: the Stripe account owner grants Subscriptions: Read or runs this script.")
     print("Dry-run only. Pass --apply --live-readonly with rk_live_ (GET only).")
     print("Test-account smoke: --apply --allow-test-mode (not production customers).")
 
