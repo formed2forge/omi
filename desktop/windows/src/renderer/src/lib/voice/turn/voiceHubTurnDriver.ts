@@ -89,6 +89,16 @@ export const RELEASE_WATCHDOG_MS = 45_000
 /** The watchdog's user-facing hint (mirrors the local PTT machine's watchdog copy). */
 export const RELEASE_WATCHDOG_HINT = 'Voice input timed out — try again'
 
+/** Mac `HubTool.thinkDeeper` / `HubTool.webSearch` → `VoiceToolDeadlineClass.chatLane`.
+ *  `ask_higher_model` is the Windows think_deeper analogue. A spoken lookup that
+ *  needs the public-web / chat lane must not be killed by the 30s standard
+ *  pending-tools deadline (web_search's own HTTP budget is 45s). */
+export const CHAT_LANE_VOICE_TOOLS: ReadonlySet<string> = new Set([
+  'web_search',
+  'think_deeper',
+  'ask_higher_model'
+])
+
 const ZERO_STATS: AudioStats = { totalSec: 0, voicedSec: 0, peak: 0 }
 
 export type VoiceHubTurnDriverDeps = {
@@ -127,7 +137,8 @@ export type VoiceHubTurnDriverDeps = {
    *  main `executeHostTool` (authority host-derived). Never rejects in practice
    *  (main returns `"Error: …"` strings); the driver still guards a rejection so a
    *  transport failure can't wedge the turn. Absent ⇒ no tool loop (today's behavior:
-   *  a provider tool call would hang until the reducer's 30 s `pendingTools` deadline). */
+   *  a provider tool call would hang until the reducer's pending-tools deadline —
+   *  30s standard, 180s for chat-lane tools). */
   executeTool?: (name: string, argumentsJSON: string) => Promise<string>
   /** Pref-gated system-audio duck at capture start (defaults to the shipped A4 call). */
   muteForCapture?: () => void
@@ -763,7 +774,8 @@ export class VoiceHubTurnDriver {
       // executor registry (control tools + serviceable product tools + spawn_agent),
       // then relay the result back to the provider so it can finish speaking. Parallel
       // calls each register in the reducer's pending set; the turn completes only once
-      // every pending call resolves (or the 30 s pendingTools deadline fires).
+      // every pending call resolves (or the pending-tools deadline fires — 30s standard,
+      // 180s chat-lane).
       onToolRequest: (call) => {
         const turnID = this.turnID
         if (turnID === null) return
@@ -778,6 +790,17 @@ export class VoiceHubTurnDriver {
           turnID,
           callID: call.callId as unknown as VoiceToolCallID
         })
+        // Mac RealtimeHubController+SessionDelegate: web_search / think_deeper
+        // upgrade the pending-tools budget to chatLane (180s). Windows also
+        // upgrades ask_higher_model (the think_deeper analogue on this port).
+        if (CHAT_LANE_VOICE_TOOLS.has(call.name)) {
+          this.dispatch({
+            type: 'toolDeadlineClassSelected',
+            turnID,
+            callID: call.callId as unknown as VoiceToolCallID,
+            deadlineClass: 'chatLane'
+          })
+        }
         this.executeVoiceTool(turnID, call)
       },
       // The warm-wait buffer lost the 1 s race — the reducer already moved the
