@@ -189,6 +189,7 @@ def test_http_error_redacts_key_and_hints_subscriptions_read():
     message = str(exc.value)
     assert secret not in message
     assert truncated not in message
-    assert "Subscriptions Read" in message
+    assert "Subscriptions: Read" in message
     assert "more_permissions_needed" in message
     assert "Prices Read alone is not enough" in message
+    assert "account owner" in message

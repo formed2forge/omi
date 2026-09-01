@@ -200,9 +200,11 @@ class StripeCensusClient:
             hint = ""
             if exc.code == 403 and path.startswith("/v1/subscriptions"):
                 hint = (
-                    " Grant Subscriptions Read on this LIVE restricted key "
-                    "(live-mode Dashboard → Developers → API keys → that key → "
-                    "Subscriptions: Read). Prices Read alone is not enough."
+                    " Prices Read alone is not enough. Grant Subscriptions: Read "
+                    "on this LIVE restricted key (no writes, no sk_live_). "
+                    "If you cannot open the live Dashboard, ask the Stripe account "
+                    "owner to add Subscriptions: Read to this same key or to run "
+                    "this GET-only census and paste the price-id table."
                 )
             raise SystemExit(
                 redact(f"Stripe GET {path} failed HTTP {exc.code}: {detail}.{hint}", self.api_key)
@@ -385,6 +387,7 @@ def _print_dry_run(catalog_path: Path) -> None:
     print(f"  billed statuses: {', '.join(BILLED_STATUSES)}")
     print("  cancel_at_period_end still counts (status remains active).")
     print("Restricted live key needs Subscriptions Read + Prices Read. Never write.")
+    print("No live Dashboard: the Stripe account owner grants Subscriptions: Read or runs this script.")
     print("Dry-run only. Pass --apply --live-readonly with rk_live_ (GET only).")
     print("Test-account smoke: --apply --allow-test-mode (not production customers).")
 
