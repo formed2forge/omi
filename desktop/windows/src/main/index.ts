@@ -116,6 +116,7 @@ import {
 import { onSessionReset } from './assistants/core/session'
 import { removeFromIndex as removeTaskFromEmbeddingIndex } from './tasks/taskEmbeddingService'
 import { createGlowWindow, registerGlowIpc, destroyGlow } from './glow/glowWindow'
+import { shouldCreateGlowOnLinux } from './linux/nativeWayland'
 import { maybeGenerateOnStartup as maybeGenerateAiProfileOnStartup } from './assistants/aiUserProfile/service'
 import { setTokenRefresher } from './assistants/core/session'
 import { makeRendererTokenRefresher } from './assistants/core/tokenPull'
@@ -1233,7 +1234,7 @@ app.whenReady().then(async () => {
         // its off-screen prime — a transparent frameless window fades in via the OS
         // show-animation on every hide→show (the bug that read as the bar "plummeting"),
         // so the halo parks off-screen instead. See main/glow/glowWindow.ts.
-        { name: 'glowWindow', run: () => createGlowWindow() },
+        { name: 'glowWindow', run: () => shouldCreateGlowOnLinux() && createGlowWindow() },
         // Meeting detection (Phase 5): event-driven Tier1/Tier2 monitor → toast +
         // auto-capture via the capture window. No-op off-Windows; 'off' mode keeps
         // the machine latched silent.
