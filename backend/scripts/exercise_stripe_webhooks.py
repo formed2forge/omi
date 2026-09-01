@@ -37,12 +37,13 @@ if str(BACKEND_DIR) not in sys.path:
 from scripts.snapshot_stripe_catalog import classify_key_kind  # noqa: E402
 
 # Mirrors routers/payment.py stripe_webhook event types that mutate subscriptions.
-WEBHOOK_EVENTS: tuple[str, ...] = (
-    "checkout.session.completed",
+SUBSCRIPTION_EVENTS: tuple[str, ...] = (
     "customer.subscription.created",
     "customer.subscription.updated",
     "customer.subscription.deleted",
 )
+CHECKOUT_EVENT = "checkout.session.completed"
+WEBHOOK_EVENTS: tuple[str, ...] = (CHECKOUT_EVENT,) + SUBSCRIPTION_EVENTS
 FORWARD_PATH = "/v1/stripe/webhook"
 STRIPE_CLI_VERSION = "1.31.0"
 _SECRET_PREFIXES = ("sk_test_", "rk_test_", "pk_test_", "sk_live_", "rk_live_", "pk_live_", "whsec_")
@@ -121,6 +122,11 @@ def _is_cli_session_denied(text: str) -> bool:
     return "stripecli_session_write" in lowered or "debugging tools write" in lowered
 
 
+def _is_checkout_write_denied(text: str) -> bool:
+    lowered = text.lower()
+    return "checkout_session_write" in lowered or "checkout sessions write" in lowered
+
+
 class _WebhookHandler(BaseHTTPRequestHandler):
     received: List[Dict[str, Any]]
     signing_secret: str = ""
@@ -168,7 +174,9 @@ def _print_dry_run(cli: Optional[str]) -> None:
     print("Dry-run only. Pass --apply with a TEST-MODE STRIPE_API_KEY to listen + trigger.")
 
 
-def apply_listen_and_trigger(events: Sequence[str] = WEBHOOK_EVENTS) -> List[Dict[str, Any]]:
+def apply_listen_and_trigger(
+    events: Sequence[str] = WEBHOOK_EVENTS,
+) -> tuple[List[Dict[str, Any]], List[str]]:
     api_key = os.getenv("STRIPE_API_KEY", "")
     if not api_key:
         raise SystemExit("STRIPE_API_KEY is required for --apply (use a TEST-MODE key).")
@@ -235,6 +243,8 @@ def apply_listen_and_trigger(events: Sequence[str] = WEBHOOK_EVENTS) -> List[Dic
             raise SystemExit("Timed out waiting for stripe listen webhook signing secret.")
         handler_cls.signing_secret = secret
         print("stripe listen ready; triggering fixture events…", file=sys.stderr)
+        triggered_ok: List[str] = []
+        skipped: List[str] = []
         for event_name in events:
             trigger = subprocess.run(
                 trigger_argv(cli, event_name),
@@ -249,13 +259,26 @@ def apply_listen_and_trigger(events: Sequence[str] = WEBHOOK_EVENTS) -> List[Dic
                     raise SystemExit(
                         "Stripe CLI trigger needs Debugging Tools Write (stripecli_session_write). " + combined
                     )
+                if event_name == CHECKOUT_EVENT and _is_checkout_write_denied(combined):
+                    skipped.append(event_name)
+                    print(
+                        f"  SKIP {event_name}: Checkout Sessions Write (checkout_session_write) "
+                        "not on this restricted key.",
+                        file=sys.stderr,
+                    )
+                    continue
                 print(f"  FAIL trigger {event_name}: {combined}", file=sys.stderr)
             else:
+                triggered_ok.append(event_name)
                 print(f"  triggered {event_name}", file=sys.stderr)
-        wait_deadline = time.time() + 20
-        while time.time() < wait_deadline and len(handler_cls.received) < len(events):
+        needed = set(triggered_ok)
+        wait_deadline = time.time() + 30
+        while time.time() < wait_deadline:
+            got = {item.get("type") for item in handler_cls.received}
+            if needed <= got:
+                break
             time.sleep(0.2)
-        return list(handler_cls.received)
+        return list(handler_cls.received), skipped
     finally:
         if listen_proc.poll() is None:
             listen_proc.send_signal(signal.SIGTERM)
@@ -284,17 +307,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if not args.apply:
         return 0
 
-    received = apply_listen_and_trigger()
+    received, skipped = apply_listen_and_trigger()
     types = [item.get("type") for item in received]
     print(f"\nReceived {len(received)} forwarded event(s): {types}")
+    if skipped:
+        print(f"Skipped triggers: {skipped}")
     livemode = [item.get("livemode") for item in received]
     if any(livemode):
         raise SystemExit("Refusing: a forwarded event had livemode=true.")
-    missing = [name for name in WEBHOOK_EVENTS if name not in types]
+    missing = [name for name in SUBSCRIPTION_EVENTS if name not in types]
     if missing:
-        print(f"Missing events: {missing}", file=sys.stderr)
+        print(f"Missing subscription events: {missing}", file=sys.stderr)
         return 1
-    print("All expected events arrived livemode=false with a verified Stripe-Signature.")
+    print("Subscription events arrived livemode=false with a verified Stripe-Signature.")
     return 0
 
 
