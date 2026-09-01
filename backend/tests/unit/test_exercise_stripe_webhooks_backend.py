@@ -94,3 +94,11 @@ def test_apply_requires_test_mode_key(monkeypatch):
     monkeypatch.delenv("STRIPE_API_KEY", raising=False)
     with pytest.raises(SystemExit, match="STRIPE_API_KEY is required"):
         whb.require_apply_env()
+
+
+def test_backend_parse_listen_secret_keeps_base64():
+    secret = "whsec_ab+c/d=="
+    text = f"Ready! Your webhook signing secret is \x1b[1m{secret}\x1b[0m (^C to quit)"
+    assert whb.parse_listen_secret(text) == secret
+    env = whb.listen_cli_env({"CLICOLOR_FORCE": "1", "PATH": "/bin"})
+    assert env["CLICOLOR_FORCE"] == "0"

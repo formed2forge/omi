@@ -38,6 +38,59 @@ def test_parse_listen_secret():
     assert wh.parse_listen_secret("no secret here") is None
 
 
+def test_parse_listen_secret_keeps_base64_chars():
+    secret = "whsec_ab+c/d=="
+    text = f"Ready! Your webhook signing secret is {secret} (^C to quit)"
+    assert wh.parse_listen_secret(text) == secret
+    assert wh.parse_listen_secret(text) != "whsec_ab"
+
+
+def test_parse_listen_secret_strips_ansi_bold():
+    secret = "whsec_ab+c/d=="
+    text = f"Ready! Your webhook signing secret is \x1b[1m{secret}\x1b[0m (^C to quit)"
+    assert wh.parse_listen_secret(text) == secret
+
+
+def test_parsed_base64_secret_verifies_stripe_signature():
+    import hashlib
+    import hmac
+    import time
+
+    stripe = pytest.importorskip("stripe")
+    secret = "whsec_ab+c/d=="
+    ready = f"Ready! Your webhook signing secret is \x1b[1m{secret}\x1b[0m (^C to quit)"
+    parsed = wh.parse_listen_secret(ready)
+    assert parsed == secret
+    payload = b'{"id":"evt_test","object":"event","type":"customer.subscription.created"}'
+    timestamp = str(int(time.time()))
+    digest = hmac.new(secret.encode("utf-8"), f"{timestamp}.".encode("utf-8") + payload, hashlib.sha256).hexdigest()
+    header = f"t={timestamp},v1={digest}"
+    event = stripe.Webhook.construct_event(payload, header, parsed)
+    assert event["type"] == "customer.subscription.created"
+    with pytest.raises(Exception):
+        stripe.Webhook.construct_event(payload, header, "whsec_ab")
+
+
+def test_listen_cli_env_disables_forced_color(monkeypatch):
+    monkeypatch.setenv("CLICOLOR_FORCE", "1")
+    monkeypatch.setenv("CLICOLOR", "1")
+    env = wh.listen_cli_env()
+    assert env["CLICOLOR_FORCE"] == "0"
+    assert env["CLICOLOR"] == "0"
+    assert env["NO_COLOR"] == "1"
+
+
+def test_require_stripe_sdk_imports():
+    stripe = wh.require_stripe_sdk()
+    assert hasattr(stripe.Webhook, "construct_event")
+
+
+def test_require_stripe_sdk_fails_closed_when_missing(monkeypatch):
+    monkeypatch.setitem(__import__("sys").modules, "stripe", None)
+    with pytest.raises(SystemExit, match="backend/.venv"):
+        wh.require_stripe_sdk()
+
+
 def test_sanitize_redacts_webhook_secret():
     text = wh._sanitize("secret whsec_SHOULDNOTLEAK and rk_test_ALSONOT")
     assert "SHOULDNOTLEAK" not in text
