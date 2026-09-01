@@ -54,6 +54,7 @@ from scripts.exercise_stripe_webhooks import (  # noqa: E402
     _refuse_live,
     _sanitize,
     ensure_stripe_cli,
+    listen_cli_env,
     parse_listen_secret,
 )
 from scripts.snapshot_stripe_catalog import TEST_FIXTURE_MARKER, classify_key_kind  # noqa: E402
@@ -367,7 +368,7 @@ def _start_listen(cli: str, port: int) -> tuple[subprocess.Popen[str], Path]:
         stdout=log_file,
         stderr=subprocess.STDOUT,
         text=True,
-        env=os.environ.copy(),
+        env=listen_cli_env(),
         start_new_session=True,
     )
     return proc, log_path

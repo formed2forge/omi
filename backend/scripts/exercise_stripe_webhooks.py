@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 import re
 import shutil
 import signal
@@ -51,6 +52,10 @@ WEBHOOK_EVENTS: tuple[str, ...] = (CHECKOUT_EVENT,) + SUBSCRIPTION_EVENTS
 FORWARD_PATH = "/v1/stripe/webhook"
 STRIPE_CLI_VERSION = "1.31.0"
 _SECRET_PREFIXES = ("sk_test_", "rk_test_", "pk_test_", "sk_live_", "rk_live_", "pk_live_", "whsec_")
+# Stripe CLI Ready-line secrets are `whsec_` + base64 (`+/=` and URL-safe `_`/`-`).
+# A charset of only `[A-Za-z0-9]` truncates at the first `+`/`/` and HMAC-fails every POST.
+_LISTEN_SECRET_RE = re.compile(r"whsec_[A-Za-z0-9+/=_-]+")
+_ANSI_RE = re.compile(r"\x1b(?:\[[0-9;?]*[ -/]*[@-~]|].*?(?:\x07|\x1b\\)|[@-Z\\-_])")
 
 
 def _sanitize(text: str) -> str:
@@ -79,16 +84,55 @@ def _refuse_live(api_key: str) -> None:
         raise SystemExit("Refusing to run against a LIVE Stripe key. Use a test-mode key (sk_test_/rk_test_).")
 
 
+def _stripe_cli_archive_name(system: Optional[str] = None, machine: Optional[str] = None) -> str:
+    """GitHub release archive for this host. linux_x86_64 is not runnable on macOS."""
+    system = (system or sys.platform).lower()
+    machine = (machine or platform.machine()).lower()
+    if machine in ("amd64", "x86_64"):
+        arch = "x86_64"
+    elif machine in ("arm64", "aarch64"):
+        arch = "arm64"
+    else:
+        raise SystemExit(f"Unsupported CPU for Stripe CLI download: {machine}")
+    if system.startswith("linux"):
+        slug = f"linux_{arch}"
+    elif system == "darwin":
+        slug = f"mac-os_{arch}"
+    else:
+        raise SystemExit(
+            f"Unsupported OS for Stripe CLI download: {system}. Install the CLI from "
+            "https://docs.stripe.com/stripe-cli and put `stripe` on PATH."
+        )
+    return f"stripe_{STRIPE_CLI_VERSION}_{slug}.tar.gz"
+
+
+def _cli_is_runnable(path: str) -> bool:
+    """False for a Linux ELF cached on macOS (OSError: Exec format error)."""
+    try:
+        result = subprocess.run([path, "version"], capture_output=True, timeout=8)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
 def _cli_bin() -> Optional[str]:
+    candidates: List[str] = []
     found = shutil.which("stripe")
     if found:
-        return found
+        candidates.append(found)
     cached = BACKEND_DIR / ".cache" / "stripe-cli" / "stripe"
     if cached.is_file() and os.access(cached, os.X_OK):
-        return str(cached)
+        candidates.append(str(cached))
     home = os.path.expanduser("~/.local/bin/stripe")
     if os.path.isfile(home) and os.access(home, os.X_OK):
-        return home
+        candidates.append(home)
+    seen: set[str] = set()
+    for path in candidates:
+        if path in seen:
+            continue
+        seen.add(path)
+        if _cli_is_runnable(path):
+            return path
     return None
 
 
@@ -98,16 +142,21 @@ def ensure_stripe_cli() -> str:
         return existing
     dest_dir = BACKEND_DIR / ".cache" / "stripe-cli"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    tarball = dest_dir / f"stripe_{STRIPE_CLI_VERSION}_linux_x86_64.tar.gz"
-    url = (
-        "https://github.com/stripe/stripe-cli/releases/download/"
-        f"v{STRIPE_CLI_VERSION}/stripe_{STRIPE_CLI_VERSION}_linux_x86_64.tar.gz"
-    )
-    print(f"Downloading Stripe CLI v{STRIPE_CLI_VERSION}…", file=sys.stderr)
+    archive = _stripe_cli_archive_name()
+    tarball = dest_dir / archive
+    url = f"https://github.com/stripe/stripe-cli/releases/download/v{STRIPE_CLI_VERSION}/{archive}"
+    print(f"Downloading Stripe CLI v{STRIPE_CLI_VERSION} ({archive})…", file=sys.stderr)
     subprocess.run(["curl", "-fsSL", "-o", str(tarball), url], check=True)
     subprocess.run(["tar", "-xzf", str(tarball), "-C", str(dest_dir)], check=True)
     binary = dest_dir / "stripe"
+    if not binary.is_file():
+        raise SystemExit(f"Stripe CLI archive {archive} did not contain a `stripe` binary.")
     binary.chmod(0o755)
+    if not _cli_is_runnable(str(binary)):
+        raise SystemExit(
+            f"Downloaded Stripe CLI {archive} is not executable on this host. "
+            "Install a native CLI (macOS: brew install stripe/stripe-cli/stripe) and retry."
+        )
     return str(binary)
 
 
@@ -116,9 +165,39 @@ def trigger_argv(cli: str, event_name: str) -> List[str]:
     return [cli, "trigger", event_name]
 
 
+def _strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text)
+
+
 def parse_listen_secret(text: str) -> Optional[str]:
-    match = re.search(r"whsec_[A-Za-z0-9]+", text)
+    """Return the listen-session `whsec_` Stripe printed, including base64 padding.
+
+    `stripe listen` Ready-line (CLI 1.31): ``Ready! … secret is <bold>whsec_… (^C to quit)``.
+    ``ansi.Bold`` wraps the secret when ``CLICOLOR_FORCE`` is set even if stdout is a pipe.
+    """
+    match = _LISTEN_SECRET_RE.search(_strip_ansi(text))
     return match.group(0) if match else None
+
+
+def listen_cli_env(base: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    """Env for `stripe listen`/`trigger`. Disable ANSI so the Ready-line secret is plaintext."""
+    env = dict(os.environ if base is None else base)
+    env["NO_COLOR"] = "1"
+    env["CLICOLOR"] = "0"
+    env["CLICOLOR_FORCE"] = "0"
+    return env
+
+
+def require_stripe_sdk() -> Any:
+    """Fail before listen/trigger if this interpreter cannot verify Stripe-Signature."""
+    try:
+        import stripe
+    except ImportError as exc:
+        raise SystemExit(
+            "The Stripe Python package is required for --apply (Webhook.construct_event). "
+            "Activate backend/.venv (`cd backend && source .venv/bin/activate`) and retry."
+        ) from exc
+    return stripe
 
 
 def _is_cli_session_denied(text: str) -> bool:
@@ -154,6 +233,12 @@ class _WebhookHandler(BaseHTTPRequestHandler):
 
             event = stripe.Webhook.construct_event(payload, sig, self.signing_secret)
         except Exception as exc:  # noqa: BLE001 - map verify failures to 400
+            print(
+                "webhook verify failed: "
+                f"payload_bytes={len(payload)} sig={'yes' if sig else 'no'} "
+                f"{_sanitize(str(exc))}",
+                file=sys.stderr,
+            )
             self._respond(400, {"status": "error", "message": _sanitize(str(exc))})
             return
         record = {"type": event.get("type"), "id": event.get("id"), "livemode": event.get("livemode")}
@@ -192,6 +277,7 @@ def apply_listen_and_trigger(
             "Refusing to run: STRIPE_API_KEY is not a test-mode secret/restricted key (sk_test_/rk_test_)."
         )
 
+    require_stripe_sdk()
     cli = ensure_stripe_cli()
     handler_cls = type(
         "Handler",
@@ -212,7 +298,7 @@ def apply_listen_and_trigger(
         ",".join(events),
         "--skip-update",
     ]
-    env = os.environ.copy()
+    env = listen_cli_env()
     listen_proc = subprocess.Popen(
         listen_cmd,
         stdout=subprocess.PIPE,
@@ -247,7 +333,10 @@ def apply_listen_and_trigger(
         if not secret:
             raise SystemExit("Timed out waiting for stripe listen webhook signing secret.")
         handler_cls.signing_secret = secret
-        print("stripe listen ready; triggering fixture events…", file=sys.stderr)
+        print(
+            f"stripe listen ready (secret_chars={len(secret)}); triggering fixture events…",
+            file=sys.stderr,
+        )
         triggered_ok: List[str] = []
         skipped: List[str] = []
         for event_name in events:
