@@ -155,6 +155,51 @@ def test_apply_scenarios_omits_test_clock_when_clock_create_denied(monkeypatch):
     assert captured.get("deleted") is True
 
 
+def test_apply_scenarios_attaches_test_clock_when_create_succeeds(monkeypatch, capsys):
+    captured: dict = {}
+
+    class _Obj:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def create(**kwargs):
+                    captured["clock_kwargs"] = kwargs
+                    return _Obj(id="clock_phase3")
+
+                @staticmethod
+                def delete(clock_id):
+                    captured["deleted_clock"] = clock_id
+
+        class Customer:
+            @staticmethod
+            def create(**kwargs):
+                captured["customer_kwargs"] = kwargs
+                return _Obj(id="cus_phase3")
+
+            @staticmethod
+            def delete(_customer_id):
+                captured["deleted"] = True
+
+    monkeypatch.setattr(ex, "_require_test_mode_key", lambda *_a, **_k: _Stripe)
+    monkeypatch.setattr(ex, "_attach_test_card", lambda *_a, **_k: None)
+    fallbacks: list = []
+    monkeypatch.setattr(ex, "record_fallback", lambda **kwargs: fallbacks.append(kwargs))
+
+    blocked = [sc for sc in ex.SCENARIOS if sc.kind == ex.KIND_DESKTOP_BLOCKED][:1]
+    results = ex.apply_scenarios(blocked, {})
+    assert captured["customer_kwargs"]["test_clock"] == "clock_phase3"
+    assert captured["deleted_clock"] == "clock_phase3"
+    assert results[0]["status"] == "passed"
+    assert fallbacks == []
+    err = capsys.readouterr().err
+    assert "Test Clock created: clock_phase3" in err
+    assert "no_clock" not in err
+
+
 def test_apply_scenarios_exits_sanitized_when_customer_write_denied(monkeypatch):
     class _Stripe:
         class test_helpers:
