@@ -121,7 +121,8 @@ describe('buildVoiceHubToolCatalog — host-derived, role-gated (INV-AGENT)', ()
       'semantic_search',
       'get_daily_recap',
       'get_work_context',
-      'capture_screen'
+      'capture_screen',
+      'web_search'
     ]) {
       expect(n).toContain(name)
     }
@@ -138,6 +139,14 @@ describe('buildVoiceHubToolCatalog — host-derived, role-gated (INV-AGENT)', ()
     const { buildVoiceSystemInstruction } =
       await import('../../renderer/src/lib/voice/systemInstruction')
     expect(buildVoiceSystemInstruction()).toMatch(/\bget_goals\b/)
+  })
+
+  it('web_search is voice-advertised for both roles and named in the voice instruction', async () => {
+    expect(names('coordinator')).toContain('web_search')
+    expect(names('leaf')).toContain('web_search')
+    const { buildVoiceSystemInstruction } =
+      await import('../../renderer/src/lib/voice/systemInstruction')
+    expect(buildVoiceSystemInstruction()).toMatch(/\bweb_search\b/)
   })
 
   it('uses the voice realtimeDescription + schemaOverride when present', () => {

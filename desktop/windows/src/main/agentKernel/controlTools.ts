@@ -22,6 +22,7 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { adapterCredentialScopeFor, isProductionAdapterId } from '../codingAgent/interface'
+import { recordFallback } from '../observability/fallback'
 import type {
   AdapterBinding,
   AgentArtifact,
@@ -442,12 +443,21 @@ export interface AgentControlToolContext {
    * Host hook for `spawn_agent`'s adapter fallback: resolve (and register into
    * the kernel registry) the default spawnable CODING-AGENT adapter when the
    * caller's own default adapter is a managed-cloud chat engine (pi-mono) that
-   * can never be spawned. Returns the registered adapter id, or null when no
-   * coding agent is connected. HOST-derived — the model supplies nothing; the
+   * cannot be spawned as a coding agent. Returns the registered adapter id, or
+   * null when no coding agent is connected — the caller then starts a leaf
+   * pi-mono worker instead. HOST-derived — the model supplies nothing; the
    * pick comes from the host's connected-agent detection (INV-AGENT posture is
    * unchanged: this widens nothing a `provider` selector could not already do).
    */
   resolveSpawnableAdapterId?: () => Promise<string | null>
+  /**
+   * Host hook for a directed `spawn_agent` provider/adapterId (hermes/openclaw/…):
+   * register that coding agent into the kernel if it is actually connected.
+   * Returns false when the agent is not connected — the caller then uses the
+   * same no-CLI leaf fallback as omitting provider, instead of creating a
+   * floating-bar run that immediately dies with "Adapter not registered".
+   */
+  ensureSpawnAdapterRegistered?: (adapterId: string) => Promise<boolean> | boolean
 }
 
 function controlRunRecovery(
@@ -494,28 +504,92 @@ function assertControlSpawnAdapterNotManagedCloud(adapterId: string): void {
  * The inherited default — the caller session's adapter, or the parent run's —
  * is fine when it is itself spawnable. But the DEFAULT chat/voice surface runs
  * on pi-mono (managed cloud), which `assertControlSpawnAdapterNotManagedCloud`
- * refuses to spawn — so before this helper existed, every "build me X" spawn
- * from default chat or voice dead-ended in `pi-mono is a managed-cloud adapter…`
- * even with Claude Code connected (the 2026-07-18 live failure; macOS defaults
- * the top-level spawn to 'acp' instead of the caller's adapter). In that case,
- * ask the host which CONNECTED coding agent to use (`resolveSpawnableAdapterId`,
- * which also registers it in the kernel registry). No hook or no connected agent
- * is a clear actionable error, not the misleading managed-cloud refusal.
+ * refuses to spawn as a coding-agent substitute — so before this helper existed,
+ * every "build me X" spawn from default chat or voice dead-ended in `pi-mono is a
+ * managed-cloud adapter…` even with Claude Code connected (the 2026-07-18 live
+ * failure; macOS defaults the top-level spawn to 'acp' instead of the caller's
+ * adapter). When a coding CLI IS connected, ask the host which one to use
+ * (`resolveSpawnableAdapterId`, which also registers it in the kernel registry).
+ *
+ * When none is connected, fall back to a LEAF pi-mono worker on the same
+ * managed-cloud door as default chat — not a coding-agent substitute. Explicit
+ * `adapterId: 'pi-mono'` and a host hook that RETURNS pi-mono still hit the
+ * DARK managed-cloud refusal.
  */
 async function resolveSpawnAgentFallbackAdapter(
   context: AgentControlToolContext,
   inherited: string
-): Promise<{ adapterId: string; hostPicked: boolean }> {
+): Promise<{ adapterId: string; hostPicked: boolean; managedCloudLeaf: boolean }> {
   if (!isManagedCloudAdapterId(inherited)) {
-    return { adapterId: inherited, hostPicked: false }
+    return { adapterId: inherited, hostPicked: false, managedCloudLeaf: false }
   }
   const picked = (await context.resolveSpawnableAdapterId?.()) ?? null
-  if (!picked) {
-    throw new Error(
-      'No coding agent is connected to run this as a background agent. Ask the user to connect Claude Code (or another coding agent) in Settings, then try again.'
-    )
+  if (picked) {
+    return { adapterId: picked, hostPicked: true, managedCloudLeaf: false }
   }
-  return { adapterId: picked, hostPicked: true }
+  return { adapterId: inherited, hostPicked: false, managedCloudLeaf: true }
+}
+
+type SpawnAgentAdapterChoice = {
+  adapterId: string
+  hostPicked: boolean
+  managedCloudLeaf: boolean
+  /** Directed provider/adapter the model named but that is not connected. */
+  ignoredDirectedAdapter: string | null
+}
+
+/**
+ * Pick the adapter `spawn_agent` will actually run on.
+ *
+ * A directed local provider (`provider: 'hermes'` / `adapterId: 'openclaw'`)
+ * only wins when that adapter is already in the kernel registry or the host
+ * hook can register it (the agent is connected). Otherwise the same no-CLI
+ * leaf fallback as omitting provider applies — a named-but-unregistered
+ * adapter used to create a floating-bar run that died with
+ * "Adapter not registered: hermes" and never showed a live pill.
+ *
+ * Explicit `adapterId: 'pi-mono'` still returns as directed so the DARK
+ * managed-cloud refusal below can fire; this helper does not bypass it.
+ */
+async function resolveSpawnAgentAdapter(
+  context: AgentControlToolContext,
+  directedAdapterId: string | undefined,
+  inherited: string
+): Promise<SpawnAgentAdapterChoice> {
+  if (directedAdapterId && isManagedCloudAdapterId(directedAdapterId)) {
+    return {
+      adapterId: directedAdapterId,
+      hostPicked: false,
+      managedCloudLeaf: false,
+      ignoredDirectedAdapter: null
+    }
+  }
+  if (directedAdapterId) {
+    let ready = context.kernel.isAdapterRegistered(directedAdapterId)
+    if (!ready && context.ensureSpawnAdapterRegistered) {
+      ready = await context.ensureSpawnAdapterRegistered(directedAdapterId)
+    }
+    if (ready) {
+      return {
+        adapterId: directedAdapterId,
+        hostPicked: false,
+        managedCloudLeaf: false,
+        ignoredDirectedAdapter: null
+      }
+    }
+    const fallback = await resolveSpawnAgentFallbackAdapter(context, inherited)
+    recordFallback({
+      component: 'other',
+      from: directedAdapterId,
+      to: fallback.adapterId,
+      reason: 'other',
+      outcome: 'recovered',
+      detail: 'spawn_agent_unregistered_provider'
+    })
+    return { ...fallback, ignoredDirectedAdapter: directedAdapterId }
+  }
+  const fallback = await resolveSpawnAgentFallbackAdapter(context, inherited)
+  return { ...fallback, ignoredDirectedAdapter: null }
 }
 
 function assertAdapterAllowedForControlRun(
@@ -860,23 +934,23 @@ export async function handleAgentControlToolCall(
             : parsed.provider === 'hermes'
               ? 'hermes'
               : undefined)
-        const fallback = directedAdapterId
-          ? { adapterId: directedAdapterId, hostPicked: false }
-          : await resolveSpawnAgentFallbackAdapter(
-              context,
-              parsed.parentRunId
-                ? context.kernel.defaultAdapterIdForRun(parsed.parentRunId)
-                : defaultControlAdapterId(context)
-            )
+        const inherited = parsed.parentRunId
+          ? context.kernel.defaultAdapterIdForRun(parsed.parentRunId)
+          : defaultControlAdapterId(context)
+        const fallback = await resolveSpawnAgentAdapter(context, directedAdapterId, inherited)
         const adapterId = fallback.adapterId
         // A managed-cloud parent run (the pi-mono chat turn itself) cannot own a
-        // delegation — its provider boundary can never contain a spawnable local
-        // adapter — so a host-picked fallback reroutes to a TOP-LEVEL background
-        // spawn (parent recorded in metadata) instead of failing the request.
-        const delegateUnderParent = Boolean(parsed.parentRunId) && !fallback.hostPicked
+        // delegation of a local adapter — its provider boundary can never contain
+        // one — so a host-picked fallback OR a leaf-pi-mono fallback reroutes to a
+        // TOP-LEVEL background spawn (parent recorded in metadata) instead of
+        // failing the request. The leaf-pi-mono path skips the DARK spawn refusal
+        // because the child is the same managed-cloud door as the coordinator,
+        // not a coding-agent substitute.
+        const delegateUnderParent =
+          Boolean(parsed.parentRunId) && !fallback.hostPicked && !fallback.managedCloudLeaf
         if (delegateUnderParent) {
           assertAdapterAllowedForControlRun(context, adapterId)
-        } else {
+        } else if (!fallback.managedCloudLeaf) {
           assertAdapterAllowedForTopLevelLocalProviderSpawn(
             context,
             adapterId,
@@ -966,6 +1040,8 @@ export async function handleAgentControlToolCall(
             // Kept for traceability when a managed-cloud parent rerouted the
             // delegation into a top-level background spawn (see above).
             requestedParentRunId: parsed.parentRunId ?? null,
+            managedCloudLeafFallback: fallback.managedCloudLeaf ? true : null,
+            ignoredDirectedAdapter: fallback.ignoredDirectedAdapter,
             ...cardStampMetadata
           }
         })
