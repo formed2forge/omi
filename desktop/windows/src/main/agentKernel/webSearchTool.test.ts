@@ -39,7 +39,9 @@ describe('createWebSearchExecutor', () => {
   })
 
   it('wraps the query in the Mac public-web prompt and does not forward context', async () => {
-    const search = vi.fn(async () => 'It is sunny, according to the National Weather Service.')
+    const search = vi.fn(async (_req: { query: string; signal?: AbortSignal }) => {
+      return 'It is sunny, according to the National Weather Service.'
+    })
     const exec = createWebSearchExecutor(search)
     const out = await exec(
       { query: 'current New York weather', context: 'my dog is named Spot' },
@@ -139,7 +141,7 @@ describe('searchPublicWeb — Mac isolated-lane contract', () => {
   })
 
   it('strips a trailing slash on desktopApiBase before appending /v2/chat/completions', async () => {
-    const fetch = vi.fn(async () => ({
+    const fetch = vi.fn(async (_url: string) => ({
       ok: true,
       status: 200,
       json: async () => ({ choices: [{ message: { content: 'ok' } }] })

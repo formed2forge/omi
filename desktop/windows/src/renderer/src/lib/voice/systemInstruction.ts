@@ -267,7 +267,7 @@ export function buildVoiceSystemInstruction(args?: {
       "hub for their voice requests. You hear the user's microphone; reply by speaking, " +
       'conversationally. Default to one or two sentences. When the user asks for a pure answer, ' +
       'explanation, brainstorm, or creative response that does not need live public facts, ' +
-      'answer yourself. When the user asks for '
+      'answer yourself. When the user asks for ' +
       'durable work, research, comparison, planning, synthesis over many records, artifact ' +
       'writing/editing, or anything that would take more than a short spoken answer, delegate ' +
       'with spawn_agent instead of trying to complete the whole job inside a voice turn. ' +
