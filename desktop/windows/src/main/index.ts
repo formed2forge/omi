@@ -177,8 +177,10 @@ import {
   applyLinuxPortalIdentity,
   detectLinuxSession,
   formatLinuxSessionSummary,
+  getLinuxSessionDiagnostics,
   resolveLinuxOzonePlatform
 } from './linux/linuxSession'
+import { probeGlobalAccelerator } from './shortcutProbe'
 
 // Default main-window content size. Single source of truth for both window
 // creation and the Settings → Font Size "Reset Window Size" affordance
@@ -437,7 +439,9 @@ if (gotSingleInstanceLock) initCrashSentinel()
 // the PipeWire capturer (portal screen share) and PulseAudio monitor-source loopback
 // for system-audio capture when pipewire-pulse/Pulse is present.
 if (process.platform === 'linux') {
-  applyLinuxPortalIdentity((name) => app.setDesktopName(name))
+  applyLinuxPortalIdentity((name) => {
+    ;(app as Electron.App & { setDesktopName(name: string): void }).setDesktopName(name)
+  })
   app.commandLine.appendSwitch('ozone-platform', resolveLinuxOzonePlatform())
   app.commandLine.appendSwitch(
     'enable-features',
@@ -1441,15 +1445,32 @@ app.whenReady().then(async () => {
   // Suspend/resume global chords while the settings UI captures raw keys for a
   // rebind — otherwise pressing the CURRENT chord fires it instead of being
   // captured. (The overlay's own recorder uses overlay:suspendShortcut.)
-  ipcMain.on('shortcuts:suspend-capture', () => {
+  const suspendAllGlobalShortcuts = (): void => {
     suspendRecordShortcut()
     suspendOverlayShortcut()
-  })
-  ipcMain.on('shortcuts:resume-capture', () => {
-    // Don't resurrect a chord the user has turned off — resume only when enabled.
+  }
+  const resumeAllGlobalShortcuts = (): void => {
     if (recordShortcutEnabled) resumeRecordShortcut()
     resumeOverlayShortcut()
+  }
+  ipcMain.on('shortcuts:suspend-capture', suspendAllGlobalShortcuts)
+  ipcMain.on('shortcuts:resume-capture', resumeAllGlobalShortcuts)
+
+  // Probe whether an accelerator is free without persisting a rebind. Suspends
+  // live chords first so Omi's own registration does not read as a conflict.
+  ipcMain.handle('shortcuts:test-accelerator', (_e, accelerator: unknown) => {
+    if (typeof accelerator !== 'string' || !accelerator.trim()) {
+      return { available: false }
+    }
+    suspendAllGlobalShortcuts()
+    try {
+      return { available: probeGlobalAccelerator(accelerator.trim()) }
+    } finally {
+      resumeAllGlobalShortcuts()
+    }
   })
+
+  ipcMain.handle('shortcuts:get-linux-session', () => getLinuxSessionDiagnostics())
 
   ipcMain.handle('shortcuts:set-record', (_e, accelerator: string) => {
     if (typeof accelerator !== 'string' || !accelerator.trim()) {

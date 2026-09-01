@@ -12,6 +12,8 @@ const getSummonHotkey = vi.fn()
 const setSummonHotkey = vi.fn()
 const suspendShortcutCapture = vi.fn()
 const resumeShortcutCapture = vi.fn()
+const testShortcutAccelerator = vi.fn()
+const getLinuxShortcutSession = vi.fn()
 
 const renderTab = (): void => {
   render(
@@ -34,6 +36,8 @@ beforeEach(() => {
   setSummonHotkey.mockReset().mockResolvedValue({ ok: true, registered: true })
   suspendShortcutCapture.mockReset()
   resumeShortcutCapture.mockReset()
+  testShortcutAccelerator.mockReset().mockResolvedValue({ available: true })
+  getLinuxShortcutSession.mockReset().mockResolvedValue(null)
   ;(globalThis as unknown as { window: { omi: unknown } }).window.omi = {
     getRecordHotkey,
     setRecordHotkey,
@@ -41,7 +45,9 @@ beforeEach(() => {
     getSummonHotkey,
     setSummonHotkey,
     suspendShortcutCapture,
-    resumeShortcutCapture
+    resumeShortcutCapture,
+    testShortcutAccelerator,
+    getLinuxShortcutSession
   }
 })
 afterEach(cleanup)
@@ -144,5 +150,28 @@ describe('ShortcutsTab', () => {
     await waitFor(() => expect(setSummonHotkey).toHaveBeenCalledWith('CommandOrControl+J'))
 
     await waitFor(() => expect(screen.getByText(/try another/)).toBeTruthy())
+  })
+
+  it('probes the current summon chord when Test is clicked', async () => {
+    renderTab()
+    await waitFor(() => expect(screen.getAllByText('Test').length).toBe(2))
+    fireEvent.click(screen.getAllByText('Test')[0])
+    await waitFor(() => expect(testShortcutAccelerator).toHaveBeenCalledWith('Shift+Space'))
+    await waitFor(() => expect(screen.getByText(/available on your system/)).toBeTruthy())
+  })
+
+  it('shows the Linux session diagnostic row when main returns session facts', async () => {
+    getLinuxShortcutSession.mockResolvedValue({
+      sessionType: 'wayland',
+      currentDesktop: 'GNOME',
+      desktopSession: null,
+      ozonePlatform: 'x11',
+      portalAppId: 'com.omiwindows.app',
+      globalShortcuts: { available: true, mechanism: 'x11-grab' },
+      summary: 'session=wayland ozone=x11 portal=com.omiwindows.app shortcuts=x11-grab'
+    })
+    renderTab()
+    await waitFor(() => expect(screen.getByText('Linux shortcut environment')).toBeTruthy())
+    expect(screen.getByText(/session=wayland/)).toBeTruthy()
   })
 })

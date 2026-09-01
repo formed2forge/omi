@@ -3,11 +3,28 @@ import {
   applyLinuxPortalIdentity,
   detectLinuxSession,
   formatLinuxSessionSummary,
+  getLinuxSessionDiagnostics,
   isLinuxWaylandSession,
   LINUX_PORTAL_APP_ID,
   resolveGlobalShortcutsCapability,
   resolveLinuxOzonePlatform
 } from './linuxSession'
+
+describe('getLinuxSessionDiagnostics', () => {
+  it('returns null off linux', () => {
+    expect(getLinuxSessionDiagnostics({}, 'win32')).toBeNull()
+  })
+
+  it('returns summary + structured facts on linux', () => {
+    const diag = getLinuxSessionDiagnostics(
+      { XDG_SESSION_TYPE: 'wayland', XDG_CURRENT_DESKTOP: 'GNOME', OMI_OZONE: 'x11' },
+      'linux'
+    )
+    expect(diag?.sessionType).toBe('wayland')
+    expect(diag?.summary).toContain('session=wayland')
+    expect(diag?.globalShortcuts).toEqual({ available: true, mechanism: 'x11-grab' })
+  })
+})
 
 describe('applyLinuxPortalIdentity', () => {
   it('sets desktop name on linux only', () => {
