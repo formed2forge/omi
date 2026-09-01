@@ -7,8 +7,9 @@ NOT part of the hermetic CI suite. Needs a write-scoped TEST-MODE key and the
 and never writes ``recognized_stripe_prices``.
 
 Default is dry-run (prints the scenario table, no Stripe calls). ``--apply``
-creates ephemeral test-clock customers, runs each in-catalog scenario against
-real test-mode Stripe, then deletes them.
+creates an ephemeral customer (Test Clock when the key allows ``billing_clock_write``,
+otherwise no clock), runs each in-catalog scenario against real test-mode Stripe,
+then deletes them.
 
     python backend/scripts/exercise_stripe_subscription_changes.py
     STRIPE_API_KEY=sk_test_... python backend/scripts/exercise_stripe_subscription_changes.py --apply
@@ -42,6 +43,7 @@ from scripts.snapshot_stripe_catalog import (  # noqa: E402
     probe_test_catalog,
     print_probe_report,
 )
+from utils.observability.fallback import record_fallback  # noqa: E402
 
 # Mirrors routers/payment.py::upgrade_subscription_endpoint:
 # cross-plan → Subscription.modify(proration_behavior=always_invoice);
@@ -252,6 +254,66 @@ class LiveRun:
     created_schedule_ids: List[str] = field(default_factory=list)
 
 
+_TEST_KEY_PREFIXES = ("sk_test_", "rk_test_", "pk_test_")
+_LIVE_KEY_PREFIXES = ("sk_live_", "rk_live_", "pk_live_")
+
+
+def _sanitize_stripe_error(exc: BaseException) -> str:
+    """Drop Stripe key material from exception text before it hits logs."""
+    text = str(exc)
+    for prefix in _TEST_KEY_PREFIXES + _LIVE_KEY_PREFIXES:
+        start = 0
+        while True:
+            idx = text.find(prefix, start)
+            if idx < 0:
+                break
+            end = idx + len(prefix)
+            while end < len(text) and text[end] not in " \t\r\n'\"":
+                end += 1
+            text = text[:idx] + prefix + "<redacted>" + text[end:]
+            start = idx + len(prefix) + len("<redacted>")
+    return text
+
+
+def _is_permission_denied(exc: BaseException) -> bool:
+    name = type(exc).__name__
+    if name == "PermissionError" or name.endswith("PermissionError"):
+        return True
+    text = str(exc).lower()
+    return "permission" in text or "billing_clock_write" in text
+
+
+def _maybe_create_test_clock(stripe: Any) -> Optional[str]:
+    """Create a Test Clock when the key allows it; otherwise continue without one.
+
+    Current scenarios do not advance the clock. Restricted keys often lack
+    ``billing_clock_write``. Missing that permission is a degraded path, not a
+    hard stop — Customers / Subscriptions still exercise the live Stripe path.
+    """
+    try:
+        clock = stripe.test_helpers.TestClock.create(
+            frozen_time=int(time.time()),
+            name="omi-phase3-clock",
+        )
+        clock_id = getattr(clock, "id", None) or clock["id"]
+        return str(clock_id)
+    except Exception as exc:  # noqa: BLE001 - restricted keys often lack billing_clock_write
+        if not _is_permission_denied(exc):
+            raise
+        record_fallback(
+            component="other",
+            from_mode="test_clock",
+            to_mode="no_clock",
+            reason="other",
+            outcome="degraded",
+        )
+        print(
+            "WARN: Test Clock create denied " f"({_sanitize_stripe_error(exc)}); continuing without a clock.",
+            file=sys.stderr,
+        )
+        return None
+
+
 def _cleanup_live(run: LiveRun) -> None:
     stripe = run.stripe
     for sched_id in run.created_schedule_ids:
@@ -283,13 +345,14 @@ def _cleanup_live(run: LiveRun) -> None:
 
 
 def _create_sub(run: LiveRun, price_id: str) -> Any:
+    # Do not expand latest_invoice: that requires invoice_read on restricted keys,
+    # and none of the scenarios read the invoice object.
     sub = run.stripe.Subscription.create(
         customer=run.customer_id,
         items=[{"price": price_id}],
         metadata={**TEST_FIXTURE_MARKER, "omi_phase3": "1"},
         payment_behavior="error_if_incomplete",
         collection_method="charge_automatically",
-        expand=["latest_invoice"],
     )
     run.created_sub_ids.append(sub.id)
     return sub
@@ -380,15 +443,27 @@ def apply_scenarios(scenarios: Sequence[Scenario], price_map: Dict[Tuple[str, st
     run = LiveRun(stripe=stripe, price_map=price_map)
     results: List[Dict[str, Any]] = []
     try:
-        clock = stripe.test_helpers.TestClock.create(frozen_time=int(time.time()), name="omi-phase3")
-        run.clock_id = clock.id
-        customer = stripe.Customer.create(
-            email=f"omi-phase3-{uuid.uuid4().hex[:10]}@example.test",
-            metadata={**TEST_FIXTURE_MARKER, "omi_phase3": "1"},
-            test_clock=clock.id,
-        )
-        run.customer_id = customer.id
-        _attach_test_card(stripe, customer.id)
+        run.clock_id = _maybe_create_test_clock(stripe)
+        customer_kwargs: Dict[str, Any] = {
+            "email": f"omi-phase3-{uuid.uuid4().hex[:10]}@example.test",
+            "metadata": {**TEST_FIXTURE_MARKER, "omi_phase3": "1"},
+        }
+        if run.clock_id:
+            customer_kwargs["test_clock"] = run.clock_id
+        try:
+            customer = stripe.Customer.create(**customer_kwargs)
+            run.customer_id = customer.id
+            _attach_test_card(stripe, customer.id)
+        except SystemExit:
+            raise
+        except Exception as exc:  # noqa: BLE001 - map Stripe permission denials to a sanitized exit
+            if _is_permission_denied(exc):
+                raise SystemExit(
+                    "Phase 3 --apply needs Customers Write, Payment Methods Write, "
+                    "Subscriptions Write, and Subscription Schedules Write on the TEST-MODE key. "
+                    f"{_sanitize_stripe_error(exc)}"
+                ) from None
+            raise
 
         paid_ids = catalog_paid_plan_ids()
         for sc in scenarios:
@@ -424,8 +499,9 @@ def apply_scenarios(scenarios: Sequence[Scenario], price_map: Dict[Tuple[str, st
                 results.append({"id": sc.id, "status": "passed", "detail": detail})
                 print(f"  PASS {sc.id}")
             except Exception as exc:  # noqa: BLE001 - collect per-scenario failures, still cleanup
-                results.append({"id": sc.id, "status": "failed", "error": str(exc)})
-                print(f"  FAIL {sc.id}: {exc}")
+                sanitized = _sanitize_stripe_error(exc)
+                results.append({"id": sc.id, "status": "failed", "error": sanitized})
+                print(f"  FAIL {sc.id}: {sanitized}")
     finally:
         _cleanup_live(run)
     return results
