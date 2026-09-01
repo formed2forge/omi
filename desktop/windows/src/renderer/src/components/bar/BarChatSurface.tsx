@@ -149,6 +149,29 @@ function PillRow({
   )
 }
 
+function AgentPillList({
+  pills,
+  onOpen,
+  onDismiss,
+  onStop,
+  testId
+}: {
+  pills: AgentPill[]
+  onOpen: (id: string) => void
+  onDismiss: (id: string) => void
+  onStop?: (pill: AgentPill) => void
+  testId?: string
+}): React.JSX.Element | null {
+  if (pills.length === 0) return null
+  return (
+    <div data-testid={testId} className="flex flex-col gap-1">
+      {pills.map((pill) => (
+        <PillRow key={pill.id} pill={pill} onOpen={onOpen} onDismiss={onDismiss} onStop={onStop} />
+      ))}
+    </div>
+  )
+}
+
 type ChatComposerProps = {
   inputRef: React.RefObject<HTMLTextAreaElement | null>
   draft: string
@@ -426,19 +449,13 @@ export function BarChatSurface(props: BarChatSurfaceProps): React.JSX.Element {
 
         {/* Live/recent spawned agent runs (B3) — the bar's only agent surface.
             Each pill opens its OWN run transcript, not the shared Omi thread. */}
-        {props.pills.length > 0 ? (
-          <div className="flex flex-col gap-1">
-            {props.pills.map((pill) => (
-              <PillRow
-                key={pill.id}
-                pill={pill}
-                onOpen={props.onOpenPill}
-                onDismiss={props.onDismissPill}
-                onStop={props.onStopPill}
-              />
-            ))}
-          </div>
-        ) : null}
+        <AgentPillList
+          pills={props.pills}
+          onOpen={props.onOpenPill}
+          onDismiss={props.onDismissPill}
+          onStop={props.onStopPill}
+          testId="hub-agent-pills"
+        />
       </div>
     )
   }
@@ -469,6 +486,21 @@ export function BarChatSurface(props: BarChatSurfaceProps): React.JSX.Element {
           ✕
         </button>
       </div>
+
+      {/* A send from Ask Omi flips to this conversation view immediately, so the
+          hub pill list is no longer on screen. Keep the same rows here so a
+          background agent started from the bar is visible without going Back. */}
+      {props.pills.length > 0 ? (
+        <div className="px-3 pb-1">
+          <AgentPillList
+            pills={props.pills}
+            onOpen={props.onOpenPill}
+            onDismiss={props.onDismissPill}
+            onStop={props.onStopPill}
+            testId="conversation-agent-pills"
+          />
+        </div>
+      ) : null}
 
       {chat.messages.length > 0 ? (
         <div

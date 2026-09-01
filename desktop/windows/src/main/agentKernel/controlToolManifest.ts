@@ -802,7 +802,7 @@ Pass parentRunId to link the new run to a parent.`,
       'Calling spawn_agent is the only way to start a visible floating-bar background agent; saying you will start one does not start it.',
       'Prefer spawning when a request needs more than ~30 seconds of tool work or research — start the agent and tell the user in one line instead of making them wait.',
       'Use visible=false for parent-linked background work that should not appear as a pill.',
-      "If the user asks to use OpenClaw or Hermes, pass provider='openclaw' or provider='hermes'.",
+      "If the user asks to use OpenClaw or Hermes AND that agent is connected, pass provider='openclaw' or provider='hermes'. Omit provider otherwise — an unconnected provider is ignored and the default background worker runs instead.",
       'Inspect progress with list_agent_sessions or get_agent_run.'
     ],
     capabilityDoc: controlDoc(
@@ -824,7 +824,8 @@ Pass parentRunId to link the new run to a parent.`,
       provider: {
         type: 'string',
         enum: ['openclaw', 'hermes'],
-        description: 'Optional local provider override.'
+        description:
+          'Optional local provider override. Only pass when that coding agent is connected; omit to use the default background worker.'
       },
       parentRunId: { type: 'string', description: 'Optional parent run to link via delegation.' },
       visible: {

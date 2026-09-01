@@ -17,6 +17,10 @@
 //     cloned `draft`; never read `draft` where Swift reads `turn`.
 //   * `hubWarm` is NON-terminal: it falls back to transcription and the turn
 //     CONTINUES.
+//   * Chat-lane tools (`web_search` / `think_deeper` / `ask_higher_model`) select
+//     `toolDeadlineClassSelected` after `toolStarted` so pending-tools uses Mac's
+//     180s `chatLaneTool` budget instead of the 30s standard. Windows omits
+//     scoped identities; the class event is fenced by `pendingToolCallIDs`.
 //   * `terminate()` skips BOTH `cancelHub` and `stopPlayback` when a barge-in
 //     supersedes a hub turn, so the successor inherits the live warm socket.
 //     Effect emission order is load-bearing: `stopCapture` before `cancelHub`.
@@ -139,6 +143,11 @@ export type VoiceTurnDeadline =
   | 'playbackDrain'
   | 'hintVisibility'
 
+/** Mac `VoiceToolDeadlineClass`. Chat-lane tools (`web_search`, `think_deeper`,
+ *  `ask_higher_model`) get the 180s pending-tools budget; everything else stays
+ *  on the 30s standard budget. Not a schedulable deadline kind. */
+export type VoiceToolDeadlineClass = 'standard' | 'chatLane'
+
 /** Swift raw values — these are the telemetry strings. */
 export const VOICE_TURN_DEADLINE_RAW: Record<VoiceTurnDeadline, string> = {
   lockDecision: 'lock_decision',
@@ -185,6 +194,7 @@ export type VoiceTurn = {
   readonly sessionID: VoiceSessionID | null
   readonly responseID: VoiceResponseID | null
   readonly pendingToolCallIDs: ReadonlySet<VoiceToolCallID>
+  readonly toolDeadlineClasses: ReadonlyMap<VoiceToolCallID, VoiceToolDeadlineClass>
   readonly activeLease: VoiceOutputLease | null
   readonly providerFinished: boolean
   readonly deadlines: ReadonlySet<VoiceTurnDeadline>
@@ -254,6 +264,12 @@ export type VoiceTurnEvent =
       responseID: VoiceResponseID | null
     }
   | { type: 'toolStarted'; turnID: VoiceTurnID; callID: VoiceToolCallID }
+  | {
+      type: 'toolDeadlineClassSelected'
+      turnID: VoiceTurnID
+      callID: VoiceToolCallID
+      deadlineClass: VoiceToolDeadlineClass
+    }
   | { type: 'toolFinished'; turnID: VoiceTurnID; callID: VoiceToolCallID }
   | { type: 'playbackStarted'; turnID: VoiceTurnID; lease: VoiceOutputLease }
   | { type: 'playbackDrained'; turnID: VoiceTurnID; leaseID: VoiceLeaseID }
@@ -297,6 +313,7 @@ const DIAGNOSTIC_LABELS: Record<VoiceTurnEvent['type'], string> = {
   providerResponseStarted: 'provider_response_started',
   providerTurnFinished: 'provider_turn_finished',
   toolStarted: 'tool_started',
+  toolDeadlineClassSelected: 'tool_deadline_class_selected',
   toolFinished: 'tool_finished',
   playbackStarted: 'playback_started',
   playbackDrained: 'playback_drained',
@@ -346,7 +363,10 @@ export type VoiceTurnEffect =
 
 // MARK: - Deadlines (a config struct, not constants — PR-2 passes a route-aware object)
 
-export type VoiceTurnDeadlines = Readonly<Record<VoiceTurnDeadline, number>>
+export type VoiceTurnDeadlines = Readonly<Record<VoiceTurnDeadline, number>> & {
+  /** Mac `Deadlines.chatLaneTool`. Duration only — not a `VoiceTurnDeadline` kind. */
+  readonly chatLaneTool: number
+}
 
 /** SECONDS (Swift `TimeInterval`). */
 export const DEFAULT_VOICE_TURN_DEADLINES: VoiceTurnDeadlines = {
@@ -356,6 +376,7 @@ export const DEFAULT_VOICE_TURN_DEADLINES: VoiceTurnDeadlines = {
   transcription: 12,
   providerResponse: 20,
   pendingTools: 30,
+  chatLaneTool: 180,
   deferredCommit: 8,
   bargeInReplacement: 8,
   playbackDrain: 30,
@@ -466,6 +487,7 @@ type MutableTurn = {
   sessionID: VoiceSessionID | null
   responseID: VoiceResponseID | null
   pendingToolCallIDs: Set<VoiceToolCallID>
+  toolDeadlineClasses: Map<VoiceToolCallID, VoiceToolDeadlineClass>
   activeLease: VoiceOutputLease | null
   providerFinished: boolean
   deadlines: Set<VoiceTurnDeadline>
@@ -491,6 +513,7 @@ function cloneTurn(turn: VoiceTurn): MutableTurn {
     sessionID: turn.sessionID,
     responseID: turn.responseID,
     pendingToolCallIDs: new Set(turn.pendingToolCallIDs),
+    toolDeadlineClasses: new Map(turn.toolDeadlineClasses),
     activeLease: turn.activeLease,
     providerFinished: turn.providerFinished,
     deadlines: new Set(turn.deadlines),
@@ -509,6 +532,7 @@ function newVoiceTurn(id: VoiceTurnID, intent: VoiceTurnIntent): MutableTurn {
     sessionID: null,
     responseID: null,
     pendingToolCallIDs: new Set(),
+    toolDeadlineClasses: new Map(),
     activeLease: null,
     providerFinished: false,
     deadlines: new Set(),
@@ -559,6 +583,28 @@ function cancel(
   if (turn === null) return
   if (!turn.deadlines.delete(deadline)) return
   effects.push({ kind: 'cancelDeadline', turnID: turn.id, deadline })
+}
+
+/** Mac `pendingToolsInterval`: any in-flight chat-lane tool stretches the wait
+ *  to `chatLaneTool` (180s); otherwise the 30s standard budget. */
+function pendingToolsInterval(turn: MutableTurn, deadlines: VoiceTurnDeadlines): number {
+  for (const callID of turn.pendingToolCallIDs) {
+    if (turn.toolDeadlineClasses.get(callID) === 'chatLane') return deadlines.chatLaneTool
+  }
+  return deadlines.pendingTools
+}
+
+/** Mac `reschedulePendingToolsDeadline`. Cancel-then-schedule so a class upgrade
+ *  (standard 30s → chat-lane 180s) actually resets the coordinator timer. */
+function reschedulePendingTools(
+  model: MutableModel,
+  effects: VoiceTurnEffect[],
+  deadlines: VoiceTurnDeadlines
+): void {
+  const turn = model.turn
+  if (turn === null || turn.pendingToolCallIDs.size === 0) return
+  cancel('pendingTools', model, effects)
+  schedule('pendingTools', pendingToolsInterval(turn, deadlines), model, effects)
 }
 
 function stale(model: MutableModel, event: VoiceTurnEvent, effects: VoiceTurnEffect[]): void {
@@ -947,9 +993,20 @@ export function reduceVoiceTurn(
         return { model, effects }
       }
       draft.pendingToolCallIDs.add(event.callID)
+      draft.toolDeadlineClasses.set(event.callID, 'standard')
       // Even from `playing` — and `activeLease` is kept.
       draft.phase = { kind: 'awaitingTools' }
-      schedule('pendingTools', deadlines.pendingTools, model, effects)
+      reschedulePendingTools(model, effects, deadlines)
+      break
+    }
+
+    case 'toolDeadlineClassSelected': {
+      if (!turn.pendingToolCallIDs.has(event.callID) || !acceptsProviderOutput(turn.phase)) {
+        stale(model, event, effects)
+        return { model, effects }
+      }
+      draft.toolDeadlineClasses.set(event.callID, event.deadlineClass)
+      reschedulePendingTools(model, effects, deadlines)
       break
     }
 
@@ -959,6 +1016,7 @@ export function reduceVoiceTurn(
         return { model, effects }
       }
       draft.pendingToolCallIDs.delete(event.callID)
+      draft.toolDeadlineClasses.delete(event.callID)
       if (draft.pendingToolCallIDs.size === 0) {
         cancel('pendingTools', model, effects)
         if (turn.providerFinished && turn.activeLease === null) {

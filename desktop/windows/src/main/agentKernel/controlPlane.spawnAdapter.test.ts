@@ -5,7 +5,10 @@
 // credentials file or touches the process-wide kernel singleton.
 
 import { describe, expect, it } from 'vitest'
-import { resolveSpawnableCodingAgentAdapterId } from './controlPlane'
+import {
+  resolveSpawnableCodingAgentAdapterId,
+  ensureDirectedCodingAgentRegistered
+} from './controlPlane'
 
 /** No adapter launch commands configured. */
 const EMPTY_ENV: NodeJS.ProcessEnv = {}
@@ -50,5 +53,41 @@ describe('resolveSpawnableCodingAgentAdapterId', () => {
       ensureRegistered: (id) => id !== 'acp'
     })
     expect(picked).toBe('hermes')
+  })
+})
+
+describe('ensureDirectedCodingAgentRegistered', () => {
+  it('returns false for hermes when no launch command is configured', () => {
+    expect(
+      ensureDirectedCodingAgentRegistered('hermes', {
+        env: EMPTY_ENV,
+        claudeConnected: () => false,
+        ensureRegistered: () => true
+      })
+    ).toBe(false)
+  })
+
+  it('registers hermes when its launch command is configured', () => {
+    const registered: string[] = []
+    expect(
+      ensureDirectedCodingAgentRegistered('hermes', {
+        env: { OMI_HERMES_ADAPTER_COMMAND: 'hermes acp' },
+        claudeConnected: () => false,
+        ensureRegistered: (id) => {
+          registered.push(id)
+          return true
+        }
+      })
+    ).toBe(true)
+    expect(registered).toEqual(['hermes'])
+  })
+
+  it('returns false for an unknown / managed-cloud adapter id', () => {
+    expect(
+      ensureDirectedCodingAgentRegistered('pi-mono', {
+        env: EMPTY_ENV,
+        ensureRegistered: () => true
+      })
+    ).toBe(false)
   })
 })

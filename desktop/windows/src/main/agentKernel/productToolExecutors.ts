@@ -34,6 +34,7 @@ import type {
 import type { TaskSearchResult } from '../assistants/tasks/toolBackends'
 import { executeReadOnlySql } from '../assistants/insight/sql'
 import type { BackendJsonResult, BackendToolRequest } from './backendTools'
+import { createWebSearchExecutor } from './webSearchTool'
 import {
   queryJitHistoryPage,
   readActiveJitFacts,
@@ -1276,6 +1277,7 @@ export function tierBProductToolExecutors(): [string, ProductToolExecutor][] {
     ['get_daily_recap', createGetDailyRecapExecutor()],
     ['save_knowledge_graph', createSaveKnowledgeGraphExecutor()],
     ['get_jit_knowledge', createGetJitKnowledgeExecutor()],
-    ['query_jit_history', createQueryJitHistoryExecutor()]
+    ['query_jit_history', createQueryJitHistoryExecutor()],
+    ['web_search', createWebSearchExecutor()]
   ]
 }
