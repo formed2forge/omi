@@ -1,52 +1,53 @@
 {
   "_meta": {
-    "synthetic": true,
-    "generated_from": "config/plan_catalog.json",
+    "synthetic": false,
+    "generated_from": "destination test-mode prices (replicate_stripe_catalog_to_test.py --apply); amounts from live GET dump",
     "catalog_revision": 2,
-    "note": "Placeholder amounts. Real price IDs come from the recognition ledger; run this script with --from-stripe (TEST-MODE key) to capture real amounts."
+    "wrote_ledger": false,
+    "note": "Destination-account TEST-MODE price IDs. Amounts match live GET. Not written to recognized_stripe_prices. Plan mapping is via STRIPE_*_PRICE_ID env, not the production ledger."
   },
   "env": {
-    "STRIPE_ARCHITECT_ANNUAL_PRICE_ID": "price_1TN7sF1F8wnoWYvwd0QaLZNA",
-    "STRIPE_ARCHITECT_MONTHLY_PRICE_ID": "price_1TN7s21F8wnoWYvwG6JuEFm6",
-    "STRIPE_OPERATOR_ANNUAL_PRICE_ID": "price_1TN7jo1F8wnoWYvw6Xu1zAtC",
-    "STRIPE_OPERATOR_MONTHLY_PRICE_ID": "price_1TN7jS1F8wnoWYvwM5GqfxDw",
-    "STRIPE_PLUS_ANNUAL_PRICE_ID": "price_1TuHCw1F8wnoWYvwZvKu86sI",
-    "STRIPE_PLUS_MONTHLY_PRICE_ID": "price_1TuH6z1F8wnoWYvw7Siv61SX",
-    "STRIPE_UNLIMITED_ANNUAL_PRICE_ID": "price_1RrxXL1F8wnoWYvw3kDbWmjs",
-    "STRIPE_UNLIMITED_MONTHLY_PRICE_ID": "price_1RrxXL1F8wnoWYvwIddzR902",
-    "STRIPE_UNLIMITED_V2_ANNUAL_PRICE_ID": "price_1TuIap1F8wnoWYvwHWq0EvNU",
-    "STRIPE_UNLIMITED_V2_MONTHLY_PRICE_ID": "price_1TuIa81F8wnoWYvw0iX0j5M8"
+    "STRIPE_ARCHITECT_ANNUAL_PRICE_ID": "price_1UAh83E4KtSciPQ7umoTx9FS",
+    "STRIPE_ARCHITECT_MONTHLY_PRICE_ID": "price_1UAh83E4KtSciPQ7kwpTIoza",
+    "STRIPE_OPERATOR_ANNUAL_PRICE_ID": "price_1UAh85E4KtSciPQ7gelOWYHc",
+    "STRIPE_OPERATOR_MONTHLY_PRICE_ID": "price_1UAh84E4KtSciPQ7KfN1yKDH",
+    "STRIPE_PLUS_ANNUAL_PRICE_ID": "price_1UAh86E4KtSciPQ70pkuTVMc",
+    "STRIPE_PLUS_MONTHLY_PRICE_ID": "price_1UAh86E4KtSciPQ70N6UT9kf",
+    "STRIPE_UNLIMITED_ANNUAL_PRICE_ID": "price_1UAh82E4KtSciPQ7hPk8TRN1",
+    "STRIPE_UNLIMITED_MONTHLY_PRICE_ID": "price_1UAh82E4KtSciPQ73tL0drpL",
+    "STRIPE_UNLIMITED_V2_ANNUAL_PRICE_ID": "price_1UAh88E4KtSciPQ7azzAdCdl",
+    "STRIPE_UNLIMITED_V2_MONTHLY_PRICE_ID": "price_1UAh87E4KtSciPQ7c4CAKOtn"
   },
   "plan_to_price": {
     "unlimited": {
-      "month": "price_1RrxXL1F8wnoWYvwIddzR902",
-      "year": "price_1RrxXL1F8wnoWYvw3kDbWmjs"
+      "month": "price_1UAh82E4KtSciPQ73tL0drpL",
+      "year": "price_1UAh82E4KtSciPQ7hPk8TRN1"
     },
     "architect": {
-      "month": "price_1TN7s21F8wnoWYvwG6JuEFm6",
-      "year": "price_1TN7sF1F8wnoWYvwd0QaLZNA"
+      "month": "price_1UAh83E4KtSciPQ7kwpTIoza",
+      "year": "price_1UAh83E4KtSciPQ7umoTx9FS"
     },
     "operator": {
-      "month": "price_1TN7jS1F8wnoWYvwM5GqfxDw",
-      "year": "price_1TN7jo1F8wnoWYvw6Xu1zAtC"
+      "month": "price_1UAh84E4KtSciPQ7KfN1yKDH",
+      "year": "price_1UAh85E4KtSciPQ7gelOWYHc"
     },
     "plus": {
-      "month": "price_1TuH6z1F8wnoWYvw7Siv61SX",
-      "year": "price_1TuHCw1F8wnoWYvwZvKu86sI"
+      "month": "price_1UAh86E4KtSciPQ70N6UT9kf",
+      "year": "price_1UAh86E4KtSciPQ70pkuTVMc"
     },
     "unlimited_v2": {
-      "month": "price_1TuIa81F8wnoWYvw0iX0j5M8",
-      "year": "price_1TuIap1F8wnoWYvwHWq0EvNU"
+      "month": "price_1UAh87E4KtSciPQ7c4CAKOtn",
+      "year": "price_1UAh88E4KtSciPQ7azzAdCdl"
     }
   },
   "prices": {
-    "price_1RrxXL1F8wnoWYvwIddzR902": {
-      "id": "price_1RrxXL1F8wnoWYvwIddzR902",
+    "price_1UAh82E4KtSciPQ73tL0drpL": {
+      "id": "price_1UAh82E4KtSciPQ73tL0drpL",
       "object": "price",
       "active": true,
       "currency": "usd",
-      "unit_amount": 999,
-      "unit_amount_decimal": "999",
+      "unit_amount": 2000,
+      "unit_amount_decimal": "2000",
       "nickname": "Neo month",
       "recurring": {
         "interval": "month",
@@ -57,13 +58,13 @@
       "livemode": false,
       "product": "prod_synthetic_unlimited"
     },
-    "price_1RrxXL1F8wnoWYvw3kDbWmjs": {
-      "id": "price_1RrxXL1F8wnoWYvw3kDbWmjs",
+    "price_1UAh82E4KtSciPQ7hPk8TRN1": {
+      "id": "price_1UAh82E4KtSciPQ7hPk8TRN1",
       "object": "price",
       "active": true,
       "currency": "usd",
-      "unit_amount": 9990,
-      "unit_amount_decimal": "9990",
+      "unit_amount": 20000,
+      "unit_amount_decimal": "20000",
       "nickname": "Neo year",
       "recurring": {
         "interval": "year",
@@ -74,8 +75,8 @@
       "livemode": false,
       "product": "prod_synthetic_unlimited"
     },
-    "price_1TN7s21F8wnoWYvwG6JuEFm6": {
-      "id": "price_1TN7s21F8wnoWYvwG6JuEFm6",
+    "price_1UAh83E4KtSciPQ7kwpTIoza": {
+      "id": "price_1UAh83E4KtSciPQ7kwpTIoza",
       "object": "price",
       "active": true,
       "currency": "usd",
@@ -91,13 +92,13 @@
       "livemode": false,
       "product": "prod_synthetic_architect"
     },
-    "price_1TN7sF1F8wnoWYvwd0QaLZNA": {
-      "id": "price_1TN7sF1F8wnoWYvwd0QaLZNA",
+    "price_1UAh83E4KtSciPQ7umoTx9FS": {
+      "id": "price_1UAh83E4KtSciPQ7umoTx9FS",
       "object": "price",
       "active": true,
       "currency": "usd",
-      "unit_amount": 199000,
-      "unit_amount_decimal": "199000",
+      "unit_amount": 199900,
+      "unit_amount_decimal": "199900",
       "nickname": "Architect year",
       "recurring": {
         "interval": "year",
@@ -108,13 +109,13 @@
       "livemode": false,
       "product": "prod_synthetic_architect"
     },
-    "price_1TN7jS1F8wnoWYvwM5GqfxDw": {
-      "id": "price_1TN7jS1F8wnoWYvwM5GqfxDw",
+    "price_1UAh84E4KtSciPQ7KfN1yKDH": {
+      "id": "price_1UAh84E4KtSciPQ7KfN1yKDH",
       "object": "price",
       "active": true,
       "currency": "usd",
-      "unit_amount": 1900,
-      "unit_amount_decimal": "1900",
+      "unit_amount": 4900,
+      "unit_amount_decimal": "4900",
       "nickname": "Operator month",
       "recurring": {
         "interval": "month",
@@ -125,13 +126,13 @@
       "livemode": false,
       "product": "prod_synthetic_operator"
     },
-    "price_1TN7jo1F8wnoWYvw6Xu1zAtC": {
-      "id": "price_1TN7jo1F8wnoWYvw6Xu1zAtC",
+    "price_1UAh85E4KtSciPQ7gelOWYHc": {
+      "id": "price_1UAh85E4KtSciPQ7gelOWYHc",
       "object": "price",
       "active": true,
       "currency": "usd",
-      "unit_amount": 18000,
-      "unit_amount_decimal": "18000",
+      "unit_amount": 49000,
+      "unit_amount_decimal": "49000",
       "nickname": "Operator year",
       "recurring": {
         "interval": "year",
@@ -142,13 +143,13 @@
       "livemode": false,
       "product": "prod_synthetic_operator"
     },
-    "price_1TuH6z1F8wnoWYvw7Siv61SX": {
-      "id": "price_1TuH6z1F8wnoWYvw7Siv61SX",
+    "price_1UAh86E4KtSciPQ70N6UT9kf": {
+      "id": "price_1UAh86E4KtSciPQ70N6UT9kf",
       "object": "price",
       "active": true,
       "currency": "usd",
-      "unit_amount": 1499,
-      "unit_amount_decimal": "1499",
+      "unit_amount": 1799,
+      "unit_amount_decimal": "1799",
       "nickname": "Plus month",
       "recurring": {
         "interval": "month",
@@ -159,13 +160,13 @@
       "livemode": false,
       "product": "prod_synthetic_plus"
     },
-    "price_1TuHCw1F8wnoWYvwZvKu86sI": {
-      "id": "price_1TuHCw1F8wnoWYvwZvKu86sI",
+    "price_1UAh86E4KtSciPQ70pkuTVMc": {
+      "id": "price_1UAh86E4KtSciPQ70pkuTVMc",
       "object": "price",
       "active": true,
       "currency": "usd",
-      "unit_amount": 14990,
-      "unit_amount_decimal": "14990",
+      "unit_amount": 16191,
+      "unit_amount_decimal": "16191",
       "nickname": "Plus year",
       "recurring": {
         "interval": "year",
@@ -176,8 +177,8 @@
       "livemode": false,
       "product": "prod_synthetic_plus"
     },
-    "price_1TuIa81F8wnoWYvw0iX0j5M8": {
-      "id": "price_1TuIa81F8wnoWYvw0iX0j5M8",
+    "price_1UAh87E4KtSciPQ7c4CAKOtn": {
+      "id": "price_1UAh87E4KtSciPQ7c4CAKOtn",
       "object": "price",
       "active": true,
       "currency": "usd",
@@ -193,13 +194,13 @@
       "livemode": false,
       "product": "prod_synthetic_unlimited_v2"
     },
-    "price_1TuIap1F8wnoWYvwHWq0EvNU": {
-      "id": "price_1TuIap1F8wnoWYvwHWq0EvNU",
+    "price_1UAh88E4KtSciPQ7azzAdCdl": {
+      "id": "price_1UAh88E4KtSciPQ7azzAdCdl",
       "object": "price",
       "active": true,
       "currency": "usd",
-      "unit_amount": 29990,
-      "unit_amount_decimal": "29990",
+      "unit_amount": 26991,
+      "unit_amount_decimal": "26991",
       "nickname": "Unlimited year",
       "recurring": {
         "interval": "year",
