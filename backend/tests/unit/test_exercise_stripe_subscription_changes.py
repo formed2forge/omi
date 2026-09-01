@@ -69,6 +69,15 @@ def test_sanitize_stripe_error_redacts_restricted_key_material():
     assert "rk_test_<redacted>" in text
 
 
+def test_sanitize_stripe_error_redacts_stripe_ellipsis_tail():
+    text = ex._sanitize_stripe_error(
+        PermissionError("The provided key 'rk_test_abcdef...EN4Z' does not have customer_write")
+    )
+    assert "EN4Z" not in text
+    assert "abcdef" not in text
+    assert "rk_test_<redacted>" in text
+
+
 def test_maybe_create_test_clock_continues_on_permission_error(capsys):
     class _Stripe:
         class test_helpers:
@@ -144,6 +153,38 @@ def test_apply_scenarios_omits_test_clock_when_clock_create_denied(monkeypatch):
         }
     ]
     assert captured.get("deleted") is True
+
+
+def test_apply_scenarios_exits_sanitized_when_customer_write_denied(monkeypatch):
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def create(**_kwargs):
+                    raise PermissionError("billing_clock_write rk_test_LEAKEDCLOCKKEY")
+
+                @staticmethod
+                def delete(_clock_id):
+                    pass
+
+        class Customer:
+            @staticmethod
+            def create(**_kwargs):
+                raise PermissionError("The provided key 'rk_test_LEAKEDCUSKEY...EN4Z' does not have customer_write")
+
+            @staticmethod
+            def delete(_customer_id):
+                raise AssertionError("customer was not created")
+
+    monkeypatch.setattr(ex, "_require_test_mode_key", lambda *_a, **_k: _Stripe)
+    monkeypatch.setattr(ex, "record_fallback", lambda **_kwargs: None)
+
+    with pytest.raises(SystemExit, match="Customers Write") as raised:
+        ex.apply_scenarios([], {})
+    message = str(raised.value)
+    assert "LEAKEDCUSKEY" not in message
+    assert "EN4Z" not in message
+    assert "customer_write" in message
 
 
 def test_price_map_from_probe_uses_fixture_metadata_only():

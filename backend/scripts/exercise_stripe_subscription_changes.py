@@ -268,7 +268,7 @@ def _sanitize_stripe_error(exc: BaseException) -> str:
             if idx < 0:
                 break
             end = idx + len(prefix)
-            while end < len(text) and (text[end].isalnum() or text[end] in "_-"):
+            while end < len(text) and text[end] not in " \t\r\n'\"":
                 end += 1
             text = text[:idx] + prefix + "<redacted>" + text[end:]
             start = idx + len(prefix) + len("<redacted>")
@@ -449,9 +449,20 @@ def apply_scenarios(scenarios: Sequence[Scenario], price_map: Dict[Tuple[str, st
         }
         if run.clock_id:
             customer_kwargs["test_clock"] = run.clock_id
-        customer = stripe.Customer.create(**customer_kwargs)
-        run.customer_id = customer.id
-        _attach_test_card(stripe, customer.id)
+        try:
+            customer = stripe.Customer.create(**customer_kwargs)
+            run.customer_id = customer.id
+            _attach_test_card(stripe, customer.id)
+        except SystemExit:
+            raise
+        except Exception as exc:  # noqa: BLE001 - map Stripe permission denials to a sanitized exit
+            if _is_permission_denied(exc):
+                raise SystemExit(
+                    "Phase 3 --apply needs Customers Write, Payment Methods Write, "
+                    "Subscriptions Write, and Subscription Schedules Write on the TEST-MODE key. "
+                    f"{_sanitize_stripe_error(exc)}"
+                ) from None
+            raise
 
         paid_ids = catalog_paid_plan_ids()
         for sc in scenarios:
