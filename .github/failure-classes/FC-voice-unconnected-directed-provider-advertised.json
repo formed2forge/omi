@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "FC-voice-unconnected-directed-provider-advertised",
+  "violated_contract": "The realtime voice spawn_agent schema must not advertise directed local providers (Hermes, OpenClaw) that are not connected. Advertising them makes the model pass provider=hermes (or ask the user to connect Hermes) on ordinary research prompts, even after spawn_agent leaf-falls back.",
+  "canonical_prevention": "The voice catalog clones spawn_agent parameters and either omits provider (none connected) or restricts its enum to host-derived availableDirectedProviderIds — Mac RealtimeHubTools.openAITools(availableDirectedProviders:) parity. Behavioral tests assert omit-when-empty, enum restriction, and that the shared manifest schema is not mutated.",
+  "canonical_prevention_artifact": [
+    "desktop/windows/src/main/ipc/voiceTool.test.ts"
+  ],
+  "evidence_prs": [],
+  "scope_hints": [
+    "desktop/windows/src/main/ipc/voiceTool.ts",
+    "desktop/windows/src/main/agentKernel/controlPlane.ts",
+    "desktop/macos/Desktop/Sources/FloatingControlBar/RealtimeHubTools.swift"
+  ],
+  "status": "open"
+}
