@@ -140,6 +140,7 @@ def checkout_subscription_fixture(uid: str, price_id: str, expected_amount: int)
                     "cancel_url": "https://example.test/cancel",
                     "mode": "subscription",
                     "client_reference_id": uid,
+                    "customer_email": harness_user_email(uid),
                     "line_items": [{"price": price_id, "quantity": 1}],
                     "metadata": metadata,
                     "subscription_data": {"metadata": metadata},
@@ -154,7 +155,22 @@ def checkout_subscription_fixture(uid: str, price_id: str, expected_amount: int)
                 "name": "payment_method",
                 "path": "/v1/payment_methods",
                 "method": "post",
-                "params": {"type": "card", "card": {"token": "tok_visa"}},
+                "params": {
+                    "type": "card",
+                    "card": {"token": "tok_visa"},
+                    "billing_details": {
+                        "email": harness_user_email(uid),
+                        "name": uid,
+                        # Same address shape as stripe-cli checkout.session.completed.json.
+                        "address": {
+                            "line1": "354 Oyster Point Blvd",
+                            "postal_code": "94080",
+                            "city": "South San Francisco",
+                            "state": "CA",
+                            "country": "US",
+                        },
+                    },
+                },
             },
             {
                 "name": "payment_page_confirm",
