@@ -53,12 +53,13 @@ for this alone.
 
 On native Wayland compositors with limited XWayland support (e.g. niri), the
 default XWayland path (`ozone-platform=x11`, chosen deliberately for global
-shortcuts + active-window support — see `src/main/index.ts`) can fail to map
-the main window at all (tray icon appears, window never does). Set
-`OMI_OZONE=wayland` to run under native Wayland instead, at the cost of global
-shortcuts (push-to-talk / overlay summon) and active-window detection not
-working. See `docs/multi-worktree-dev.md`'s environment-overrides table for
-this and other dev-only env vars (`OMI_DEV_HW_GPU`, etc.).
+shortcuts + active-window support — see `src/main/index.ts` and
+`src/main/linux/linuxSession.ts`) can fail to map the main window at all (tray
+icon appears, window never does). Set `OMI_OZONE=wayland` to run under native
+Wayland instead (portal global shortcuts need valid `desktopName` + `.desktop` —
+see `LINUX.md`). Costs active-window detection on native Wayland. See
+`docs/multi-worktree-dev.md`'s environment-overrides table for this and other
+dev-only env vars (`OMI_DEV_HW_GPU`, etc.).
 
 `OMI_OZONE=wayland` alone can still leave the main window mapped but blank
 (tray works fine) — `pnpm dev`'s software-render default has known
