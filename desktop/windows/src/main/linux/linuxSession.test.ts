@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyLinuxPortalIdentity,
+  compositorNeedsKeybindWorkaround,
+  detectLinuxCompositor,
   detectLinuxSession,
   formatLinuxSessionSummary,
   getLinuxSessionDiagnostics,
@@ -22,7 +24,12 @@ describe('getLinuxSessionDiagnostics', () => {
     )
     expect(diag?.sessionType).toBe('wayland')
     expect(diag?.summary).toContain('session=wayland')
-    expect(diag?.globalShortcuts).toEqual({ available: true, mechanism: 'x11-grab' })
+    expect(diag?.globalShortcuts).toEqual({
+      available: true,
+      mechanism: 'x11-grab',
+      deliveryReliable: true,
+      compositorWorkaround: null
+    })
   })
 })
 
@@ -64,26 +71,63 @@ describe('isLinuxWaylandSession', () => {
   })
 })
 
+describe('detectLinuxCompositor', () => {
+  it('detects niri from NIRI_SOCKET', () => {
+    expect(detectLinuxCompositor({ NIRI_SOCKET: '/run/niri/0' })).toBe('niri')
+  })
+
+  it('detects sway from SWAYSOCK', () => {
+    expect(detectLinuxCompositor({ SWAYSOCK: '/run/user/1000/sway-ipc.0' })).toBe('sway')
+  })
+})
+
 describe('resolveGlobalShortcutsCapability', () => {
   it('uses x11-grab on the default XWayland path', () => {
-    expect(resolveGlobalShortcutsCapability('wayland', 'x11')).toEqual({
+    expect(resolveGlobalShortcutsCapability('wayland', 'x11', 'gnome')).toEqual({
       available: true,
-      mechanism: 'x11-grab'
+      mechanism: 'x11-grab',
+      deliveryReliable: true,
+      compositorWorkaround: null
     })
   })
 
-  it('uses wayland-portal on native Wayland ozone', () => {
-    expect(resolveGlobalShortcutsCapability('wayland', 'wayland')).toEqual({
+  it('marks niri delivery unreliable with compositor workaround', () => {
+    const cap = resolveGlobalShortcutsCapability('wayland', 'x11', 'niri')
+    expect(cap).toMatchObject({
       available: true,
-      mechanism: 'wayland-portal'
+      mechanism: 'x11-grab',
+      deliveryReliable: false
+    })
+    if (cap.available) {
+      expect(cap.compositorWorkaround?.summonCommand).toContain('--omi-action summon')
+      expect(cap.compositorWorkaround?.niriConfigExample).toContain('Mod+Shift+Space')
+    }
+  })
+
+  it('uses wayland-portal on native Wayland ozone', () => {
+    expect(resolveGlobalShortcutsCapability('wayland', 'wayland', 'gnome')).toEqual({
+      available: true,
+      mechanism: 'wayland-portal',
+      deliveryReliable: true,
+      compositorWorkaround: null
     })
   })
 
   it('still expects portal on unknown session type with native Wayland ozone', () => {
-    expect(resolveGlobalShortcutsCapability('unknown', 'wayland')).toEqual({
+    expect(resolveGlobalShortcutsCapability('unknown', 'wayland', 'unknown')).toEqual({
       available: true,
-      mechanism: 'wayland-portal'
+      mechanism: 'wayland-portal',
+      deliveryReliable: true,
+      compositorWorkaround: null
     })
+  })
+})
+
+describe('compositorNeedsKeybindWorkaround', () => {
+  it('is true for niri and sway only', () => {
+    expect(compositorNeedsKeybindWorkaround('niri')).toBe(true)
+    expect(compositorNeedsKeybindWorkaround('sway')).toBe(true)
+    expect(compositorNeedsKeybindWorkaround('gnome')).toBe(false)
   })
 })
 
@@ -96,11 +140,17 @@ describe('detectLinuxSession', () => {
       OMI_OZONE: 'x11'
     })
     expect(info.sessionType).toBe('wayland')
+    expect(info.compositor).toBe('gnome')
     expect(info.currentDesktop).toBe('GNOME')
     expect(info.desktopSession).toBe('ubuntu')
     expect(info.ozonePlatform).toBe('x11')
     expect(info.portalAppId).toBe('com.omiwindows.app')
-    expect(info.globalShortcuts).toEqual({ available: true, mechanism: 'x11-grab' })
+    expect(info.globalShortcuts).toEqual({
+      available: true,
+      mechanism: 'x11-grab',
+      deliveryReliable: true,
+      compositorWorkaround: null
+    })
   })
 
   it('formats a stable one-line summary', () => {
@@ -108,12 +158,15 @@ describe('detectLinuxSession', () => {
       detectLinuxSession({
         XDG_SESSION_TYPE: 'wayland',
         XDG_CURRENT_DESKTOP: 'KDE',
-        OMI_OZONE: 'wayland'
+        OMI_OZONE: 'wayland',
+        NIRI_SOCKET: '/run/niri/0'
       })
     )
     expect(summary).toContain('session=wayland')
     expect(summary).toContain('ozone=wayland')
     expect(summary).toContain('shortcuts=wayland-portal')
+    expect(summary).toContain('delivery=compositor-keybind')
+    expect(summary).toContain('compositor=niri')
     expect(summary).toContain('desktop=KDE')
   })
 })
