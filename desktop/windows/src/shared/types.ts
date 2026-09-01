@@ -640,6 +640,20 @@ export type TrayListeningState = 'idle' | 'listening' | 'paused'
  *  consumers must treat `undefined` as enabled (`enabled !== false`). */
 export type RecordHotkeyState = { accelerator: string; registered: boolean; enabled?: boolean }
 
+export type ShortcutAcceleratorProbeResult = { available: boolean }
+
+export type LinuxShortcutSessionDiagnostics = {
+  sessionType: 'wayland' | 'x11' | 'unknown'
+  currentDesktop: string | null
+  desktopSession: string | null
+  ozonePlatform: 'x11' | 'wayland'
+  portalAppId: string
+  globalShortcuts:
+    | { available: true; mechanism: 'x11-grab' | 'wayland-portal' }
+    | { available: false; reason: string }
+  summary: string
+}
+
 /** Outcome of a manual "check for updates" from Settings → About.
  *  - `unsupported`: the updater is inert (unpackaged dev build) — updates install
  *    automatically only in packaged builds, so there is nothing to check.
@@ -1245,6 +1259,11 @@ export type OmiBridgeApi = {
    *  by another app (main rolls back to the previous binding). Persist the new
    *  accelerator in preferences (overlayShortcut) on ok so it survives restarts. */
   setSummonHotkey: (accelerator: string) => Promise<{ ok: boolean; registered: boolean }>
+  /** Probe whether the OS will accept an accelerator without persisting a rebind.
+   *  Main suspends live chords for the duration of the probe. */
+  testShortcutAccelerator: (accelerator: string) => Promise<ShortcutAcceleratorProbeResult>
+  /** Linux-only session + portal facts for Settings diagnostics. Null elsewhere. */
+  getLinuxShortcutSession: () => Promise<LinuxShortcutSessionDiagnostics | null>
   /** The update staged for install-on-quit, if any (query on Settings mount —
    *  the one-shot update:ready event usually fires while Settings is unmounted). */
   getPendingUpdate: () => Promise<{ version: string } | null>

@@ -702,6 +702,9 @@ const omi: OmiBridgeApi = {
     ipcRenderer.invoke('shortcuts:set-record-enabled', enabled),
   getSummonHotkey: () => ipcRenderer.invoke('shortcuts:get-summon'),
   setSummonHotkey: (accelerator: string) => ipcRenderer.invoke('shortcuts:set-summon', accelerator),
+  testShortcutAccelerator: (accelerator: string) =>
+    ipcRenderer.invoke('shortcuts:test-accelerator', accelerator),
+  getLinuxShortcutSession: () => ipcRenderer.invoke('shortcuts:get-linux-session'),
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
   checkForUpdates: () => ipcRenderer.invoke('update:check'),
   getBetaUpdatesOptIn: () => ipcRenderer.invoke('update:get-beta-optin'),
