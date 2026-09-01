@@ -24,6 +24,7 @@
 
 import { ipcMain } from 'electron'
 import {
+  availableDirectedProviderIds,
   controlPlaneOwnerId,
   getAgentRuntimeKernel,
   hasKnownControlPlaneOwner
@@ -97,9 +98,49 @@ function parseToolArgs(argumentsJSON: string): Record<string, unknown> {
  *
  * Non-serviceable manifest tools are omitted rather than advertised-then-degraded.
  * Pure + role-parameterized so it is unit-testable without a kernel.
+ *
+ * `availableDirectedProviders` is Mac `RealtimeHubTools.openAITools(availableDirectedProviders:)`.
+ * Default `[]` fail-closes like Mac's standalone callers: spawn_agent has no provider
+ * enum, so a voice model cannot pick Hermes/OpenClaw that is not connected.
  */
+export function applyDirectedProviderSchema(
+  parameters: Record<string, unknown>,
+  availableDirectedProviders: readonly string[]
+): Record<string, unknown> {
+  const rawProperties = parameters.properties
+  if (!rawProperties || typeof rawProperties !== 'object' || Array.isArray(rawProperties)) {
+    return parameters
+  }
+  const properties = { ...(rawProperties as Record<string, unknown>) }
+  if (!('provider' in properties)) return parameters
+  if (availableDirectedProviders.length === 0) {
+    const { provider: _omit, ...rest } = properties
+    return { ...parameters, properties: rest }
+  }
+  const existing =
+    properties.provider &&
+    typeof properties.provider === 'object' &&
+    !Array.isArray(properties.provider)
+      ? { ...(properties.provider as Record<string, unknown>) }
+      : { type: 'string' }
+  return {
+    ...parameters,
+    properties: {
+      ...properties,
+      provider: {
+        ...existing,
+        type: 'string',
+        enum: [...availableDirectedProviders],
+        description:
+          'Optional local provider override only when the current user explicitly names it; omit for a regular Omi agent.'
+      }
+    }
+  }
+}
+
 export function buildVoiceHubToolCatalog(
-  executionRole: 'coordinator' | 'leaf'
+  executionRole: 'coordinator' | 'leaf',
+  availableDirectedProviders: readonly string[] = []
 ): VoiceToolDeclaration[] {
   const out: VoiceToolDeclaration[] = []
   for (const entry of omiToolManifest) {
@@ -118,13 +159,18 @@ export function buildVoiceHubToolCatalog(
     if (isControl && !isToolAvailableForContext(entry.adapters['pi-mono'], { executionRole })) {
       continue
     }
+    const rawParameters = (entry.voice?.schemaOverride ?? entry.inputSchema) as unknown as Record<
+      string,
+      unknown
+    >
+    const parameters =
+      entry.name === 'spawn_agent'
+        ? applyDirectedProviderSchema(rawParameters, availableDirectedProviders)
+        : rawParameters
     out.push({
       name: entry.name,
       description: entry.voice?.realtimeDescription ?? entry.description,
-      parameters: (entry.voice?.schemaOverride ?? entry.inputSchema) as unknown as Record<
-        string,
-        unknown
-      >
+      parameters
     })
   }
   return out
@@ -139,7 +185,7 @@ export function readVoiceHubToolCatalog(
   if (!deps.ownerReady) return []
   const sessionId = mainChatSessionId(deps)
   const role = deps.kernel.executionPolicyForSession(sessionId).executionRole
-  return buildVoiceHubToolCatalog(role)
+  return buildVoiceHubToolCatalog(role, availableDirectedProviderIds())
 }
 
 /**

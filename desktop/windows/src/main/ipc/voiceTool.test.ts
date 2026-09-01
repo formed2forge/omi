@@ -155,6 +155,34 @@ describe('buildVoiceHubToolCatalog — host-derived, role-gated (INV-AGENT)', ()
     // The voice schemaOverride requires `objective`.
     expect((spawn.parameters as { required?: string[] }).required).toContain('objective')
   })
+
+  it('omits spawn_agent.provider when no directed local providers are available (Mac parity)', () => {
+    const spawn = buildVoiceHubToolCatalog('coordinator', []).find((t) => t.name === 'spawn_agent')!
+    const properties = (spawn.parameters as { properties?: Record<string, unknown> }).properties
+    expect(properties?.provider).toBeUndefined()
+    expect(properties?.brief).toBeDefined()
+  })
+
+  it('restricts spawn_agent.provider enum to the connected directed providers', () => {
+    const spawn = buildVoiceHubToolCatalog('coordinator', ['openclaw']).find(
+      (t) => t.name === 'spawn_agent'
+    )!
+    const provider = (
+      spawn.parameters as { properties?: { provider?: { enum?: string[]; description?: string } } }
+    ).properties?.provider
+    expect(provider?.enum).toEqual(['openclaw'])
+    expect(provider?.description).toMatch(/explicitly names it/)
+  })
+
+  it('does not mutate the shared spawn_agent schema when omitting provider', () => {
+    buildVoiceHubToolCatalog('coordinator', [])
+    const spawn = buildVoiceHubToolCatalog('coordinator', ['hermes']).find(
+      (t) => t.name === 'spawn_agent'
+    )!
+    const provider = (spawn.parameters as { properties?: { provider?: { enum?: string[] } } })
+      .properties?.provider
+    expect(provider?.enum).toEqual(['hermes'])
+  })
 })
 
 describe('readVoiceHubToolCatalog — role read from the main_chat session', () => {
