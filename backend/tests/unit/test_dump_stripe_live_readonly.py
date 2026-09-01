@@ -51,6 +51,38 @@ def test_redact_strips_live_key():
     assert "[redacted]" in redacted
 
 
+def test_redact_does_not_loop_when_stripe_echoes_truncated_live_prefix():
+    """Stripe 403 bodies echo a truncated rk_live_… that is not the full secret.
+
+    Replacing that prefix with rk_live_[redacted] and searching from index 0
+    rematches forever. This is the hang Tim hit on the billed-price census.
+    """
+    secret = "rk_live_SUPERSECRETVALUE"
+    truncated = "rk_live_" + ("A" * 40)
+    masked = "rk_live_" + ("*" * 64) + "xyz"
+    for echo in (truncated, masked):
+        redacted = dump.redact(f"The provided key '{echo}' does not have access", secret)
+        assert echo not in redacted
+        assert secret not in redacted
+        assert "rk_live_[redacted]" in redacted
+
+
+def test_stripe_error_detail_parses_code_and_caps_length():
+    body = json.dumps(
+        {
+            "error": {
+                "code": "more_permissions_needed",
+                "type": "invalid_request_error",
+                "message": "Missing permission: Subscriptions.",
+            }
+        }
+    )
+    detail = dump.stripe_error_detail(body)
+    assert "more_permissions_needed" in detail
+    assert "Missing permission: Subscriptions." in detail
+    assert dump.stripe_error_detail("not-json " + ("x" * 400)) == ("not-json " + ("x" * 400))[:300]
+
+
 def test_get_only_retrieve_known_ids(monkeypatch, tmp_path):
     requests = []
 
@@ -178,6 +210,32 @@ def test_http_error_redacts_key(monkeypatch):
     with pytest.raises(SystemExit) as exc:
         client.get("/v1/prices/price_1TuH6z1F8wnoWYvw7Siv61SX")
     assert secret not in str(exc.value)
+
+
+def test_http_error_truncated_live_prefix_does_not_hang():
+    secret = "rk_live_SUPERSECRETVALUE"
+    truncated = "rk_live_" + ("B" * 48)
+    body = json.dumps(
+        {
+            "error": {
+                "code": "more_permissions_needed",
+                "type": "invalid_request_error",
+                "message": f"The provided key '{truncated}' does not have access to this endpoint.",
+            }
+        }
+    )
+
+    def opener(req, timeout=0):
+        raise HTTPError(req.full_url, 403, "Forbidden", hdrs=None, fp=io.BytesIO(body.encode("utf-8")))
+
+    client = dump.StripeReadonlyClient(secret, opener=opener)
+    with pytest.raises(SystemExit) as exc:
+        client.get("/v1/prices/price_1TuH6z1F8wnoWYvw7Siv61SX")
+    message = str(exc.value)
+    assert secret not in message
+    assert truncated not in message
+    assert "more_permissions_needed" in message
+    assert "HTTP 403" in message
 
 
 def test_api_key_file(tmp_path, monkeypatch):
