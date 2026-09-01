@@ -295,8 +295,9 @@ def _maybe_create_test_clock(stripe: Any) -> Optional[str]:
             frozen_time=int(time.time()),
             name="omi-phase3-clock",
         )
-        clock_id = getattr(clock, "id", None) or clock["id"]
-        return str(clock_id)
+        clock_id = str(getattr(clock, "id", None) or clock["id"])
+        print(f"Test Clock created: {clock_id}", file=sys.stderr)
+        return clock_id
     except Exception as exc:  # noqa: BLE001 - restricted keys often lack billing_clock_write
         if not _is_permission_denied(exc):
             raise
@@ -450,6 +451,7 @@ def apply_scenarios(scenarios: Sequence[Scenario], price_map: Dict[Tuple[str, st
         }
         if run.clock_id:
             customer_kwargs["test_clock"] = run.clock_id
+            print(f"Customer will use Test Clock {run.clock_id}", file=sys.stderr)
         try:
             customer = stripe.Customer.create(**customer_kwargs)
             run.customer_id = customer.id
