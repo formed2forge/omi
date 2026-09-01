@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "The companion bar now shows live agent status the way macOS does: a green glow when a background agent finishes, red when it fails, plus matching status orbs on each agent row."
+  ]
+}

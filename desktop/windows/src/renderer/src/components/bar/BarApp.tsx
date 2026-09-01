@@ -24,16 +24,18 @@ import { useAgentPills } from '../../hooks/useAgentPills'
 import { Orb } from '../orb/Orb'
 import { BarChatSurface } from './BarChatSurface'
 import { AgentPillView } from './AgentPillView'
-import type { AgentPill } from './agentPills'
+import { aggregateStatusGroup, type AgentPill } from './agentPills'
 import { BarHintStrip } from './BarHintStrip'
 import { createBarSender } from './barSend'
 import {
   constantLevelWaveformSource,
   deriveOrbState,
   deriveBarVoiceState,
+  deriveTurnPhase,
   isBarBusy,
   isPlaybackLevelFresh,
-  pillLabel
+  pillLabel,
+  voiceSuppressesAgentStatus
 } from './barDisplay'
 import type {
   BarMode,
@@ -560,6 +562,20 @@ export function BarApp(): React.JSX.Element {
     continuousListening,
     agentsActive
   })
+  // Collapsed-bar ambient agent status (Mac compactPillFill + AgentStatusGlow).
+  // Voice capturing/replying owns the pill; otherwise the highest-priority
+  // unviewed pill group tints the surface (failed > running > queued > done >
+  // stopped). Expanded chrome stays un-tinted so the glow is peek-only.
+  const turnPhase = deriveTurnPhase({
+    recording: recordingNow,
+    transcribing: thinkingNow,
+    status: barChat.status,
+    continuousListening,
+    agentsActive
+  })
+  const agentGroup = aggregateStatusGroup(pills)
+  const showAgentGlow =
+    !expanded && agentGroup !== null && !voiceSuppressesAgentStatus(turnPhase)
   // The orb's live level, by lane: the user's mic while capturing (hub-projected
   // or local analyser), the reply's own played audio while Omi speaks (fresh
   // playback tap only — stale ⇒ null ⇒ pose-only choreography), else none.
@@ -625,17 +641,25 @@ export function BarApp(): React.JSX.Element {
     <div className="bar-root">
       <div className={`bar-slide ${sliding === 'in' ? 'bar-slide-in' : 'bar-slide-out'}`}>
         <div
-          className={`bar-surface ${expanded ? 'bar-surface-expanded' : ''}`}
+          className={`bar-surface ${expanded ? 'bar-surface-expanded' : ''}${
+            showAgentGlow ? ` bar-surface-agent bar-surface-agent-${agentGroup}` : ''
+          }`}
+          data-agent-status={showAgentGlow ? agentGroup : undefined}
           style={surfaceStyle}
           onMouseEnter={onSurfaceEnter}
           onMouseLeave={onSurfaceLeave}
         >
-          {/* Collapsed pill — orb + wordmark. Click to expand. Minimal by design:
-              the orb is the status indicator (no transcript, no waveform). */}
+          {/* Collapsed pill — orb + wordmark. Click to expand. Agent-run status
+              is the surface tint/glow (Mac compactPillFill); the orb stays the
+              voice/agents pose and is never remounted for this. */}
           <div
             className={`bar-content ${!expanded ? 'bar-content-active' : ''}`}
             role="button"
-            aria-label="Open Omi"
+            aria-label={
+              showAgentGlow && agentGroup
+                ? `Open Omi, subagents ${agentGroup}`
+                : 'Open Omi'
+            }
             tabIndex={-1}
             onClick={() => window.omiBar.expand()}
           >

@@ -10,6 +10,7 @@ import { ChatMessages } from '../chat/ChatMessages'
 import { useLiveEdgeFollow } from '../../hooks/useLiveEdgeFollow'
 import { displayLabel, displayTintToken, isFinished, type AgentPill } from './agentPills'
 import { pillChipClasses } from './agentPillTranscript'
+import { AgentStatusMark } from './AgentStatusMark'
 import type { BarChatState } from '../../../../shared/types'
 
 function ChevronLeft(): React.JSX.Element {
@@ -84,21 +85,6 @@ function OmiChatRow({ onOpen }: { onOpen: () => void }): React.JSX.Element {
   )
 }
 
-/** Leading status column shared by EVERY list row so all titles line up on one
- *  left margin (no ragged edge). The dot pulses when that row is active — Omi
- *  thinking/speaking, or an agent running a task — and is a calm neutral marker
- *  otherwise. Neutral/emerald only (no purple — brand rule). */
-function RowStatusDot({ active }: { active: boolean }): React.JSX.Element {
-  return (
-    <span
-      aria-hidden="true"
-      className={`h-2 w-2 shrink-0 rounded-full ${
-        active ? 'animate-pulse bg-emerald-400' : 'bg-neutral-600'
-      }`}
-    />
-  )
-}
-
 /** One floating-agent-pill row in the bar list: title + status chip + live
  *  one-liner, opening that run's OWN transcript on click. A finished pill offers
  *  Dismiss; an active pill offers Stop (when a canceller is wired). The open,
@@ -123,7 +109,7 @@ function PillRow({
         onClick={() => onOpen(pill.id)}
         className="flex min-w-0 flex-1 items-center gap-3 text-left"
       >
-        <RowStatusDot active={!finished} />
+        <AgentStatusMark displayStatus={pill.displayStatus} provider={pill.provider} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium text-neutral-100">{pill.title}</span>
