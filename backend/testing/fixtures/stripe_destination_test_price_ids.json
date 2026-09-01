@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "account": "destination_test",
+    "wrote_ledger": false,
+    "note": "Set these as Cloud Agent / harness secrets. Do not append to recognized_stripe_prices."
+  },
+  "env": {
+    "STRIPE_ARCHITECT_ANNUAL_PRICE_ID": "price_1UAh83E4KtSciPQ7umoTx9FS",
+    "STRIPE_ARCHITECT_MONTHLY_PRICE_ID": "price_1UAh83E4KtSciPQ7kwpTIoza",
+    "STRIPE_OPERATOR_ANNUAL_PRICE_ID": "price_1UAh85E4KtSciPQ7gelOWYHc",
+    "STRIPE_OPERATOR_MONTHLY_PRICE_ID": "price_1UAh84E4KtSciPQ7KfN1yKDH",
+    "STRIPE_PLUS_ANNUAL_PRICE_ID": "price_1UAh86E4KtSciPQ70pkuTVMc",
+    "STRIPE_PLUS_MONTHLY_PRICE_ID": "price_1UAh86E4KtSciPQ70N6UT9kf",
+    "STRIPE_UNLIMITED_ANNUAL_PRICE_ID": "price_1UAh82E4KtSciPQ7hPk8TRN1",
+    "STRIPE_UNLIMITED_MONTHLY_PRICE_ID": "price_1UAh82E4KtSciPQ73tL0drpL",
+    "STRIPE_UNLIMITED_V2_ANNUAL_PRICE_ID": "price_1UAh88E4KtSciPQ7azzAdCdl",
+    "STRIPE_UNLIMITED_V2_MONTHLY_PRICE_ID": "price_1UAh87E4KtSciPQ7c4CAKOtn"
+  }
+}
