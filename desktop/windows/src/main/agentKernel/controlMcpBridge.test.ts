@@ -242,7 +242,8 @@ describe('tools/list visibility for a model-facing caller', () => {
       'execute_sql',
       'semantic_search',
       'get_conversations',
-      'get_work_context'
+      'get_work_context',
+      'web_search'
     ]) {
       expect(names).toContain(product)
     }
