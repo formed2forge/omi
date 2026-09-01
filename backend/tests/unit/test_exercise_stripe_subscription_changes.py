@@ -62,6 +62,90 @@ def test_dry_run_refuses_live_key(monkeypatch):
         ex.main([])
 
 
+def test_sanitize_stripe_error_redacts_restricted_key_material():
+    leaked = "rk_test_THISMUSTNOTAPPEARINLOGS"
+    text = ex._sanitize_stripe_error(PermissionError(f"key {leaked} lacks billing_clock_write"))
+    assert leaked not in text
+    assert "rk_test_<redacted>" in text
+
+
+def test_maybe_create_test_clock_continues_on_permission_error(capsys):
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def create(**_kwargs):
+                    raise PermissionError("key rk_test_LEAKEDCLOCKKEY lacks billing_clock_write")
+
+    clock_id = ex._maybe_create_test_clock(_Stripe)
+    assert clock_id is None
+    err = capsys.readouterr().err
+    assert "LEAKEDCLOCKKEY" not in err
+    assert "continuing without a clock" in err
+
+
+def test_maybe_create_test_clock_reraises_non_permission_errors():
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def create(**_kwargs):
+                    raise RuntimeError("stripe down")
+
+    with pytest.raises(RuntimeError, match="stripe down"):
+        ex._maybe_create_test_clock(_Stripe)
+
+
+def test_apply_scenarios_omits_test_clock_when_clock_create_denied(monkeypatch):
+    captured: dict = {}
+    fallbacks: list = []
+
+    class _Obj:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def create(**_kwargs):
+                    raise PermissionError("Restricted key missing billing_clock_write (rk_test_LEAKEDAPPLYKEY)")
+
+                @staticmethod
+                def delete(_clock_id):
+                    raise AssertionError("clock should not be deleted when create was denied")
+
+        class Customer:
+            @staticmethod
+            def create(**kwargs):
+                captured["customer_kwargs"] = kwargs
+                return _Obj(id="cus_phase3")
+
+            @staticmethod
+            def delete(_customer_id):
+                captured["deleted"] = True
+
+    monkeypatch.setattr(ex, "_require_test_mode_key", lambda *_a, **_k: _Stripe)
+    monkeypatch.setattr(ex, "_attach_test_card", lambda *_a, **_k: None)
+    monkeypatch.setattr(ex, "record_fallback", lambda **kwargs: fallbacks.append(kwargs))
+
+    blocked = [sc for sc in ex.SCENARIOS if sc.kind == ex.KIND_DESKTOP_BLOCKED][:1]
+    results = ex.apply_scenarios(blocked, {})
+    assert "test_clock" not in captured["customer_kwargs"]
+    assert captured["customer_kwargs"]["metadata"]["omi_phase3"] == "1"
+    assert results[0]["status"] == "passed"
+    assert fallbacks == [
+        {
+            "component": "other",
+            "from_mode": "test_clock",
+            "to_mode": "no_clock",
+            "reason": "other",
+            "outcome": "degraded",
+        }
+    ]
+    assert captured.get("deleted") is True
+
+
 def test_price_map_from_probe_uses_fixture_metadata_only():
     report = {
         "fixture_prices": [
