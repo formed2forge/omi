@@ -12,6 +12,10 @@ Debugging Tools Write (``stripecli_session_write``) for ``listen`` / ``trigger``
 
     python backend/scripts/exercise_stripe_webhooks.py
     STRIPE_API_KEY=sk_test_... python backend/scripts/exercise_stripe_webhooks.py --apply
+
+To persist plan changes through ``routers/payment.py`` into the Firestore emulator,
+use ``backend/scripts/exercise_stripe_webhooks_backend.py`` instead of this
+stdlib receiver.
 """
 
 from __future__ import annotations
@@ -172,6 +176,7 @@ def _print_dry_run(cli: Optional[str]) -> None:
     print(f"\nStripe CLI on PATH: {'yes (' + cli + ')' if cli else 'no'}")
     print("Restricted keys need Debugging Tools Write (stripecli_session_write) for listen/trigger.")
     print("Dry-run only. Pass --apply with a TEST-MODE STRIPE_API_KEY to listen + trigger.")
+    print("Persist via payment.py: python backend/scripts/exercise_stripe_webhooks_backend.py --apply")
 
 
 def apply_listen_and_trigger(
