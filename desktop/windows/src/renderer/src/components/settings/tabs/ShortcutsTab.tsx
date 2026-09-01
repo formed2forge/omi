@@ -25,12 +25,13 @@
 // accelerator is also the push-to-talk hold trigger (main/bar gesture machine),
 // so disabling it would silently kill PTT.
 //
-// Deliberately NOT built — no Windows machinery for any of these (all macOS-only):
-// double-tap-to-lock, PTT sound cues, and mute-audio-while-talking.
+// Phase 1 (Linux shortcuts): each card has a Test control that probes whether the
+// OS will accept the current chord (suspend → register probe → resume). Linux
+// also shows a read-only session diagnostic row (portal/ozone/WM hints).
 import { useEffect, useRef, useState } from 'react'
-import { Keyboard, MessageSquareText } from 'lucide-react'
+import { Keyboard, MessageSquareText, Monitor } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { RecordHotkeyState } from '../../../../../shared/types'
+import type { LinuxShortcutSessionDiagnostics, RecordHotkeyState } from '../../../../../shared/types'
 import { setPreferences } from '../../../lib/preferences'
 import { SettingRow } from '../SettingRow'
 import { acceleratorToTokens, DEFAULT_OVERLAY_ACCELERATOR } from '../../../lib/overlayShortcut'
@@ -40,6 +41,7 @@ import { DEFAULT_RECORD_HOTKEY } from '../../../../../shared/hotkeyDefaults'
 export function ShortcutsTab(): React.JSX.Element {
   return (
     <>
+      <LinuxShortcutSessionRow />
       <ShortcutCard
         icon={MessageSquareText}
         title="Summon hotkey"
@@ -71,6 +73,55 @@ export function ShortcutsTab(): React.JSX.Element {
         }
       />
     </>
+  )
+}
+
+function LinuxShortcutSessionRow(): React.JSX.Element | null {
+  const [diag, setDiag] = useState<LinuxShortcutSessionDiagnostics | null | undefined>(undefined)
+
+  useEffect(() => {
+    let unmounted = false
+    void window.omi?.getLinuxShortcutSession?.().then((info) => {
+      if (!unmounted) setDiag(info ?? null)
+    })
+    return () => {
+      unmounted = true
+    }
+  }, [])
+
+  if (!diag) return null
+
+  const mechanism = diag.globalShortcuts.available
+    ? diag.globalShortcuts.mechanism === 'wayland-portal'
+      ? 'Wayland desktop portal'
+      : 'X11 global grab'
+    : diag.globalShortcuts.reason
+
+  return (
+    <SettingRow
+      icon={Monitor}
+      title="Linux shortcut environment"
+      subtitle="Session facts Omi uses when registering global shortcuts."
+      keywords="linux wayland x11 portal ozone desktop environment shortcut diagnostics"
+    >
+      <div className="space-y-2 text-xs text-white/55">
+        <p className="font-mono text-[11px] text-white/70">{diag.summary}</p>
+        <p>
+          Session <span className="text-white/80">{diag.sessionType}</span>
+          {diag.currentDesktop ? (
+            <>
+              {' '}
+              · desktop <span className="text-white/80">{diag.currentDesktop}</span>
+            </>
+          ) : null}
+          {' '}
+          · ozone <span className="text-white/80">{diag.ozonePlatform}</span>
+        </p>
+        <p>
+          Global shortcut path: <span className="text-white/80">{mechanism}</span>
+        </p>
+      </div>
+    </SettingRow>
   )
 }
 
@@ -115,6 +166,8 @@ function ShortcutCard(props: {
   const [registered, setRegistered] = useState(true)
   const [enabled, setEnabled] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<'available' | 'unavailable' | null>(null)
   // Set as soon as the user picks a chip / records a chord. The mount `load()` is
   // async, so a fast click whose commit resolves FIRST would otherwise be undone
   // by the (now stale) load result — ignore the load once the user has acted.
@@ -134,6 +187,23 @@ function ShortcutCard(props: {
     // Mount-only: `load` is a stable inline closure per card.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    setTestResult(null)
+  }, [accel])
+
+  const runTest = async (): Promise<void> => {
+    if (!accel || !enabled) return
+    setError(null)
+    setTestResult(null)
+    setTesting(true)
+    try {
+      const res = await window.omi?.testShortcutAccelerator?.(accel)
+      setTestResult(res?.available ? 'available' : 'unavailable')
+    } finally {
+      setTesting(false)
+    }
+  }
 
   // suspend/resume release ALL global chords while recording — otherwise pressing
   // the CURRENT chord (e.g. Ctrl+Space / Shift+Space) fires it instead of being
@@ -234,10 +304,20 @@ function ShortcutCard(props: {
               <span>Off</span>
             </Chip>
           )}
+
+          <Chip selected={false} onClick={() => void runTest()} disabled={!enabled || !accel || testing}>
+            <span>{testing ? 'Testing…' : 'Test'}</span>
+          </Chip>
         </div>
 
         {!enabled ? (
           <p className="text-xs text-white/40">Recording shortcut is off.</p>
+        ) : testResult === 'available' ? (
+          <p className="text-xs text-emerald-300/90">This shortcut is available on your system.</p>
+        ) : testResult === 'unavailable' ? (
+          <p className="text-xs text-amber-300">
+            Another app is using this shortcut — pick a different one.
+          </p>
         ) : error || !registered ? (
           <p className="text-xs text-amber-300">
             {error ?? 'This shortcut is held by another app — pick a different one.'}

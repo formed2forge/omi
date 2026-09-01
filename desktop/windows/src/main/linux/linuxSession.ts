@@ -108,3 +108,17 @@ export function formatLinuxSessionSummary(info: LinuxSessionInfo): string {
   }
   return parts.join(' ')
 }
+
+export type LinuxSessionDiagnostics = LinuxSessionInfo & {
+  summary: string
+}
+
+/** Serializable session facts for Settings → Shortcuts (Linux only). */
+export function getLinuxSessionDiagnostics(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform
+): LinuxSessionDiagnostics | null {
+  if (platform !== 'linux') return null
+  const info = detectLinuxSession(env)
+  return { ...info, summary: formatLinuxSessionSummary(info) }
+}
