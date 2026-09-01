@@ -187,6 +187,24 @@ def test_apply_scenarios_exits_sanitized_when_customer_write_denied(monkeypatch)
     assert "customer_write" in message
 
 
+def test_create_sub_does_not_expand_latest_invoice():
+    captured: dict = {}
+
+    class _Stripe:
+        class Subscription:
+            @staticmethod
+            def create(**kwargs):
+                captured["kwargs"] = kwargs
+                return type("Sub", (), {"id": "sub_test"})()
+
+    run = ex.LiveRun(stripe=_Stripe, price_map={})
+    run.customer_id = "cus_test"
+    sub = ex._create_sub(run, "price_test")
+    assert sub.id == "sub_test"
+    assert run.created_sub_ids == ["sub_test"]
+    assert "expand" not in captured["kwargs"]
+
+
 def test_price_map_from_probe_uses_fixture_metadata_only():
     report = {
         "fixture_prices": [

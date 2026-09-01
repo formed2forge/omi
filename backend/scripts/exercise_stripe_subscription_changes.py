@@ -345,13 +345,14 @@ def _cleanup_live(run: LiveRun) -> None:
 
 
 def _create_sub(run: LiveRun, price_id: str) -> Any:
+    # Do not expand latest_invoice: that requires invoice_read on restricted keys,
+    # and none of the scenarios read the invoice object.
     sub = run.stripe.Subscription.create(
         customer=run.customer_id,
         items=[{"price": price_id}],
         metadata={**TEST_FIXTURE_MARKER, "omi_phase3": "1"},
         payment_behavior="error_if_incomplete",
         collection_method="charge_automatically",
-        expand=["latest_invoice"],
     )
     run.created_sub_ids.append(sub.id)
     return sub
