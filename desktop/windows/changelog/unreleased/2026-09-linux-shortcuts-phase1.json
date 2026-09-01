@@ -1,0 +1,6 @@
+{
+  "changes": [
+    "Settings → Shortcuts now has a Test button on each global shortcut to check whether your system will accept the chord",
+    "Linux: Settings → Shortcuts shows your session and portal shortcut path (Wayland vs X11)"
+  ]
+}
