@@ -9,7 +9,8 @@ and never writes ``recognized_stripe_prices``.
 Default is dry-run (prints the scenario table, no Stripe calls). ``--apply``
 creates an ephemeral customer (Test Clock when the key allows ``billing_clock_write``,
 otherwise no clock), runs each in-catalog scenario against real test-mode Stripe,
-then deletes them.
+then deletes them. Each scenario's subscriptions are canceled before the next
+one so a Test Clock customer stays under Stripe's 3-active-subscription cap.
 
     python backend/scripts/exercise_stripe_subscription_changes.py
     STRIPE_API_KEY=sk_test_... python backend/scripts/exercise_stripe_subscription_changes.py --apply
@@ -345,6 +346,35 @@ def _cleanup_live(run: LiveRun) -> None:
             pass
 
 
+def _retire_open_subscriptions(run: LiveRun) -> None:
+    """Drop scenario subs so a Test Clock customer stays under Stripe's 3-active cap.
+
+    Without a clock, one customer can hold every scenario sub until final cleanup.
+    Test clocks reject a 4th active subscription on the same customer
+    (``already at the combined maximum of 3 allowed``). Scenarios are independent,
+    so retiring after each one is correct with or without a clock.
+    """
+    stripe = run.stripe
+    for sched_id in list(run.created_schedule_ids):
+        try:
+            stripe.SubscriptionSchedule.release(sched_id)
+        except Exception:
+            try:
+                stripe.SubscriptionSchedule.cancel(sched_id)
+            except Exception:
+                pass
+    run.created_schedule_ids.clear()
+    for sub_id in list(run.created_sub_ids):
+        try:
+            stripe.Subscription.cancel(sub_id, invoice_now=False, prorate=False)
+        except Exception:
+            try:
+                stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+            except Exception:
+                pass
+    run.created_sub_ids.clear()
+
+
 def _create_sub(run: LiveRun, price_id: str) -> Any:
     # Do not expand latest_invoice: that requires invoice_read on restricted keys,
     # and none of the scenarios read the invoice object.
@@ -504,6 +534,7 @@ def apply_scenarios(scenarios: Sequence[Scenario], price_map: Dict[Tuple[str, st
                 sanitized = _sanitize_stripe_error(exc)
                 results.append({"id": sc.id, "status": "failed", "error": sanitized})
                 print(f"  FAIL {sc.id}: {sanitized}")
+            _retire_open_subscriptions(run)
     finally:
         _cleanup_live(run)
     return results
