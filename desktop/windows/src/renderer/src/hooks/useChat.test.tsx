@@ -1139,6 +1139,7 @@ describe('useChat — default thread backend hydration (B5 cross-device read par
     prefs.chatHistoryMode = 'infinite'
     // Wire order: backend returns newest-first; the loader must reverse to chronological.
     const evidenceEnvelope = { sources: [{ id: 'src-1', title: 'Test', url: 'https://t.co', score: 0.9 }] }
+    const parsedEvidence = { schemaVersion: 1, references: [] }
     sessionMocks.getMessages.mockResolvedValueOnce([
       { id: 'be-2', text: 'hi there', sender: 'ai', createdAt: '2026-01-01T00:00:01Z', evidence: evidenceEnvelope },
       { id: 'be-1', text: 'hello from mobile', sender: 'human', createdAt: '2026-01-01T00:00:00Z' }
@@ -1150,13 +1151,14 @@ describe('useChat — default thread backend hydration (B5 cross-device read par
     expect(result.current.history).toHaveLength(2)
     // Oldest message first — confirmed chronological despite newest-first wire order.
     expect(result.current.history[0]).toMatchObject({ id: 'be-1', role: 'user', content: 'hello from mobile' })
-    expect(result.current.history[1]).toMatchObject({ id: 'be-2', role: 'assistant', content: 'hi there', evidence: evidenceEnvelope })
+    expect(result.current.history[1]).toMatchObject({ id: 'be-2', role: 'assistant', content: 'hi there', evidence: parsedEvidence })
   })
 
   it('R5 — mount loader (infinite) falls back to local SQLite when the backend call fails', async () => {
     prefs.chatHistoryMode = 'infinite'
     sessionMocks.getMessages.mockRejectedValueOnce(new Error('network'))
     const evidenceEnvelope = { sources: [{ id: 'src-2', title: 'Local', url: 'https://l.co', score: 0.8 }] }
+    const parsedEvidence = { schemaVersion: 1, references: [] }
     ;(window as unknown as { omi: { getLocalConversation: unknown } }).omi.getLocalConversation =
       async () => ({
         startedAt: 1,
@@ -1171,7 +1173,7 @@ describe('useChat — default thread backend hydration (B5 cross-device read par
     })
     expect(result.current.history).toHaveLength(2)
     expect(result.current.history[0]).toMatchObject({ id: 'loc-1', role: 'user', content: 'offline message' })
-    expect(result.current.history[1]).toMatchObject({ id: 'loc-2', role: 'assistant', content: 'cached reply', evidence: evidenceEnvelope })
+    expect(result.current.history[1]).toMatchObject({ id: 'loc-2', role: 'assistant', content: 'cached reply', evidence: parsedEvidence })
   })
 })
 
