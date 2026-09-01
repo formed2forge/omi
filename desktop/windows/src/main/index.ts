@@ -172,6 +172,12 @@ import {
 import { getAppSettings, setAppSettings, onAppSettingsChanged } from './appSettings'
 import { showBestEffortNotification } from './notify'
 import { buildHotkeyConflictNotice } from './hotkeyNotice'
+import {
+  applyLinuxPortalIdentity,
+  detectLinuxSession,
+  formatLinuxSessionSummary,
+  resolveLinuxOzonePlatform
+} from './linux/linuxSession'
 
 // Default main-window content size. Single source of truth for both window
 // creation and the Settings → Font Size "Reset Window Size" affordance
@@ -423,18 +429,20 @@ if (gotSingleInstanceLock) initSentry()
 // rewrites the live instance's flag. The clean-exit write is in will-quit below.
 if (gotSingleInstanceLock) initCrashSentinel()
 
-// Linux: default to XWayland (x11 ozone). On a native Wayland session Electron
-// cannot register global shortcuts (push-to-talk / overlay summon) and the X11
-// active-window path is blind, so XWayland gives the fullest experience. Set
-// OMI_OZONE=wayland to run natively (accepting those limitations). Also enable
-// the PipeWire capturer (portal screen share) and PulseAudio monitor-source
-// loopback for system-audio capture when pipewire-pulse/Pulse is present.
+// Linux: portal identity + session facts (phase 0 shortcuts groundwork).
+// Default to XWayland (x11 ozone) for the broadest shortcut + active-window
+// support today. Set OMI_OZONE=wayland for native Wayland (portal global shortcuts
+// when desktopName/.desktop are valid; X11 foreground path still blind). Also enable
+// the PipeWire capturer (portal screen share) and PulseAudio monitor-source loopback
+// for system-audio capture when pipewire-pulse/Pulse is present.
 if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('ozone-platform', process.env.OMI_OZONE || 'x11')
+  applyLinuxPortalIdentity((name) => app.setDesktopName(name))
+  app.commandLine.appendSwitch('ozone-platform', resolveLinuxOzonePlatform())
   app.commandLine.appendSwitch(
     'enable-features',
     'WebRTCPipeWireCapturer,PulseaudioLoopbackForScreenShare'
   )
+  console.info(`[linux] ${formatLinuxSessionSummary(detectLinuxSession())}`)
 }
 
 const icon = nativeImage.createFromPath(iconPath)
