@@ -33,6 +33,15 @@ def test_pricing_basic_uses_harness_email():
     assert whb.harness_user_email("pricing_operator") == "pricing_operator@local.omi.invalid"
 
 
+def test_checkout_client_reference_log_predicate(tmp_path):
+    log_path = tmp_path / "uvicorn.log"
+    log_path.write_text("Processing subscription for user pricing_basic (from metadata)\n")
+    assert not whb._log_mentions_checkout_client_reference(log_path, "pricing_basic")
+    log_path.write_text("Processing subscription for user pricing_basic (from client_reference_id)\n")
+    assert whb._log_mentions_checkout_client_reference(log_path, "pricing_basic")
+    assert not whb._wait_log_mentions_checkout_client_reference(log_path, "someone_else", timeout=0.01)
+
+
 def test_checkout_subscription_fixture_is_subscription_mode():
     fixture = whb.checkout_subscription_fixture("pricing_basic", "price_plus_m", 1799)
     session = fixture["fixtures"][0]["params"]
