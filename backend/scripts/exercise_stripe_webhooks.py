@@ -52,6 +52,10 @@ WEBHOOK_EVENTS: tuple[str, ...] = (CHECKOUT_EVENT,) + SUBSCRIPTION_EVENTS
 FORWARD_PATH = "/v1/stripe/webhook"
 STRIPE_CLI_VERSION = "1.31.0"
 _SECRET_PREFIXES = ("sk_test_", "rk_test_", "pk_test_", "sk_live_", "rk_live_", "pk_live_", "whsec_")
+# Stripe CLI Ready-line secrets are `whsec_` + base64 (`+/=` and URL-safe `_`/`-`).
+# A charset of only `[A-Za-z0-9]` truncates at the first `+`/`/` and HMAC-fails every POST.
+_LISTEN_SECRET_RE = re.compile(r"whsec_[A-Za-z0-9+/=_-]+")
+_ANSI_RE = re.compile(r"\x1b(?:\[[0-9;?]*[ -/]*[@-~]|].*?(?:\x07|\x1b\\)|[@-Z\\-_])")
 
 
 def _sanitize(text: str) -> str:
@@ -161,9 +165,39 @@ def trigger_argv(cli: str, event_name: str) -> List[str]:
     return [cli, "trigger", event_name]
 
 
+def _strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text)
+
+
 def parse_listen_secret(text: str) -> Optional[str]:
-    match = re.search(r"whsec_[A-Za-z0-9]+", text)
+    """Return the listen-session `whsec_` Stripe printed, including base64 padding.
+
+    `stripe listen` Ready-line (CLI 1.31): ``Ready! … secret is <bold>whsec_… (^C to quit)``.
+    ``ansi.Bold`` wraps the secret when ``CLICOLOR_FORCE`` is set even if stdout is a pipe.
+    """
+    match = _LISTEN_SECRET_RE.search(_strip_ansi(text))
     return match.group(0) if match else None
+
+
+def listen_cli_env(base: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    """Env for `stripe listen`/`trigger`. Disable ANSI so the Ready-line secret is plaintext."""
+    env = dict(os.environ if base is None else base)
+    env["NO_COLOR"] = "1"
+    env["CLICOLOR"] = "0"
+    env["CLICOLOR_FORCE"] = "0"
+    return env
+
+
+def require_stripe_sdk() -> Any:
+    """Fail before listen/trigger if this interpreter cannot verify Stripe-Signature."""
+    try:
+        import stripe
+    except ImportError as exc:
+        raise SystemExit(
+            "The Stripe Python package is required for --apply (Webhook.construct_event). "
+            "Activate backend/.venv (`cd backend && source .venv/bin/activate`) and retry."
+        ) from exc
+    return stripe
 
 
 def _is_cli_session_denied(text: str) -> bool:
@@ -199,6 +233,12 @@ class _WebhookHandler(BaseHTTPRequestHandler):
 
             event = stripe.Webhook.construct_event(payload, sig, self.signing_secret)
         except Exception as exc:  # noqa: BLE001 - map verify failures to 400
+            print(
+                "webhook verify failed: "
+                f"payload_bytes={len(payload)} sig={'yes' if sig else 'no'} "
+                f"{_sanitize(str(exc))}",
+                file=sys.stderr,
+            )
             self._respond(400, {"status": "error", "message": _sanitize(str(exc))})
             return
         record = {"type": event.get("type"), "id": event.get("id"), "livemode": event.get("livemode")}
@@ -237,6 +277,7 @@ def apply_listen_and_trigger(
             "Refusing to run: STRIPE_API_KEY is not a test-mode secret/restricted key (sk_test_/rk_test_)."
         )
 
+    require_stripe_sdk()
     cli = ensure_stripe_cli()
     handler_cls = type(
         "Handler",
@@ -257,7 +298,7 @@ def apply_listen_and_trigger(
         ",".join(events),
         "--skip-update",
     ]
-    env = os.environ.copy()
+    env = listen_cli_env()
     listen_proc = subprocess.Popen(
         listen_cmd,
         stdout=subprocess.PIPE,
@@ -292,7 +333,10 @@ def apply_listen_and_trigger(
         if not secret:
             raise SystemExit("Timed out waiting for stripe listen webhook signing secret.")
         handler_cls.signing_secret = secret
-        print("stripe listen ready; triggering fixture events…", file=sys.stderr)
+        print(
+            f"stripe listen ready (secret_chars={len(secret)}); triggering fixture events…",
+            file=sys.stderr,
+        )
         triggered_ok: List[str] = []
         skipped: List[str] = []
         for event_name in events:
