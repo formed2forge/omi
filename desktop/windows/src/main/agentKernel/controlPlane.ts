@@ -274,6 +274,30 @@ export function resolveSpawnableCodingAgentAdapterId(
   return null
 }
 
+function isCodingAgentAdapterId(adapterId: string): adapterId is CodingAgentAdapterId {
+  return (PRODUCTION_ADAPTER_IDS as readonly string[]).includes(adapterId)
+}
+
+/**
+ * Register a model-directed coding agent (`spawn_agent` provider / adapterId)
+ * only when that agent is actually connected. Returns false when it is not
+ * installed, not signed in (Claude Code), or kernel registration fails — so
+ * spawn can fall back to a leaf pi-mono worker instead of creating a run that
+ * dies with `Adapter not registered: hermes`.
+ */
+export function ensureDirectedCodingAgentRegistered(
+  adapterId: string,
+  deps: SpawnableAdapterDeps = {}
+): boolean {
+  if (!isCodingAgentAdapterId(adapterId)) return false
+  const env = deps.env ?? process.env
+  const claudeConnected = deps.claudeConnected ?? ((): boolean => claudeAuthStatus().connected)
+  const ensureRegistered = deps.ensureRegistered ?? ensureCodingAgentAdapterRegistered
+  if (!adapterIsActivated(adapterId, {}, env)) return false
+  if (adapterId === 'acp' && !claudeConnected()) return false
+  return ensureRegistered(adapterId)
+}
+
 /**
  * Set the authoritative owner for control-tool calls. MAIN-SIDE ONLY — must never
  * be wired to a plain IPC handler (see the owner-authority note above). Called by
@@ -320,7 +344,8 @@ export function trustedDirectControlContext(): AgentControlToolContext {
     trustedUserControl: true,
     executionRole: 'coordinator',
     getOwnerId: () => activeOwnerId,
-    resolveSpawnableAdapterId: async () => resolveSpawnableCodingAgentAdapterId()
+    resolveSpawnableAdapterId: async () => resolveSpawnableCodingAgentAdapterId(),
+    ensureSpawnAdapterRegistered: (adapterId) => ensureDirectedCodingAgentRegistered(adapterId)
   }
 }
 

@@ -318,9 +318,30 @@ describe('BarChatSurface', () => {
     expect(marks[1].getAttribute('data-agent-status')).toBe('done')
   })
 
-  it('conversation: header renders the passed title prop (data-driven, not hardcoded)', () => {
-    renderSurface({ view: 'conversation', conversationTitle: 'Omi Chat' })
-    expect(screen.getByText('Omi Chat')).toBeTruthy()
+  it('conversation: a background-agent pill stays visible (Ask Omi send hides the hub list)', () => {
+    // A send from the hub flips to conversation immediately, so the hub pill
+    // list is no longer on screen. The same rows must render here or a spawn
+    // started from Ask Omi has no status surface until the user hits Back.
+    const pill = {
+      id: 'p1',
+      runId: 'r1',
+      sessionId: 's1',
+      title: 'Research the latest news',
+      displayStatus: 'running' as const,
+      latestActivity: 'Searching…',
+      query: 'research the latest news',
+      createdAtMs: 1,
+      completedAtMs: null,
+      errorMessage: null,
+      provider: null,
+      viewedAtMs: null
+    }
+    const props = renderSurface({ view: 'conversation', pills: [pill] })
+    expect(screen.getByTestId('conversation-agent-pills')).toBeTruthy()
+    expect(screen.getByText('Research the latest news')).toBeTruthy()
+    fireEvent.click(screen.getByText('Research the latest news'))
+    expect(props.onOpenPill).toHaveBeenCalledWith('p1')
+    expect(props.onOpenConversation).not.toHaveBeenCalled()
   })
 
   it('conversation: renders the thread and the back chevron returns to the list', () => {

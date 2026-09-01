@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "FC-voice-chat-lane-tool-deadline",
+  "violated_contract": "A warm-hub voice turn waiting on a chat-lane tool (web_search, think_deeper, ask_higher_model) must keep the 180-second chat-lane pending-tools budget. Applying the 30-second standard-tool deadline terminates a legitimate public-web lookup as toolTimeout, cancels the hub, and the spoken answer falls to cascade or system TTS — a different voice than the live session.",
+  "canonical_prevention": "The voice-turn reducer stores a per-call deadline class and reschedules pending-tools to chatLaneTool (180s) when any in-flight call is chat-lane. The hub driver selects chatLane for web_search, think_deeper, and ask_higher_model after toolStarted. Behavioral tests assert the 180s reschedule, that mixed pending tools keep 180s, and that the driver arms 180s for web_search while standard tools stay at 30s.",
+  "canonical_prevention_artifact": [
+    "desktop/windows/src/renderer/src/lib/voice/turn/voiceTurnMachine.test.ts",
+    "desktop/windows/src/renderer/src/lib/voice/turn/voiceHubTurnDriver.test.ts"
+  ],
+  "evidence_prs": [],
+  "scope_hints": [
+    "desktop/windows/src/renderer/src/lib/voice/turn/**",
+    "desktop/macos/Desktop/Sources/VoiceTurnDomain/VoiceTurnStateMachine.swift"
+  ],
+  "status": "open"
+}

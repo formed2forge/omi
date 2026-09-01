@@ -98,6 +98,7 @@ describe('buildVoiceSystemInstruction', () => {
       'semantic_search',
       'get_work_context',
       'capture_screen',
+      'web_search',
       'list_agent_sessions'
     ]) {
       expect(text).toContain(tool)

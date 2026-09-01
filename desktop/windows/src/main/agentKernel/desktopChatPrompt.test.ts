@@ -31,6 +31,11 @@ describe('buildDesktopChatSystemPrompt', () => {
     expect(prompt.match(/spawn_agent/g)).toHaveLength(1)
   })
 
+  it('names web_search in the tools note so current public facts are not answered from memory', () => {
+    const prompt = buildDesktopChatSystemPrompt()
+    expect(prompt).toContain('web_search for current public facts')
+  })
+
   it('establishes the Omi persona and keeps normal replies conversational', () => {
     const prompt = buildDesktopChatSystemPrompt()
     expect(prompt).toContain('You are Omi')

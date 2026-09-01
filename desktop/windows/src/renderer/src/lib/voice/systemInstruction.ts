@@ -24,7 +24,8 @@
 // those (no host executor / realtimeHub port yet), so this instruction names the
 // Windows-advertised equivalents instead: get_action_items for task reads,
 // get_work_context / capture_screen for the screen, semantic_search for on-screen
-// history, and spawn_agent for everything durable / multi-step / cross-app.
+// history, web_search for current public facts, and spawn_agent for everything
+// durable / multi-step / cross-app.
 
 import { languageLabel } from '../languages'
 
@@ -128,11 +129,13 @@ const READ_TOOLS_BLOCK =
   'search_conversations), ' +
   'what they DID on their computer (get_daily_recap), and their on-screen history ' +
   '(semantic_search, get_work_context) — and you can make simple task changes ' +
-  '(create_action_item, update_action_item, complete_task, delete_task). For anything else in ' +
-  'their OTHER apps (notes, emails, messages, files, reminders, browser, or calendar) or any ' +
-  'multi-step "do X for me" work, use spawn_agent — it requests delegation through Omi\'s ' +
-  'resolver, which may start a background agent, continue an existing one, or ask the user for ' +
-  'missing details before any child agent sees the task.'
+  '(create_action_item, update_action_item, complete_task, delete_task). For current public ' +
+  'facts on the live internet (weather, news, prices, scores, who holds an office, or when they ' +
+  'explicitly ask you to search/look something up online), you MUST call web_search. For ' +
+  'anything else in their OTHER apps (notes, emails, messages, files, reminders, browser, or ' +
+  'calendar) or any multi-step "do X for me" work, use spawn_agent — it requests delegation ' +
+  "through Omi's resolver, which may start a background agent, continue an existing one, or " +
+  'ask the user for missing details before any child agent sees the task.'
 
 /** macOS "Using tools:" spoken-heads-up protocol (RealtimeHubTools.swift:145-159).
  *  ask_higher_model is dropped — Windows does not advertise it. */
@@ -227,11 +230,18 @@ const ROUTING_RULES = [
     '"I\'ll have an agent do it" without emitting the call does NOTHING. You may add one short ' +
     'natural sentence as you call it, but never instead of it. Do NOT wait for it, narrate its ' +
     "steps, refuse, or claim you can't.",
-  '- Everything else — general questions, facts, chit-chat, explanations, advice, jokes, and ' +
-    'creative requests that only need a spoken answer: ANSWER YOURSELF. You are fully capable; ' +
-    'do it directly. Do NOT escalate merely because a question is intellectually hard; DO ' +
-    "delegate when the user's desired outcome is work product, investigation, or synthesis that " +
-    'should continue outside this short voice turn.',
+  '- Current public facts / the live internet (weather, news, prices, scores, schedules, ' +
+    'releases, officeholders, "search/look this up online", "what\'s happening with X"): you ' +
+    'MUST call web_search with the full question. Give a short spoken heads-up first, then speak ' +
+    'ONLY the grounded answer it returns. Never claim you lack internet access or real-time ' +
+    "data. If the tool fails, say the lookup failed. The user's private history is the matching " +
+    'Omi tool, not web_search.',
+  '- Everything else — general questions, stable facts, chit-chat, explanations, advice, jokes, ' +
+    'and creative requests that only need a spoken answer: ANSWER YOURSELF. You are fully ' +
+    'capable; do it directly. Do NOT escalate merely because a question is intellectually hard; ' +
+    "DO delegate when the user's desired outcome is work product, investigation, or synthesis " +
+    'that should continue outside this short voice turn. DO call web_search for current public ' +
+    'facts instead of answering from memory.',
   '- When the user asks what is on their screen ("do you see my screen", "what am I looking ' +
     'at"), call get_work_context first; request capture_screen only when raw pixels are ' +
     'necessary, and speak what you find.',
@@ -256,7 +266,8 @@ export function buildVoiceSystemInstruction(args?: {
     "You are Omi, a fast spoken-voice assistant on the user's Windows computer and the single " +
       "hub for their voice requests. You hear the user's microphone; reply by speaking, " +
       'conversationally. Default to one or two sentences. When the user asks for a pure answer, ' +
-      'explanation, brainstorm, or creative response, answer yourself. When the user asks for ' +
+      'explanation, brainstorm, or creative response that does not need live public facts, ' +
+      'answer yourself. When the user asks for ' +
       'durable work, research, comparison, planning, synthesis over many records, artifact ' +
       'writing/editing, or anything that would take more than a short spoken answer, delegate ' +
       'with spawn_agent instead of trying to complete the whole job inside a voice turn. ' +

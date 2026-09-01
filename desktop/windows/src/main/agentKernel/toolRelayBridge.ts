@@ -489,7 +489,9 @@ function buildControlToolContext(
     // CALL-TIME dynamic import: controlPlane statically imports this module, so
     // a static import back would be a cycle (same idiom as productToolExecutors).
     resolveSpawnableAdapterId: async () =>
-      (await import('./controlPlane')).resolveSpawnableCodingAgentAdapterId()
+      (await import('./controlPlane')).resolveSpawnableCodingAgentAdapterId(),
+    ensureSpawnAdapterRegistered: async (adapterId) =>
+      (await import('./controlPlane')).ensureDirectedCodingAgentRegistered(adapterId)
   }
 }
 
