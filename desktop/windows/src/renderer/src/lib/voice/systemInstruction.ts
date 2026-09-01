@@ -234,7 +234,8 @@ const ROUTING_RULES = [
     'releases, officeholders, "search/look this up online", "what\'s happening with X"): you ' +
     'MUST call web_search with the full question. Give a short spoken heads-up first, then speak ' +
     'ONLY the grounded answer it returns. Never claim you lack internet access or real-time ' +
-    "data. If the tool fails, say the lookup failed. The user's private history is the matching " +
+    'data. Never spawn_agent or ask the user to connect Hermes/OpenClaw for a public-web lookup. ' +
+    "If the tool fails, say the lookup failed. The user's private history is the matching " +
     'Omi tool, not web_search.',
   '- Everything else — general questions, stable facts, chit-chat, explanations, advice, jokes, ' +
     'and creative requests that only need a spoken answer: ANSWER YOURSELF. You are fully ' +
@@ -271,6 +272,9 @@ export function buildVoiceSystemInstruction(args?: {
       'durable work, research, comparison, planning, synthesis over many records, artifact ' +
       'writing/editing, or anything that would take more than a short spoken answer, delegate ' +
       'with spawn_agent instead of trying to complete the whole job inside a voice turn. ' +
+      'Do not name or request Hermes or OpenClaw unless the user did. For current public ' +
+      'research (news, culture, trends, who/what/when on the live internet) call web_search ' +
+      'and speak a short grounded summary — that is not a spawn_agent job. ' +
       `${userLanguagesLine(args?.userLanguages ?? [])}Reply in the same language the user is speaking.`,
     aboutUser,
     continuityBlock(args?.topLevelConversationContext ?? '').trim(),

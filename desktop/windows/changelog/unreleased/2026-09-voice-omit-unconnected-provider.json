@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "Voice chat no longer offers Hermes or OpenClaw as a spawn_agent provider unless that coding agent is actually connected. Ordinary research prompts (news, culture, trends) stay on web_search and a spoken summary instead of asking you to set up Hermes."
+  ]
+}
