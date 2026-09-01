@@ -130,7 +130,7 @@ const MessageRow = memo(function MessageRow({
   // Never offer copy on the reply that is still streaming in (or on an
   // empty placeholder) — only once there is settled text to copy.
   const streaming = isLast && sending && m.role === 'assistant'
-  const canCopy = !streaming && m.content.trim().length > 0
+  const canCopy = !streaming && String(m.content ?? '').trim().length > 0
   const evidence = m.role === 'assistant' ? m.evidence : undefined
   const bubbleClass = `group/msg relative ${m.role === 'user' ? cls.user : cls.assistant}`
   const bubbleChildren = (
@@ -155,7 +155,7 @@ const MessageRow = memo(function MessageRow({
   // text) shows just the strip — no empty bubble. Messages with no
   // attachments emit exactly the single bubble div as before.
   if (m.role === 'user' && m.attachments?.length) {
-    const filesOnly = !m.content.trim()
+    const filesOnly = !String(m.content ?? '').trim()
     return (
       <div className="flex flex-col items-end gap-1.5">
         <ChatAttachmentStrip attachments={m.attachments} compact={compact} align="end" />
@@ -163,7 +163,7 @@ const MessageRow = memo(function MessageRow({
       </div>
     )
   }
-  if (evidence && evidence.references.length > 0) {
+  if (evidence && (evidence.references?.length ?? 0) > 0) {
     return (
       <div className="flex flex-col gap-1.5">
         <div className={bubbleClass}>{bubbleChildren}</div>
