@@ -1608,7 +1608,7 @@ const controlVoicePatches: Partial<Record<AgentControlManifestTool['name'], OmiT
           type: 'string',
           enum: ['openclaw', 'hermes'],
           description:
-            'Optional local provider override. Only pass when that coding agent is connected; omit to use the default background worker.'
+            'Optional local provider override only when the current user explicitly names it; omit for a regular Omi agent.'
         },
         parent_run_id: {
           type: 'string',

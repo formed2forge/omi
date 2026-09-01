@@ -239,6 +239,22 @@ export function ensureCodingAgentAdapterRegistered(adapterId: CodingAgentAdapter
   }
 }
 
+/** Model-facing `spawn_agent.provider` enum. Mac only advertises ids that are
+ *  actually registered; Windows maps that to "command configured" because coding
+ *  agents are registered lazily on first spawn. */
+export const DIRECTED_SPAWN_PROVIDERS = ['openclaw', 'hermes'] as const
+export type DirectedSpawnProvider = (typeof DIRECTED_SPAWN_PROVIDERS)[number]
+
+/** The directed providers a voice/chat model may name right now. Empty when
+ *  neither OpenClaw nor Hermes has a launch command — the voice catalog then
+ *  OMITS the provider field (Mac `availableDirectedProviders: []`). */
+export function availableDirectedProviderIds(
+  deps: { env?: NodeJS.ProcessEnv } = {}
+): DirectedSpawnProvider[] {
+  const env = deps.env ?? process.env
+  return DIRECTED_SPAWN_PROVIDERS.filter((id) => adapterIsActivated(id, {}, env))
+}
+
 /** Injectable edges for `resolveSpawnableCodingAgentAdapterId` (unit tests). */
 export interface SpawnableAdapterDeps {
   env?: NodeJS.ProcessEnv

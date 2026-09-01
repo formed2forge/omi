@@ -106,6 +106,8 @@ describe('buildVoiceSystemInstruction', () => {
     // The delegation directive: the model must EMIT spawn_agent, not merely promise it.
     expect(text).toContain('delegate with spawn_agent')
     expect(text).toContain('EMIT the spawn_agent')
+    expect(text).toContain('Do not name or request Hermes or OpenClaw unless the user did')
+    expect(text).toMatch(/Never spawn_agent or ask the user to connect Hermes/)
     // Tools macOS voice-exposes but Windows does NOT advertise must never be named —
     // pointing the model at an uncallable tool makes it promise work it cannot do.
     for (const absent of [
