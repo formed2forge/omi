@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 import re
 import shutil
 import signal
@@ -79,16 +80,55 @@ def _refuse_live(api_key: str) -> None:
         raise SystemExit("Refusing to run against a LIVE Stripe key. Use a test-mode key (sk_test_/rk_test_).")
 
 
+def _stripe_cli_archive_name(system: Optional[str] = None, machine: Optional[str] = None) -> str:
+    """GitHub release archive for this host. linux_x86_64 is not runnable on macOS."""
+    system = (system or sys.platform).lower()
+    machine = (machine or platform.machine()).lower()
+    if machine in ("amd64", "x86_64"):
+        arch = "x86_64"
+    elif machine in ("arm64", "aarch64"):
+        arch = "arm64"
+    else:
+        raise SystemExit(f"Unsupported CPU for Stripe CLI download: {machine}")
+    if system.startswith("linux"):
+        slug = f"linux_{arch}"
+    elif system == "darwin":
+        slug = f"mac-os_{arch}"
+    else:
+        raise SystemExit(
+            f"Unsupported OS for Stripe CLI download: {system}. Install the CLI from "
+            "https://docs.stripe.com/stripe-cli and put `stripe` on PATH."
+        )
+    return f"stripe_{STRIPE_CLI_VERSION}_{slug}.tar.gz"
+
+
+def _cli_is_runnable(path: str) -> bool:
+    """False for a Linux ELF cached on macOS (OSError: Exec format error)."""
+    try:
+        result = subprocess.run([path, "version"], capture_output=True, timeout=8)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
 def _cli_bin() -> Optional[str]:
+    candidates: List[str] = []
     found = shutil.which("stripe")
     if found:
-        return found
+        candidates.append(found)
     cached = BACKEND_DIR / ".cache" / "stripe-cli" / "stripe"
     if cached.is_file() and os.access(cached, os.X_OK):
-        return str(cached)
+        candidates.append(str(cached))
     home = os.path.expanduser("~/.local/bin/stripe")
     if os.path.isfile(home) and os.access(home, os.X_OK):
-        return home
+        candidates.append(home)
+    seen: set[str] = set()
+    for path in candidates:
+        if path in seen:
+            continue
+        seen.add(path)
+        if _cli_is_runnable(path):
+            return path
     return None
 
 
@@ -98,16 +138,21 @@ def ensure_stripe_cli() -> str:
         return existing
     dest_dir = BACKEND_DIR / ".cache" / "stripe-cli"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    tarball = dest_dir / f"stripe_{STRIPE_CLI_VERSION}_linux_x86_64.tar.gz"
-    url = (
-        "https://github.com/stripe/stripe-cli/releases/download/"
-        f"v{STRIPE_CLI_VERSION}/stripe_{STRIPE_CLI_VERSION}_linux_x86_64.tar.gz"
-    )
-    print(f"Downloading Stripe CLI v{STRIPE_CLI_VERSION}…", file=sys.stderr)
+    archive = _stripe_cli_archive_name()
+    tarball = dest_dir / archive
+    url = f"https://github.com/stripe/stripe-cli/releases/download/v{STRIPE_CLI_VERSION}/{archive}"
+    print(f"Downloading Stripe CLI v{STRIPE_CLI_VERSION} ({archive})…", file=sys.stderr)
     subprocess.run(["curl", "-fsSL", "-o", str(tarball), url], check=True)
     subprocess.run(["tar", "-xzf", str(tarball), "-C", str(dest_dir)], check=True)
     binary = dest_dir / "stripe"
+    if not binary.is_file():
+        raise SystemExit(f"Stripe CLI archive {archive} did not contain a `stripe` binary.")
     binary.chmod(0o755)
+    if not _cli_is_runnable(str(binary)):
+        raise SystemExit(
+            f"Downloaded Stripe CLI {archive} is not executable on this host. "
+            "Install a native CLI (macOS: brew install stripe/stripe-cli/stripe) and retry."
+        )
     return str(binary)
 
 

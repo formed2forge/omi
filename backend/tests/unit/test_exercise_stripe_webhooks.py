@@ -62,3 +62,62 @@ def test_cli_session_denied_is_detected():
     msg = "Enabling Debugging Tools Write ('stripecli_session_write') permissions"
     assert wh._is_cli_session_denied(msg) is True
     assert wh._is_cli_session_denied("customer_write missing") is False
+
+
+def test_stripe_cli_archive_matches_host():
+    assert wh._stripe_cli_archive_name("linux", "x86_64") == f"stripe_{wh.STRIPE_CLI_VERSION}_linux_x86_64.tar.gz"
+    assert wh._stripe_cli_archive_name("linux", "aarch64") == f"stripe_{wh.STRIPE_CLI_VERSION}_linux_arm64.tar.gz"
+    assert wh._stripe_cli_archive_name("darwin", "arm64") == f"stripe_{wh.STRIPE_CLI_VERSION}_mac-os_arm64.tar.gz"
+    assert wh._stripe_cli_archive_name("darwin", "x86_64") == f"stripe_{wh.STRIPE_CLI_VERSION}_mac-os_x86_64.tar.gz"
+
+
+def test_stripe_cli_archive_refuses_windows():
+    with pytest.raises(SystemExit, match="Unsupported OS"):
+        wh._stripe_cli_archive_name("win32", "x86_64")
+
+
+def test_cli_is_runnable_false_on_exec_format_error(monkeypatch):
+    def _boom(_cmd, **_kwargs):
+        raise OSError(8, "Exec format error")
+
+    monkeypatch.setattr(wh.subprocess, "run", _boom)
+    assert wh._cli_is_runnable("/Users/tim/tempdev/omi/backend/.cache/stripe-cli/stripe") is False
+
+
+def test_cli_bin_skips_unrunnable_cache(monkeypatch, tmp_path):
+    cached_dir = tmp_path / ".cache" / "stripe-cli"
+    cached_dir.mkdir(parents=True)
+    (cached_dir / "stripe").write_bytes(b"\x7fELF")
+    (cached_dir / "stripe").chmod(0o755)
+    monkeypatch.setattr(wh.shutil, "which", lambda _name: str(cached_dir / "stripe"))
+    monkeypatch.setattr(wh, "BACKEND_DIR", tmp_path)
+    monkeypatch.setattr(wh, "_cli_is_runnable", lambda _path: False)
+    assert wh._cli_bin() is None
+
+
+def test_ensure_stripe_cli_downloads_host_archive_when_cache_unrunnable(monkeypatch, tmp_path, capsys):
+    cached_dir = tmp_path / ".cache" / "stripe-cli"
+    cached_dir.mkdir(parents=True)
+    bad = cached_dir / "stripe"
+    bad.write_bytes(b"\x7fELF")
+    bad.chmod(0o755)
+    monkeypatch.setattr(wh, "BACKEND_DIR", tmp_path)
+    monkeypatch.setattr(wh, "_cli_bin", lambda: None)
+    monkeypatch.setattr(wh, "_stripe_cli_archive_name", lambda: "stripe_1.31.0_mac-os_arm64.tar.gz")
+    calls: list[list[str]] = []
+
+    def _run(cmd, **_kwargs):
+        calls.append(list(cmd))
+        if cmd[0] == "tar":
+            (cached_dir / "stripe").write_text("#!/bin/sh\necho stripe-cli\n")
+            (cached_dir / "stripe").chmod(0o755)
+        return type("R", (), {"returncode": 0})()
+
+    monkeypatch.setattr(wh.subprocess, "run", _run)
+    monkeypatch.setattr(wh, "_cli_is_runnable", lambda path: path.endswith("/stripe") and (tmp_path / ".cache/stripe-cli/stripe").is_file())
+    got = wh.ensure_stripe_cli()
+    assert got.endswith("/.cache/stripe-cli/stripe")
+    urls = [c for c in calls if c[0] == "curl"]
+    assert any("mac-os_arm64.tar.gz" in " ".join(c) for c in urls)
+    err = capsys.readouterr().err
+    assert "mac-os_arm64" in err
