@@ -17,6 +17,8 @@ def test_scenario_table_skips_max_on_current_catalog():
     assert rows["operator_month_to_plus_month_blocked"]["status"] == "ready"
     assert rows["plus_month_to_max_month"]["status"] == "skip"
     assert "max" in rows["plus_month_to_max_month"]["skip_reason"]
+    assert rows["plus_month_cancel_at_period_end_then_basic"]["status"] == "ready"
+    assert rows["plus_month_cancel_at_period_end_then_basic"]["kind"] == ex.KIND_PERIOD_END_BASIC
 
 
 def test_scenario_table_includes_max_when_catalog_has_it():
@@ -53,6 +55,7 @@ def test_dry_run_main_does_not_need_a_key(monkeypatch, capsys):
     assert ex.main([]) == 0
     out = capsys.readouterr().out
     assert "plus_month_to_unlimited_v2_month" in out
+    assert "plus_month_cancel_at_period_end_then_basic" in out
     assert "Dry-run only" in out
 
 
@@ -287,3 +290,173 @@ def test_price_map_from_probe_uses_fixture_metadata_only():
     assert mapping[("plus", "month")] == "price_plus_m"
     assert mapping[("plus", "year")] == "price_plus_y"
     assert len(mapping) == 2
+
+
+class _Obj:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def get(self, key, default=None):
+        return self.__dict__.get(key, default)
+
+
+def test_subscription_period_end_prefers_subscription_then_item():
+    assert ex._subscription_period_end({"current_period_end": 100}) == 100
+    assert (
+        ex._subscription_period_end({"items": {"data": [{"current_period_end": 200}]}}) == 200
+    )
+    assert ex._subscription_period_end({}) is None
+
+
+def test_advance_test_clock_polls_until_ready(capsys):
+    statuses = ["ready"]
+
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def advance(clock_id, frozen_time):
+                    assert clock_id == "clock_1"
+                    assert frozen_time == 50
+                    return _Obj(id=clock_id, status="advancing")
+
+                @staticmethod
+                def retrieve(clock_id):
+                    return _Obj(id=clock_id, status=statuses.pop(0))
+
+    run = ex.LiveRun(stripe=_Stripe, price_map={})
+    run.clock_id = "clock_1"
+    slept: list[float] = []
+    clock = ex._advance_test_clock(run, 50, timeout=5, sleep=slept.append)
+    assert clock["status"] == "ready"
+    assert slept == [0.5]
+    assert "advanced to 50" in capsys.readouterr().err
+
+
+def test_advance_test_clock_raises_on_internal_failure():
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def advance(_clock_id, **_kwargs):
+                    return _Obj(status="internal_failure")
+
+                @staticmethod
+                def retrieve(_clock_id):
+                    raise AssertionError("should not poll after internal_failure")
+
+    run = ex.LiveRun(stripe=_Stripe, price_map={})
+    run.clock_id = "clock_1"
+    with pytest.raises(RuntimeError, match="internal_failure"):
+        ex._advance_test_clock(run, 50, timeout=5, sleep=lambda _s: None)
+
+
+def test_advance_test_clock_times_out(monkeypatch):
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def advance(_clock_id, **_kwargs):
+                    return _Obj(status="advancing")
+
+                @staticmethod
+                def retrieve(_clock_id):
+                    return _Obj(status="advancing")
+
+    run = ex.LiveRun(stripe=_Stripe, price_map={})
+    run.clock_id = "clock_1"
+    monkeypatch.setattr(ex.time, "time", lambda: 1000.0)
+    with pytest.raises(RuntimeError, match="timed out"):
+        ex._advance_test_clock(run, 50, timeout=0, sleep=lambda _s: None)
+
+
+def test_apply_scenarios_skips_period_end_when_clock_denied(monkeypatch):
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def create(**_kwargs):
+                    raise PermissionError("Restricted key missing billing_clock_write")
+
+                @staticmethod
+                def delete(_clock_id):
+                    raise AssertionError("clock should not be deleted when create was denied")
+
+        class Customer:
+            @staticmethod
+            def create(**_kwargs):
+                return _Obj(id="cus_phase3")
+
+            @staticmethod
+            def delete(_customer_id):
+                pass
+
+    monkeypatch.setattr(ex, "_require_test_mode_key", lambda *_a, **_k: _Stripe)
+    monkeypatch.setattr(ex, "_attach_test_card", lambda *_a, **_k: None)
+    monkeypatch.setattr(ex, "record_fallback", lambda **_kwargs: None)
+
+    period = [sc for sc in ex.SCENARIOS if sc.kind == ex.KIND_PERIOD_END_BASIC]
+    results = ex.apply_scenarios(period, {("plus", "month"): "price_plus_m"})
+    assert results[0]["status"] == "skipped"
+    assert "no test clock" in results[0]["reason"]
+
+
+def test_run_period_end_basic_advances_then_resolves_basic():
+    period_end = 1_700_000_000
+    retrieved: list[str] = []
+
+    class _Stripe:
+        class test_helpers:
+            class TestClock:
+                @staticmethod
+                def advance(clock_id, frozen_time):
+                    assert clock_id == "clock_1"
+                    assert frozen_time == period_end + 1
+                    return _Obj(id=clock_id, status="ready")
+
+                @staticmethod
+                def retrieve(_clock_id):
+                    raise AssertionError("ready on advance; no poll")
+
+        class Subscription:
+            @staticmethod
+            def create(**_kwargs):
+                return _Obj(
+                    id="sub_1",
+                    status="active",
+                    current_period_end=period_end,
+                    items={"data": [{"id": "si_1", "price": {"id": "price_plus_m"}}]},
+                )
+
+            @staticmethod
+            def modify(sub_id, **kwargs):
+                assert kwargs["cancel_at_period_end"] is True
+                return _Obj(
+                    id=sub_id,
+                    status="active",
+                    cancel_at_period_end=True,
+                    current_period_end=period_end,
+                )
+
+            @staticmethod
+            def retrieve(sub_id):
+                retrieved.append(sub_id)
+                return _Obj(id=sub_id, status="canceled", cancel_at_period_end=False)
+
+            @staticmethod
+            def cancel(sub_id, **_kwargs):
+                return _Obj(id=sub_id, status="canceled")
+
+    run = ex.LiveRun(stripe=_Stripe, price_map={("plus", "month"): "price_plus_m"})
+    run.clock_id = "clock_1"
+    run.customer_id = "cus_1"
+    sc = [s for s in ex.SCENARIOS if s.kind == ex.KIND_PERIOD_END_BASIC][0]
+    detail = ex._run_period_end_basic(run, sc)
+    assert detail["plan_before_advance"] == "plus"
+    assert detail["plan_after_advance"] == "basic"
+    assert detail["stripe_status_after_advance"] == "canceled"
+    assert detail["advanced_to"] == period_end + 1
+    assert retrieved == ["sub_1"]

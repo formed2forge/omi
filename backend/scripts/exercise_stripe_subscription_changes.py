@@ -9,8 +9,10 @@ and never writes ``recognized_stripe_prices``.
 Default is dry-run (prints the scenario table, no Stripe calls). ``--apply``
 creates an ephemeral customer (Test Clock when the key allows ``billing_clock_write``,
 otherwise no clock), runs each in-catalog scenario against real test-mode Stripe,
-then deletes them. Each scenario's subscriptions are canceled before the next
-one so a Test Clock customer stays under Stripe's 3-active-subscription cap.
+then deletes them. Cancel-at-period-end → Basic advances the clock past
+``current_period_end`` (skipped without a clock). Each scenario's subscriptions
+are canceled before the next one so a Test Clock customer stays under Stripe's
+3-active-subscription cap.
 
     python backend/scripts/exercise_stripe_subscription_changes.py
     STRIPE_API_KEY=sk_test_... python backend/scripts/exercise_stripe_subscription_changes.py --apply
@@ -53,6 +55,7 @@ KIND_CROSS_PLAN = "cross_plan_immediate_proration"
 KIND_INTERVAL = "same_plan_interval_schedule"
 KIND_DESKTOP_BLOCKED = "desktop_to_consumer_blocked"
 KIND_CANCEL_VALID = "cancel_at_period_end_still_valid"
+KIND_PERIOD_END_BASIC = "cancel_at_period_end_then_basic"
 KIND_INACTIVE_BASIC = "inactive_stripe_status_resolves_basic"
 KIND_SCHEDULED_IS_ACTIVE = "scheduled_interval_marks_both_is_active"
 
@@ -139,6 +142,13 @@ SCENARIOS: Tuple[Scenario, ...] = (
         start=("plus", "month"),
         target=None,
         why="Paid access continues until current_period_end after cancel-at-period-end",
+    ),
+    Scenario(
+        id="plus_month_cancel_at_period_end_then_basic",
+        kind=KIND_PERIOD_END_BASIC,
+        start=("plus", "month"),
+        target=None,
+        why="TestClock.advance past current_period_end maps cancel-at-period-end to Basic",
     ),
     Scenario(
         id="canceled_status_resolves_basic",
@@ -287,9 +297,10 @@ def _is_permission_denied(exc: BaseException) -> bool:
 def _maybe_create_test_clock(stripe: Any) -> Optional[str]:
     """Create a Test Clock when the key allows it; otherwise continue without one.
 
-    Current scenarios do not advance the clock. Restricted keys often lack
+    Period-end scenarios call ``TestClock.advance``. Restricted keys often lack
     ``billing_clock_write``. Missing that permission is a degraded path, not a
-    hard stop — Customers / Subscriptions still exercise the live Stripe path.
+    hard stop — Customers / Subscriptions still exercise the live Stripe path,
+    and advance-dependent scenarios are skipped.
     """
     try:
         clock = stripe.test_helpers.TestClock.create(
@@ -314,6 +325,58 @@ def _maybe_create_test_clock(stripe: Any) -> Optional[str]:
             file=sys.stderr,
         )
         return None
+
+
+def _obj_get(obj: Any, key: str, default: Any = None) -> Any:
+    if obj is None:
+        return default
+    if isinstance(obj, dict) or hasattr(obj, "get"):
+        try:
+            return obj.get(key, default)
+        except TypeError:
+            pass
+    return getattr(obj, key, default)
+
+
+def _subscription_period_end(sub: Any) -> Optional[int]:
+    """Prefer subscription.current_period_end; fall back to the first item (newer API)."""
+    end = _obj_get(sub, "current_period_end")
+    if end:
+        return int(end)
+    items = _obj_get(sub, "items") or {}
+    data = _obj_get(items, "data") or []
+    if data:
+        item_end = _obj_get(data[0], "current_period_end")
+        if item_end:
+            return int(item_end)
+    return None
+
+
+def _advance_test_clock(
+    run: LiveRun,
+    frozen_time: int,
+    *,
+    timeout: float = 120.0,
+    sleep: Any = time.sleep,
+) -> Any:
+    """Advance the clock and poll until status is ready (Stripe advance is async)."""
+    if not run.clock_id:
+        raise RuntimeError("Test Clock advance requested with no clock")
+    clock = run.stripe.test_helpers.TestClock.advance(run.clock_id, frozen_time=int(frozen_time))
+    deadline = time.time() + timeout
+    while True:
+        status = str(_obj_get(clock, "status") or "")
+        if status == "ready":
+            print(f"Test Clock {run.clock_id} advanced to {frozen_time}", file=sys.stderr)
+            return clock
+        if status == "internal_failure":
+            raise RuntimeError(f"Test Clock {run.clock_id} advance internal_failure")
+        if time.time() >= deadline:
+            raise RuntimeError(
+                f"timed out waiting for Test Clock {run.clock_id} to become ready (last status={status or 'unknown'})"
+            )
+        sleep(0.5)
+        clock = run.stripe.test_helpers.TestClock.retrieve(run.clock_id)
 
 
 def _cleanup_live(run: LiveRun) -> None:
@@ -447,7 +510,7 @@ def _run_cancel_valid(run: LiveRun, sc: Scenario) -> Dict[str, Any]:
     start_id = run.price_map[sc.start]
     sub = _create_sub(run, start_id)
     updated = run.stripe.Subscription.modify(sub.id, cancel_at_period_end=True)
-    period_end = updated["current_period_end"]
+    period_end = _subscription_period_end(updated)
     still_valid = period_end is not None and period_end >= int(time.time())
     plan = resolve_stripe_status_to_plan(updated["status"], sc.start[0])
     if not still_valid:
@@ -457,6 +520,37 @@ def _run_cancel_valid(run: LiveRun, sc: Scenario) -> Dict[str, Any]:
     if not updated["cancel_at_period_end"]:
         raise RuntimeError(f"{sc.id}: cancel_at_period_end was not set")
     return {"subscription_id": updated.id, "plan": plan, "cancel_at_period_end": True, "still_valid": True}
+
+
+def _run_period_end_basic(run: LiveRun, sc: Scenario) -> Dict[str, Any]:
+    start_id = run.price_map[sc.start]
+    sub = _create_sub(run, start_id)
+    updated = run.stripe.Subscription.modify(sub.id, cancel_at_period_end=True)
+    if not _obj_get(updated, "cancel_at_period_end"):
+        raise RuntimeError(f"{sc.id}: cancel_at_period_end was not set")
+    plan = resolve_stripe_status_to_plan(_obj_get(updated, "status"), sc.start[0])
+    if plan != sc.start[0]:
+        raise RuntimeError(f"{sc.id}: expected plan {sc.start[0]} before advance, resolved {plan}")
+    period_end = _subscription_period_end(updated)
+    if not period_end:
+        raise RuntimeError(f"{sc.id}: missing current_period_end; cannot TestClock.advance")
+    # Stripe: cannot advance more than two intervals; period_end+1 is one monthly interval.
+    frozen = int(period_end) + 1
+    _advance_test_clock(run, frozen)
+    after = run.stripe.Subscription.retrieve(sub.id)
+    status_after = _obj_get(after, "status")
+    plan_after = resolve_stripe_status_to_plan(status_after, sc.start[0])
+    if plan_after != "basic":
+        raise RuntimeError(
+            f"{sc.id}: expected basic after clock advance, got {plan_after} (status={status_after})"
+        )
+    return {
+        "subscription_id": _obj_get(after, "id"),
+        "plan_before_advance": plan,
+        "plan_after_advance": plan_after,
+        "stripe_status_after_advance": status_after,
+        "advanced_to": frozen,
+    }
 
 
 def _run_inactive_basic(run: LiveRun, sc: Scenario) -> Dict[str, Any]:
@@ -515,6 +609,15 @@ def apply_scenarios(scenarios: Sequence[Scenario], price_map: Dict[Tuple[str, st
                     }
                 )
                 continue
+            if sc.kind == KIND_PERIOD_END_BASIC and not run.clock_id:
+                results.append(
+                    {
+                        "id": sc.id,
+                        "status": "skipped",
+                        "reason": "no test clock; cannot TestClock.advance past current_period_end",
+                    }
+                )
+                continue
             try:
                 if sc.kind == KIND_CROSS_PLAN:
                     detail = _run_cross_plan(run, sc)
@@ -524,6 +627,8 @@ def apply_scenarios(scenarios: Sequence[Scenario], price_map: Dict[Tuple[str, st
                     detail = _run_desktop_blocked(sc)
                 elif sc.kind == KIND_CANCEL_VALID:
                     detail = _run_cancel_valid(run, sc)
+                elif sc.kind == KIND_PERIOD_END_BASIC:
+                    detail = _run_period_end_basic(run, sc)
                 elif sc.kind == KIND_INACTIVE_BASIC:
                     detail = _run_inactive_basic(run, sc)
                 else:
