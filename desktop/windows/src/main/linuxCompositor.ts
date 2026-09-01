@@ -13,9 +13,9 @@ const WAYLAND_NATIVE_COMPOSITORS: Record<string, string> = {
   hyprland: 'HYPRLAND_INSTANCE_SIGNATURE'
 }
 
-export function detectLinuxCompositor(): string | undefined {
+export function detectLinuxCompositor(env: NodeJS.ProcessEnv = process.env): string | undefined {
   for (const [name, marker] of Object.entries(WAYLAND_NATIVE_COMPOSITORS)) {
-    if (process.env[marker]) return name
+    if (env[marker]) return name
   }
   return undefined
 }
@@ -27,7 +27,7 @@ export function detectLinuxCompositor(): string | undefined {
 // the main window unmapped instead of just degraded, so native Wayland (with
 // its own, lesser limitations) is the better default there. OMI_OZONE stays
 // available as an explicit override in either direction.
-export function defaultOzonePlatform(): 'wayland' | 'x11' {
-  if (process.env.XDG_SESSION_TYPE !== 'wayland') return 'x11'
-  return detectLinuxCompositor() ? 'wayland' : 'x11'
+export function defaultOzonePlatform(env: NodeJS.ProcessEnv = process.env): 'wayland' | 'x11' {
+  if (env.XDG_SESSION_TYPE !== 'wayland') return 'x11'
+  return detectLinuxCompositor(env) ? 'wayland' : 'x11'
 }

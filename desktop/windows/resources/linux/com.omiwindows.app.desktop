@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Omi
+GenericName=AI Assistant
+Comment=AI that sees your screen, listens, and remembers
+Exec=omi-windows %U
+Icon=omi-windows
+Terminal=false
+Categories=Utility;
+StartupWMClass=omi-windows
+MimeType=x-scheme-handler/omi;

@@ -53,7 +53,18 @@ On native Wayland the floating bar uses a **full-width top strip** (pill stays a
 the screen top via in-window layout), **hides with `win.hide()`** when dismissed
 instead of parking off-screen, skips `setAlwaysOnTop`, and does **not** create the
 focus-halo glow window (Win32-only today). Global summon shortcuts remain
-unavailable on native Wayland.
+unavailable on native Wayland unless portal identity is valid.
+
+**Portal identity (global shortcuts on native Wayland):** Electron binds
+`globalShortcut` through `org.freedesktop.portal.GlobalShortcuts` when running
+native Wayland. That requires a stable app ID:
+
+- `package.json` → `"desktopName": "com.omiwindows.app"` (matches `appId`)
+- Shipped `.desktop` → `resources/linux/com.omiwindows.app.desktop` (`StartupWMClass=omi-windows`)
+- Main process calls `app.setDesktopName('com.omiwindows.app')` before `ready`
+
+Session facts are centralized in `src/main/linux/linuxSession.ts` and logged at
+startup as `[linux] session=… ozone=… portal=… shortcuts=…`.
 
 Screen capture on Wayland goes through the desktop portal, which asks
 "Share screen?" for consent — and Electron has no persisted-consent path, so
@@ -78,13 +89,15 @@ continuous capture explicitly. X11 sessions keep continuous Rewind on by default
 - ⏳ Auto-update (AppImage-only: gate on `process.env.APPIMAGE`, not just
   `isPackaged`; `.deb` stays package-manager).
 - ⏳ XDG autostart (`.desktop` under `~/.config/autostart`) when launch-at-login
-  Settings exists on this tree.
+  Settings exists on this tree. Base `.desktop` ships in `resources/linux/` for
+  packaging; autostart wiring is still TODO.
 - ⏳ Pendant BLE, Glass video, native-Wayland capture (portal restore-token),
   full Windows-parity feature wave (lands with the Windows desktop umbrella,
   then reuses these Linux seams).
 
 ## Implementation notes
-- `src/main/usage/linuxForeground.ts` — X11 active-window (xprop + /proc/<pid>/exe).
+- `src/main/linux/linuxSession.ts` — portal app ID, session/desktop env detection,
+  global-shortcut capability hints (phase 0 of Linux shortcuts work).
 - `src/main/usage/nativeForeground.ts` — Linux branch delegates to the above; the
   Windows (koffi) path is unchanged. koffi is lazy-`require`d so Linux import of
   this module (and of `userAssistRegistry.ts`) never loads the Win32 native at
