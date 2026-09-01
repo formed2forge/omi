@@ -6,6 +6,8 @@ import {
   isTerminalWire,
   displayLabel,
   displayTintToken,
+  statusGroupFromDisplay,
+  aggregateStatusGroup,
   deriveTitle,
   mergeProjectedPills,
   markViewed,
@@ -132,9 +134,9 @@ describe('displayLabel / displayTintToken', () => {
     expect(displayTintToken('done')).toBe('done')
     expect(displayTintToken('stopped')).toBe('stopped')
     expect(displayTintToken('failed')).toBe('failed')
-    // queued + starting both collapse to the neutral token.
     expect(displayTintToken('queued')).toBe('queued')
-    expect(displayTintToken('starting')).toBe('queued')
+    // starting shares running amber (Mac AgentPill.Status.tintColor).
+    expect(displayTintToken('starting')).toBe('running')
   })
   it('emits no hex / purple in any token', () => {
     const statuses: AgentPillDisplayStatus[] = [
@@ -448,5 +450,74 @@ describe('trimForSoftCap', () => {
     ]
     const out = trimForSoftCap(pills, null) // 9 pills → evict the one done (b)
     expect(out.map((p) => p.id)).toEqual(['a', 'c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'])
+  })
+})
+
+describe('statusGroupFromDisplay / aggregateStatusGroup (Mac NotchAgentStatusGroup)', () => {
+  it('maps starting to running and queued to its own cyan group', () => {
+    expect(statusGroupFromDisplay('starting')).toBe('running')
+    expect(statusGroupFromDisplay('running')).toBe('running')
+    expect(statusGroupFromDisplay('queued')).toBe('queued')
+    expect(statusGroupFromDisplay('done')).toBe('done')
+    expect(statusGroupFromDisplay('stopped')).toBe('stopped')
+    expect(statusGroupFromDisplay('failed')).toBe('failed')
+  })
+
+  it('returns null when there are no pills', () => {
+    expect(aggregateStatusGroup([])).toBeNull()
+  })
+
+  it('priority is failed > running > queued > done > stopped', () => {
+    expect(
+      aggregateStatusGroup([
+        pill({ id: 'd', displayStatus: 'done' }),
+        pill({ id: 'q', displayStatus: 'queued' }),
+        pill({ id: 'f', displayStatus: 'failed' }),
+        pill({ id: 'r', displayStatus: 'running' })
+      ])
+    ).toBe('failed')
+    expect(
+      aggregateStatusGroup([
+        pill({ id: 'd', displayStatus: 'done' }),
+        pill({ id: 'r', displayStatus: 'running' }),
+        pill({ id: 'q', displayStatus: 'queued' })
+      ])
+    ).toBe('running')
+    expect(
+      aggregateStatusGroup([
+        pill({ id: 'd', displayStatus: 'done' }),
+        pill({ id: 'q', displayStatus: 'queued' }),
+        pill({ id: 's', displayStatus: 'stopped' })
+      ])
+    ).toBe('queued')
+    expect(
+      aggregateStatusGroup([
+        pill({ id: 'd', displayStatus: 'done' }),
+        pill({ id: 's', displayStatus: 'stopped' })
+      ])
+    ).toBe('done')
+    expect(aggregateStatusGroup([pill({ id: 's', displayStatus: 'stopped' })])).toBe('stopped')
+  })
+
+  it('starting counts as running in the aggregate', () => {
+    expect(aggregateStatusGroup([pill({ displayStatus: 'starting' })])).toBe('running')
+  })
+
+  it('viewed finished pills go quiet; unviewed finished still tint', () => {
+    expect(
+      aggregateStatusGroup([pill({ id: 'd', displayStatus: 'done', viewedAtMs: 9_000 })])
+    ).toBeNull()
+    expect(
+      aggregateStatusGroup([pill({ id: 'f', displayStatus: 'failed', viewedAtMs: 9_000 })])
+    ).toBeNull()
+    expect(
+      aggregateStatusGroup([pill({ id: 'd', displayStatus: 'done', viewedAtMs: null })])
+    ).toBe('done')
+    expect(
+      aggregateStatusGroup([
+        pill({ id: 'd', displayStatus: 'done', viewedAtMs: 9_000 }),
+        pill({ id: 'r', displayStatus: 'running', viewedAtMs: null })
+      ])
+    ).toBe('running')
   })
 })
