@@ -8,6 +8,7 @@
   },
   "author": "Based Hardware",
   "homepage": "https://github.com/BasedHardware/omi",
+  "desktopName": "com.omiwindows.app",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
