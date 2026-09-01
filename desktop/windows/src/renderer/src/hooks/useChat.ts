@@ -375,7 +375,8 @@ export function useChat(): UseChat {
       startedAtRef.current = c.startedAt || Date.now()
       setHistory(
         c.messages.map((m) => {
-          const evidence = parseChatEvidenceFromRecord(m)
+          const rec = m as { evidence?: ChatMsg['evidence'] }
+          const evidence = rec.evidence ?? parseChatEvidenceFromRecord(m)
           return {
             id: m.id ?? crypto.randomUUID(),
             role: m.role,
