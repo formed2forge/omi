@@ -79,6 +79,18 @@ trustworthy click test is a physical one (or the GetAsyncKeyState path itself).
 - Regression suites that pin the mechanisms: `src/main/bar/watchdog.test.ts`,
   `bar.orb.test.ts`, `BarChatSurface.test.tsx`, `barDisplay.test.ts`, `e2e/bar.spec.mjs`.
 
+## Agent-status glow is CSS on `.bar-surface`, not a second window
+
+The collapsed pill communicates background-agent status (failed red, running amber,
+queued cyan, done green, stopped gray) the same way macOS tints the compact strip.
+That signal is `data-agent-status` + `.bar-surface-agent-*` box-shadow on the existing
+morphing surface (`BarApp.tsx`, `bar.css`). Do **not** drive it through the Focus halo
+window (`main/glow/*` — green/red there means focused/distracted, a different product)
+and do **not** remount or recolor the hoisted `<Orb>` to carry it. Voice capturing and
+replying suppress the glow (`voiceSuppressesAgentStatus`). Viewed finished pills go
+quiet (`aggregateStatusGroup`). The 560-wide static bar window already has room for
+the shadow; do not `setBounds` to "make room" for it.
+
 ## Shell panels: `display:none` makes ResizeObserver read 0 (not bar-specific)
 
 Not a bar trap, but the same "hidden→shown paints wrong for a frame" family, so it

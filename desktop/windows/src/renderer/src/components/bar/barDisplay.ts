@@ -183,3 +183,11 @@ export function pillLabel(
       return 'Omi'
   }
 }
+
+/** True when a live voice turn owns the collapsed pill, so the agent-status
+ *  glow must not paint. Mirrors Mac `isVoiceResponseGlowActive` winning over
+ *  `NotchAgentStatusGroup.aggregate`. Capturing (user speaking) and replying
+ *  (Omi speaking) both own the visual; thinking/agents/ambient/idle do not. */
+export function voiceSuppressesAgentStatus(phase: BarTurnPhase): boolean {
+  return phase === 'capturing' || phase === 'replying'
+}

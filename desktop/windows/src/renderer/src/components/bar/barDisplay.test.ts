@@ -7,7 +7,8 @@ import {
   isBarBusy,
   isPlaybackLevelFresh,
   PLAYBACK_LEVEL_FRESH_MS,
-  pillLabel
+  pillLabel,
+  voiceSuppressesAgentStatus
 } from './barDisplay'
 
 describe('deriveTurnPhase (the ONE precedence ladder orb + pill derive from)', () => {
@@ -275,6 +276,20 @@ describe('pillLabel', () => {
   it('a delegated coding-agent run rests on "Omi" — the orb agents pose is the indicator', () => {
     // Agent tasks ride status 'sending' for minutes; the pill must not pin "Thinking".
     expect(pillLabel({ ...base, agentsActive: true, status: 'sending' })).toBe('Omi')
+  })
+})
+
+describe('voiceSuppressesAgentStatus (Mac voice-response glow wins)', () => {
+  it('suppresses agent tint while capturing or replying', () => {
+    expect(voiceSuppressesAgentStatus('capturing')).toBe(true)
+    expect(voiceSuppressesAgentStatus('replying')).toBe(true)
+  })
+
+  it('lets agent tint show while thinking, agents-active, ambient, or idle', () => {
+    expect(voiceSuppressesAgentStatus('thinking')).toBe(false)
+    expect(voiceSuppressesAgentStatus('agents')).toBe(false)
+    expect(voiceSuppressesAgentStatus('ambient')).toBe(false)
+    expect(voiceSuppressesAgentStatus('idle')).toBe(false)
   })
 })
 
