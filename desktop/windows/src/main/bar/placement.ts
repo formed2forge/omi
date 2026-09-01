@@ -67,12 +67,36 @@ export function isCursorOverPill(cursor: { x: number; y: number }, display: Disp
 export function computeBarBounds(display: DisplayLike): Rect {
   const b = display.bounds
   const width = Math.min(BAR_WINDOW_WIDTH, b.width)
-  const height = Math.min(
+  const height = barStripHeight(display)
+  const x = Math.round(b.x + (b.width - width) / 2)
+  return { x, y: b.y, width, height }
+}
+
+/** Height shared by the compact bar window and the native-Wayland full-width shell. */
+export function barStripHeight(display: DisplayLike): number {
+  return Math.min(
     BAR_WINDOW_MAX_HEIGHT,
     Math.max(1, Math.round(display.workArea.height * BAR_MAX_HEIGHT_FRACTION))
   )
-  const x = Math.round(b.x + (b.width - width) / 2)
-  return { x, y: b.y, width, height }
+}
+
+/**
+ * Native Wayland shell: span the monitor width and hug the top edge. The pill is
+ * laid out at the top-center inside the window (bar.css), so even when the
+ * compositor ignores client x/y and centers the surface, a full-width strip
+ * keeps the control at the screen top instead of mid-screen.
+ */
+export function computeBarShellBounds(display: DisplayLike): Rect {
+  const b = display.bounds
+  return { x: b.x, y: b.y, width: b.width, height: barStripHeight(display) }
+}
+
+/** Bounds used when creating or revealing the bar on a display. */
+export function computeBarWindowBounds(
+  display: DisplayLike,
+  options?: { shell?: boolean }
+): Rect {
+  return options?.shell ? computeBarShellBounds(display) : computeBarBounds(display)
 }
 
 /** Clearance (DIP) above the target's top edge for the off-screen staging rect

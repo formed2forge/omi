@@ -64,12 +64,10 @@ dev-only env vars (`OMI_DEV_HW_GPU`, etc.).
 `OMI_OZONE=wayland` alone can still leave the main window mapped but blank
 (tray works fine) — `pnpm dev`'s software-render default has known
 presentation bugs on native Wayland; add `OMI_DEV_HW_GPU=1` alongside it. See
-`docs/multi-worktree-dev.md`'s
-troubleshooting section for the confirmed repro (Asahi Fedora + niri) and a
-second known limitation: the bar and the focus-halo glow window both
-position themselves via explicit `setBounds`, which native Wayland ignores,
-so they float in the screen center instead of staying parked off-screen —
-functional, just misplaced.
+`docs/multi-worktree-dev.md`'s troubleshooting section for the confirmed repro
+(Asahi Fedora + niri) and native-Wayland floating-bar behavior: the bar uses a
+full-width top strip and real `hide()` when dismissed; the glow window is not
+created on native Wayland.
 
 ## CI
 
