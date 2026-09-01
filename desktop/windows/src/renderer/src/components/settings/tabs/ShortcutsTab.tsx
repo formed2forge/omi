@@ -39,6 +39,19 @@ import { useChordRecorder } from '../../../hooks/useChordRecorder'
 import { DEFAULT_RECORD_HOTKEY } from '../../../../../shared/hotkeyDefaults'
 
 export function ShortcutsTab(): React.JSX.Element {
+  const [shortcutDeliveryReliable, setShortcutDeliveryReliable] = useState(true)
+
+  useEffect(() => {
+    let unmounted = false
+    void window.omi?.getLinuxShortcutSession?.().then((info) => {
+      if (unmounted || !info?.globalShortcuts.available) return
+      setShortcutDeliveryReliable(info.globalShortcuts.deliveryReliable)
+    })
+    return () => {
+      unmounted = true
+    }
+  }, [])
+
   return (
     <>
       <LinuxShortcutSessionRow />
@@ -52,6 +65,7 @@ export function ShortcutsTab(): React.JSX.Element {
         commit={(next) =>
           window.omi?.setSummonHotkey?.(next) ?? Promise.resolve({ ok: false, registered: false })
         }
+        shortcutDeliveryReliable={shortcutDeliveryReliable}
         // Mirror to the legacy pref so App.tsx's startup re-apply converges.
         onCommitted={(next) => setPreferences({ overlayShortcut: next })}
       />
@@ -65,6 +79,7 @@ export function ShortcutsTab(): React.JSX.Element {
         commit={(next) =>
           window.omi?.setRecordHotkey?.(next) ?? Promise.resolve({ ok: false, registered: false })
         }
+        shortcutDeliveryReliable={shortcutDeliveryReliable}
         // Record-only: the "Off" chip. Summon omits this (coupled to PTT), so its
         // card renders no Off affordance.
         onSetEnabled={(enabled) =>
@@ -91,23 +106,31 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
 
   if (!diag) return null
 
-  const mechanism = diag.globalShortcuts.available
-    ? diag.globalShortcuts.mechanism === 'wayland-portal'
+  const gs = diag.globalShortcuts
+  const mechanism = gs.available
+    ? gs.mechanism === 'wayland-portal'
       ? 'Wayland desktop portal'
       : 'X11 global grab'
-    : diag.globalShortcuts.reason
+    : gs.reason
+  const workaround = gs.compositorWorkaround
 
   return (
     <SettingRow
       icon={Monitor}
       title="Linux shortcut environment"
       subtitle="Session facts Omi uses when registering global shortcuts."
-      keywords="linux wayland x11 portal ozone desktop environment shortcut diagnostics"
+      keywords="linux wayland x11 portal ozone desktop environment shortcut diagnostics niri sway compositor"
     >
       <div className="space-y-2 text-xs text-white/55">
         <p className="font-mono text-[11px] text-white/70">{diag.summary}</p>
         <p>
           Session <span className="text-white/80">{diag.sessionType}</span>
+          {diag.compositor !== 'unknown' ? (
+            <>
+              {' '}
+              · compositor <span className="text-white/80">{diag.compositor}</span>
+            </>
+          ) : null}
           {diag.currentDesktop ? (
             <>
               {' '}
@@ -120,6 +143,22 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
         <p>
           Global shortcut path: <span className="text-white/80">{mechanism}</span>
         </p>
+        {gs.available && !gs.deliveryReliable && workaround ? (
+          <div className="space-y-2 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-amber-100/90">
+            <p>
+              {diag.compositor} does not deliver in-app global shortcuts to Electron apps
+              (registration can succeed while key presses never reach Omi). Bind these in your
+              compositor config instead:
+            </p>
+            <p className="font-mono text-[11px] text-white/80">Summon: {workaround.summonCommand}</p>
+            <p className="font-mono text-[11px] text-white/80">
+              Record mic: {workaround.recordMicCommand}
+            </p>
+            <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[10px] text-white/70">
+              {workaround.niriConfigExample}
+            </pre>
+          </div>
+        ) : null}
       </div>
     </SettingRow>
   )
@@ -159,9 +198,21 @@ function ShortcutCard(props: {
   /** When provided, the card renders an "Off" chip that fully disables the chord
    *  (Record card only; Summon omits it — it's coupled to push-to-talk). */
   onSetEnabled?: (enabled: boolean) => Promise<RecordHotkeyState>
+  /** Linux-only: in-app shortcuts may register but never fire (niri/sway). */
+  shortcutDeliveryReliable?: boolean
 }): React.JSX.Element {
-  const { icon, title, subtitle, keywords, defaultAccel, load, commit, onCommitted, onSetEnabled } =
-    props
+  const {
+    icon,
+    title,
+    subtitle,
+    keywords,
+    defaultAccel,
+    load,
+    commit,
+    onCommitted,
+    onSetEnabled,
+    shortcutDeliveryReliable = true
+  } = props
   const [accel, setAccel] = useState<string | null>(null)
   const [registered, setRegistered] = useState(true)
   const [enabled, setEnabled] = useState(true)
@@ -312,6 +363,11 @@ function ShortcutCard(props: {
 
         {!enabled ? (
           <p className="text-xs text-white/40">Recording shortcut is off.</p>
+        ) : testResult === 'available' && !shortcutDeliveryReliable ? (
+          <p className="text-xs text-amber-300">
+            Omi can register this chord, but your compositor does not deliver global shortcut
+            events to apps. Use the compositor-keybind commands shown above.
+          </p>
         ) : testResult === 'available' ? (
           <p className="text-xs text-emerald-300/90">This shortcut is available on your system.</p>
         ) : testResult === 'unavailable' ? (

@@ -642,15 +642,34 @@ export type RecordHotkeyState = { accelerator: string; registered: boolean; enab
 
 export type ShortcutAcceleratorProbeResult = { available: boolean }
 
+export type LinuxCompositorKind = 'niri' | 'sway' | 'hyprland' | 'gnome' | 'kde' | 'unknown'
+
+export type LinuxCompositorKeybindWorkaround = {
+  compositor: LinuxCompositorKind
+  niriConfigExample: string
+  summonCommand: string
+  recordMicCommand: string
+}
+
 export type LinuxShortcutSessionDiagnostics = {
   sessionType: 'wayland' | 'x11' | 'unknown'
+  compositor: LinuxCompositorKind
   currentDesktop: string | null
   desktopSession: string | null
   ozonePlatform: 'x11' | 'wayland'
   portalAppId: string
   globalShortcuts:
-    | { available: true; mechanism: 'x11-grab' | 'wayland-portal' }
-    | { available: false; reason: string }
+    | {
+        available: true
+        mechanism: 'x11-grab' | 'wayland-portal'
+        deliveryReliable: boolean
+        compositorWorkaround: LinuxCompositorKeybindWorkaround | null
+      }
+    | {
+        available: false
+        reason: string
+        compositorWorkaround: LinuxCompositorKeybindWorkaround | null
+      }
   summary: string
 }
 
