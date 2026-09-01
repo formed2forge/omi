@@ -1,6 +1,7 @@
 {
   "changes": [
     "Chat and voice can now search the live public web with web_search — the same isolated managed lane macOS uses — so current facts like weather, news, and prices are looked up instead of guessed.",
-    "Asking Omi to start a background agent from chat or voice no longer requires a connected coding CLI: when Claude Code (or another coding agent) is not connected, the work runs as a leaf Omi worker instead of asking you to connect one in Settings."
+    "Asking Omi to start a background agent from chat or voice no longer requires a connected coding CLI: when Claude Code (or another coding agent) is not connected, the work runs as a leaf Omi worker instead of asking you to connect one in Settings.",
+    "A background agent started from the floating Ask Omi bar now shows its status pill in the conversation (not only after going Back to the hub list). Naming an unconnected provider like Hermes no longer kills the run with “adapter not registered” — it uses the same leaf worker as omitting the provider."
   ]
 }
