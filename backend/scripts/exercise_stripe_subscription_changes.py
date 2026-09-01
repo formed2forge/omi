@@ -15,9 +15,9 @@ then deletes them.
     STRIPE_API_KEY=sk_test_... python backend/scripts/exercise_stripe_subscription_changes.py --apply
 
 Webhook delivery (``stripe listen`` / ``stripe trigger``) is a separate pass:
-this script exercises Subscription.create / modify / schedule / cancel on the
-Stripe API and the local plan-resolution rules. Pointing the Stripe CLI at a
-running backend is documented in the report when ``stripe`` is not on PATH.
+see ``backend/scripts/exercise_stripe_webhooks.py``. This script exercises
+Subscription.create / modify / schedule / cancel on the Stripe API and the
+local plan-resolution rules.
 """
 
 from __future__ import annotations
