@@ -425,6 +425,16 @@ def _log_mentions_checkout_client_reference(log_path: Path, uid: str) -> bool:
     return uid in text and "client_reference_id" in text
 
 
+def _wait_log_mentions_checkout_client_reference(log_path: Path, uid: str, timeout: float) -> bool:
+    """subscription.created can write plus before checkout.session.completed is logged."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if _log_mentions_checkout_client_reference(log_path, uid):
+            return True
+        time.sleep(0.2)
+    return False
+
+
 def apply_backend_persist(port: Optional[int] = None, timeout: float = 60) -> Dict[str, Any]:
     api_key, plus_price_id = require_apply_env()
     _ensure_redis()
@@ -483,7 +493,17 @@ def apply_backend_persist(port: Optional[int] = None, timeout: float = 60) -> Di
             print("uvicorn log tail:\n" + _tail_sanitized(uvicorn_log), file=sys.stderr)
             print("listen log tail:\n" + _tail_sanitized(listen_log), file=sys.stderr)
             raise
-        checkout_via_client_reference = _log_mentions_checkout_client_reference(uvicorn_log, checkout_uid)
+        checkout_via_client_reference = _wait_log_mentions_checkout_client_reference(
+            uvicorn_log, checkout_uid, timeout=min(20.0, timeout)
+        )
+        if not checkout_via_client_reference:
+            print(fixture_out, file=sys.stderr)
+            print("uvicorn log tail:\n" + _tail_sanitized(uvicorn_log), file=sys.stderr)
+            print("listen log tail:\n" + _tail_sanitized(listen_log), file=sys.stderr)
+            raise SystemExit(
+                "checkout.session.completed did not log client_reference_id after plan became plus "
+                "(subscription.created can race ahead of the checkout handler)."
+            )
         print(
             f"checkout persist: {checkout_uid} plan={checkout_plan} "
             f"client_reference_id={'yes' if checkout_via_client_reference else 'not in logs'}",
@@ -572,6 +592,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     from scripts.exercise_stripe_webhooks import _cli_bin
 
     _print_dry_run(_cli_bin(), args.port)
+    sys.stdout.flush()
     if not args.apply:
         return 0
 
