@@ -67,6 +67,11 @@ session, **continuous Rewind capture defaults OFF** (`XDG_SESSION_TYPE=wayland`)
 on-demand "what's on my screen" still works (one Share prompt), and you can enable
 continuous capture explicitly. X11 sessions keep continuous Rewind on by default.
 
+**Settings → Shortcuts (phase 1):** each global chord has a **Test** button that
+probes whether the OS will accept it (`shortcuts:test-accelerator` — suspend live
+chords, register a noop probe, resume). On Linux, a read-only **Linux shortcut
+environment** row shows portal/ozone/session facts from `linuxSession.ts`.
+
 ## What works / what's next
 - ✅ Sign-in, mic → cloud transcription, chat, memory (inherited, cross-platform)
 - ⚠️ App-usage tracking (X11 active-window via `linuxForeground.ts`;
