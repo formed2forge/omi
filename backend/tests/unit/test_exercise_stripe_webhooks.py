@@ -45,6 +45,12 @@ def test_sanitize_redacts_webhook_secret():
     assert "rk_test_<redacted>" in text
 
 
+def test_trigger_argv_omits_skip_update():
+    argv = wh.trigger_argv("/usr/bin/stripe", "customer.subscription.updated")
+    assert argv == ["/usr/bin/stripe", "trigger", "customer.subscription.updated"]
+    assert "--skip-update" not in argv
+
+
 def test_cli_session_denied_is_detected():
     msg = "Enabling Debugging Tools Write ('stripecli_session_write') permissions"
     assert wh._is_cli_session_denied(msg) is True

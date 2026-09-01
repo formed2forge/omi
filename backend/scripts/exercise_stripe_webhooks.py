@@ -106,6 +106,11 @@ def ensure_stripe_cli() -> str:
     return str(binary)
 
 
+def trigger_argv(cli: str, event_name: str) -> List[str]:
+    # stripe listen accepts --skip-update; stripe trigger on CLI 1.31 does not.
+    return [cli, "trigger", event_name]
+
+
 def parse_listen_secret(text: str) -> Optional[str]:
     match = re.search(r"whsec_[A-Za-z0-9]+", text)
     return match.group(0) if match else None
@@ -232,7 +237,7 @@ def apply_listen_and_trigger(events: Sequence[str] = WEBHOOK_EVENTS) -> List[Dic
         print("stripe listen ready; triggering fixture events…", file=sys.stderr)
         for event_name in events:
             trigger = subprocess.run(
-                [cli, "trigger", event_name, "--skip-update"],
+                trigger_argv(cli, event_name),
                 capture_output=True,
                 text=True,
                 env=env,
