@@ -288,6 +288,36 @@ describe('BarChatSurface', () => {
     expect(props.onOpenConversation).not.toHaveBeenCalled()
   })
 
+  it('list: a failed pill shows a red status orb, a done pill a green one', () => {
+    const failed = {
+      id: 'p-fail',
+      runId: 'r1',
+      sessionId: 's1',
+      title: 'Broken run',
+      displayStatus: 'failed' as const,
+      latestActivity: 'Agent failed',
+      query: 'do it',
+      createdAtMs: 1,
+      completedAtMs: 2,
+      errorMessage: 'boom',
+      provider: null,
+      viewedAtMs: null
+    }
+    const done = {
+      ...failed,
+      id: 'p-done',
+      title: 'Finished run',
+      displayStatus: 'done' as const,
+      latestActivity: 'All set',
+      errorMessage: null
+    }
+    renderSurface({ view: 'list', pills: [failed, done] })
+    const marks = screen.getAllByTestId('agent-status-mark')
+    expect(marks).toHaveLength(2)
+    expect(marks[0].getAttribute('data-agent-status')).toBe('failed')
+    expect(marks[1].getAttribute('data-agent-status')).toBe('done')
+  })
+
   it('conversation: header renders the passed title prop (data-driven, not hardcoded)', () => {
     renderSurface({ view: 'conversation', conversationTitle: 'Omi Chat' })
     expect(screen.getByText('Omi Chat')).toBeTruthy()

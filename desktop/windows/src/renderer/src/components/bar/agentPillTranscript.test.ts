@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { AgentPill } from './agentPills'
 import {
   pillChipClasses,
+  statusOrbClasses,
   retainTextForPills,
   runDetailFinalText,
   runDetailToProjectionRow,
@@ -162,9 +163,20 @@ describe('pillChipClasses', () => {
     expect(done).toContain('emerald')
     expect(failed).toContain('red')
     expect(stopped).toContain('neutral')
-    expect(queued).toContain('neutral')
+    expect(queued).toContain('cyan')
     for (const cls of [running, done, failed, stopped, queued]) {
       expect(cls).not.toMatch(/purple|violet|fuchsia|indigo/)
+    }
+  })
+
+  it('status orbs use the same palette, never purple', () => {
+    expect(statusOrbClasses('running')).toContain('amber')
+    expect(statusOrbClasses('done')).toContain('emerald')
+    expect(statusOrbClasses('failed')).toContain('red')
+    expect(statusOrbClasses('stopped')).toContain('neutral')
+    expect(statusOrbClasses('queued')).toContain('cyan')
+    for (const token of ['running', 'done', 'failed', 'stopped', 'queued'] as const) {
+      expect(statusOrbClasses(token)).not.toMatch(/purple|violet|fuchsia|indigo/)
     }
   })
 })

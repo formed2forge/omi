@@ -40,11 +40,16 @@ export type AgentPillDisplayStatus =
   | 'failed'
 
 /** A neutral, className-ish tint token — NOT a raw color. B3 maps these to
- *  Tailwind classes. Intended palette (NO PURPLE — brand rule INV-UI-1):
- *    running → amber · done → emerald/green · stopped → neutral/gray ·
- *    failed → red · queued (also 'starting') → neutral.
+ *  Tailwind classes. Intended palette (NO PURPLE — brand rule INV-UI-1), matching
+ *  Mac `AgentPill.Status.tintColor`:
+ *    queued → cyan · starting/running → amber · done → emerald/green ·
+ *    stopped → neutral/gray · failed → red.
  *  Never hardcode hex here. */
 export type AgentPillTintToken = 'queued' | 'running' | 'done' | 'stopped' | 'failed'
+
+/** Coarse status group for the collapsed-bar glow and list orbs. Mirrors Mac's
+ *  `NotchAgentStatusGroup` (starting shares running; queued stays its own cyan). */
+export type AgentStatusGroup = 'running' | 'queued' | 'failed' | 'stopped' | 'done'
 
 /** One row of the `floating_agent_pills[]` array the renderer receives from the
  *  existing `list_agent_sessions` door. Matches `serializeFloatingPillSnapshot`
@@ -163,11 +168,42 @@ export function displayLabel(display: AgentPillDisplayStatus): string {
 
 const DISPLAY_TINT: Record<AgentPillDisplayStatus, AgentPillTintToken> = {
   queued: 'queued',
-  starting: 'queued',
+  starting: 'running',
   running: 'running',
   done: 'done',
   stopped: 'stopped',
   failed: 'failed'
+}
+
+const DISPLAY_TO_GROUP: Record<AgentPillDisplayStatus, AgentStatusGroup> = {
+  queued: 'queued',
+  starting: 'running',
+  running: 'running',
+  done: 'done',
+  stopped: 'stopped',
+  failed: 'failed'
+}
+
+/** Map a display status to the Mac `NotchAgentStatusGroup` bucket. */
+export function statusGroupFromDisplay(display: AgentPillDisplayStatus): AgentStatusGroup {
+  return DISPLAY_TO_GROUP[display]
+}
+
+/** Highest-priority aggregate across pills, for the collapsed-pill tint/glow.
+ *  Mirrors Mac `NotchAgentStatusGroup.aggregate`: failure needs the user,
+ *  activity is ambient, and finished pills the user has already viewed go
+ *  quiet — done work should stop tugging at the eye.
+ *  Priority: failed > running > queued > done > stopped. */
+export function aggregateStatusGroup(pills: readonly AgentPill[]): AgentStatusGroup | null {
+  const groups = new Set<AgentStatusGroup>()
+  for (const pill of pills) {
+    if (isFinished(pill.displayStatus) && pill.viewedAtMs !== null) continue
+    groups.add(statusGroupFromDisplay(pill.displayStatus))
+  }
+  for (const candidate of ['failed', 'running', 'queued', 'done', 'stopped'] as const) {
+    if (groups.has(candidate)) return candidate
+  }
+  return null
 }
 
 /** The neutral tint token (never a raw color) B3 maps to a Tailwind class. */

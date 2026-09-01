@@ -113,8 +113,9 @@ export function synthesizePillTranscript(
   return { messages, sending: !isFinished(pill.displayStatus) }
 }
 
-/** Tailwind chip classes for a pill status tint token. NO PURPLE (INV-UI-1):
- *  running→amber, done→emerald, stopped→neutral, failed→red, queued→neutral. */
+/** Tailwind chip classes for a pill status tint token. NO PURPLE (INV-UI-1).
+ *  Matches Mac `AgentPill.Status.tintColor`: queued→cyan, running→amber,
+ *  done→emerald, stopped→neutral, failed→red. */
 export function pillChipClasses(token: AgentPillTintToken): string {
   switch (token) {
     case 'running':
@@ -126,7 +127,24 @@ export function pillChipClasses(token: AgentPillTintToken): string {
     case 'stopped':
       return 'bg-neutral-600/40 text-neutral-300'
     case 'queued':
-      return 'bg-neutral-700/50 text-neutral-400'
+      return 'bg-cyan-500/15 text-cyan-300'
+  }
+}
+
+/** Fill classes for the list-row status orb. Same palette as `pillChipClasses`,
+ *  solid so the 8px mark reads at collapsed-bar density. */
+export function statusOrbClasses(token: AgentPillTintToken): string {
+  switch (token) {
+    case 'running':
+      return 'bg-amber-400 text-amber-400'
+    case 'done':
+      return 'bg-emerald-400 text-emerald-400'
+    case 'failed':
+      return 'bg-red-400 text-red-400'
+    case 'stopped':
+      return 'bg-neutral-400 text-neutral-400'
+    case 'queued':
+      return 'bg-cyan-400 text-cyan-400'
   }
 }
 
