@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "FC-live-session-dropped-before-successor-ready",
+  "violated_contract": "Replacing a live session or socket must not drop the predecessor until the successor is ready to serve the same user-facing path. A gap where neither is usable forces the first requests onto a degraded fallback even though a working session existed moments earlier.",
+  "canonical_prevention": "Rebuild make-before-break: keep the live session as the route until the incoming session is connected, then swap on idle. Fence each session's callbacks to that instance so a retired socket's late close/error cannot mutate the successor. Behavioral tests assert isWarm stays true during the successor mint, a PTT begin during rebuild hits the predecessor, an incoming error leaves the live session up, and a retired close after swap does not drop the successor.",
+  "canonical_prevention_artifact": [
+    "desktop/windows/src/renderer/src/lib/voice/hub/hubController.seed.test.ts"
+  ],
+  "evidence_prs": [],
+  "scope_hints": [
+    "desktop/windows/src/renderer/src/lib/voice/hub/**"
+  ],
+  "status": "open"
+}

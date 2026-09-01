@@ -694,6 +694,7 @@ describe('HubController — A7c reconnect policy (B: strike-bounded re-warm)', (
     h.getSession().connect() // connectedAt = now (1000)
     h.now.value = 1_000 + HUB_IDLE_TEARDOWN_THRESHOLD_MS + 1
     h.getSession().fail('websocket closed (1011)', true, 1011)
+    await tick() // let the dying ensureWarm hit `finally` so a reconnect is a new warm
     if (h.pendingReconnect()) {
       h.fireReconnect()
       await tick()
