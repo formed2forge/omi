@@ -84,6 +84,17 @@ if not isinstance(path, str) or not path:
     raise SystemExit("omi-ctl: health did not provide logFilePath")
 print(path)
 ' ;;
+  db-path)
+    # omi-agentd.sqlite3 lives in userData/, not beside main.log (userData/logs/).
+    curl -fsS "$BASE/health" | python3 -c '
+import json, os, sys
+health = json.load(sys.stdin)
+path = health.get("logFilePath")
+if not isinstance(path, str) or not path:
+    raise SystemExit("omi-ctl: health did not provide logFilePath")
+user_data = os.path.dirname(os.path.dirname(path))
+print(os.path.join(user_data, "omi-agentd.sqlite3"))
+' ;;
   navigate)
     target="${1:?usage: omi-ctl navigate <screen> [settings-section] [--show]}"; shift || true
     section=""
@@ -160,6 +171,7 @@ Usage:
   omi-ctl state                          App state snapshot (pathname, auth, onboarding)
   omi-ctl health                         Bundle/backend/runtime identity (unauthenticated)
   omi-ctl log-path                       Print the main-process log path from /health
+  omi-ctl db-path                        Print omi-agentd.sqlite3 for the running dev app
   omi-ctl navigate <screen> [section] [--show]
   omi-ctl wait-ready [tries]             Block until signed-in main state (0.5s/try)
   omi-ctl screens                        List valid screen targets
