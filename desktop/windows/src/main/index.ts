@@ -191,6 +191,13 @@ import {
   type LinuxCliAction
 } from './linux/linuxCliAction'
 import { probeGlobalAccelerator } from './shortcutProbe'
+import {
+  clearNiriKeybindConsent,
+  getNiriCompositorKeybindStatus,
+  installNiriCompositorKeybinds,
+  maybeAutoSyncNiriKeybinds,
+  setNiriKeybindAutoApply
+} from './linux/compositorKeybinds/niriKeybindService'
 
 // Default main-window content size. Single source of truth for both window
 // creation and the Settings → Font Size "Reset Window Size" affordance
@@ -1541,6 +1548,22 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('shortcuts:get-linux-session', () => getLinuxSessionDiagnostics())
 
+  ipcMain.handle('shortcuts:get-niri-keybind-status', () => {
+    if (process.platform !== 'linux') return null
+    return getNiriCompositorKeybindStatus()
+  })
+  ipcMain.handle(
+    'shortcuts:install-niri-keybinds',
+    (_e, opts?: { grantConsent?: boolean }) =>
+      installNiriCompositorKeybinds({ grantConsent: opts?.grantConsent === true })
+  )
+  ipcMain.handle('shortcuts:set-niri-keybind-auto-apply', (_e, enabled: boolean) =>
+    setNiriKeybindAutoApply(enabled === true)
+  )
+  ipcMain.handle('shortcuts:clear-niri-keybind-consent', () => {
+    clearNiriKeybindConsent()
+  })
+
   ipcMain.handle('shortcuts:set-record', (_e, accelerator: string) => {
     if (typeof accelerator !== 'string' || !accelerator.trim()) {
       return { ok: false, registered: getRecordShortcut().registered }
@@ -1555,6 +1578,7 @@ app.whenReady().then(async () => {
     // must NOT refuse to enable. So always persist the accelerator + enable intent.
     recordShortcutEnabled = true
     setAppSettings({ recordHotkey: next.accelerator, recordHotkeyEnabled: true })
+    maybeAutoSyncNiriKeybinds()
     return { ok: next.registered, registered: next.registered }
   })
 
@@ -1569,6 +1593,7 @@ app.whenReady().then(async () => {
     } else {
       suspendRecordShortcut()
     }
+    maybeAutoSyncNiriKeybinds()
     return { ...getRecordShortcut(), enabled: recordShortcutEnabled }
   })
 
@@ -1586,6 +1611,7 @@ app.whenReady().then(async () => {
       setSummonGestureAccelerator(getOverlayAccelerator())
       // Persist so the chord survives restarts and main re-registers it at launch.
       setAppSettings({ summonHotkey: getOverlayAccelerator() })
+      maybeAutoSyncNiriKeybinds()
     }
     return { ok, registered: ok }
   })
