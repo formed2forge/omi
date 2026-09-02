@@ -86,6 +86,8 @@ import { registerAutomationHandlers } from './ipc/automation'
 import { registerCodingAgentHandlers } from './ipc/codingAgent'
 import { initClaudeAgentConfigDir } from './codingAgent/agentConfigDir'
 import { registerMainChatHandlers } from './ipc/mainChat'
+import { resolveDevInstance } from './devInstance'
+import { isDevAutomationEnabled, startDevAutomationBridge } from './devAutomation/bridge'
 import { registerAgentCardHandlers } from './ipc/agentCards'
 import { registerVoiceHubHandlers } from './ipc/voiceHub'
 import { registerVoiceToolHandlers } from './ipc/voiceTool'
@@ -1041,6 +1043,19 @@ app.whenReady().then(async () => {
   // `win` is this launch's instance for one-shot wiring below (ready-to-show,
   // bench); long-lived consumers read the module-level `mainWindow` instead.
   const win = (mainWindow = createWindow())
+
+  if (import.meta.env.DEV && !app.isPackaged && isDevAutomationEnabled()) {
+    const inst = resolveDevInstance()
+    startDevAutomationBridge({
+      port: inst.automationPort,
+      userDataPath: app.getPath('userData'),
+      appName: app.getName(),
+      appVersion: app.getVersion(),
+      devInstanceName: inst.name,
+      rendererOrigin: `http://localhost:${inst.rendererPort}`,
+      getMainWindow: () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null)
+    })
+  }
 
   // Pull-based token freshness: let main-process REST callers (task sync, and any
   // other assistant on the shared core/session) refresh the Firebase token on
