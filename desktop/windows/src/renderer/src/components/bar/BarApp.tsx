@@ -110,6 +110,7 @@ export function BarApp(): React.JSX.Element {
     pills,
     markViewed: markPillViewed,
     dismiss: dismissPill,
+    refresh: refreshPills,
     transcriptFor
   } = useAgentPills(activePillId)
   const [draft, setDraft] = useState('')
@@ -598,6 +599,9 @@ export function BarApp(): React.JSX.Element {
   // across on the send path.
   const openConversation = (): void => {
     setView('conversation')
+    // A hub send flips here before spawn_agent runs; pull pills now so a row
+    // that already exists (or lands via the spawn-card push) is visible at once.
+    refreshPills()
   }
 
   // Open a spawned-agent pill's OWN transcript (the B3 fix — routes to that run's

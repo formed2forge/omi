@@ -10,6 +10,7 @@ import {
   aggregateStatusGroup,
   deriveTitle,
   mergeProjectedPills,
+  spawnCardToProjectionRow,
   markViewed,
   expireViewedFinished,
   trimForSoftCap,
@@ -216,6 +217,41 @@ describe('mergeProjectedPills — create / update by id', () => {
     const { pills } = mergeProjectedPills(existing, [], 5000)
     expect(pills).toHaveLength(1)
     expect(pills[0].id).toBe('a')
+  })
+})
+
+describe('spawnCardToProjectionRow', () => {
+  it('builds a queued pill row from a spawn card seed', () => {
+    const row = spawnCardToProjectionRow({
+      pillId: 'pill-abc',
+      runId: 'run-1',
+      sessionId: 'session-1',
+      title: 'Research the news',
+      objective: 'find the latest headlines',
+      provider: 'pi-mono',
+      createdAtMs: 1000
+    })
+    expect(row).toMatchObject({
+      id: 'pill-abc',
+      runId: 'run-1',
+      sessionId: 'session-1',
+      title: 'Research the news',
+      status: 'queued',
+      query: 'find the latest headlines',
+      provider: 'pi-mono'
+    })
+  })
+
+  it('returns null when required ids are missing', () => {
+    expect(
+      spawnCardToProjectionRow({
+        runId: '',
+        sessionId: 'session-1',
+        title: 'x',
+        objective: 'y',
+        createdAtMs: 1
+      })
+    ).toBeNull()
   })
 })
 

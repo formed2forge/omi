@@ -18,6 +18,7 @@ import {
   isFinished,
   markViewed as markViewedPure,
   mergeProjectedPills,
+  spawnCardToProjectionRow,
   trimForSoftCap,
   VIEWED_FINISHED_TTL_MS,
   type AgentPill,
@@ -30,6 +31,7 @@ import {
   synthesizePillTranscript,
   type AgentRunDetail
 } from '../components/bar/agentPillTranscript'
+import type { AgentThreadCardMsg } from '../../../../shared/types'
 import type { ChatMsg } from './useChat'
 
 // Both poll cadences mirror Mac's 2s canonical-run poll (AgentPill.swift:1775).
@@ -41,6 +43,10 @@ const RUN_POLL_MS = 2000
 // re-arm the instant an agent appears. The heartbeat is a belt-and-suspenders
 // backstop so a session can never be permanently missed even if a push is lost.
 const IDLE_LIST_POLL_MS = 30_000
+// After a spawn card push, the list poll can briefly return empty (the session
+// row lands a beat later). Retry a few times before falling back to the idle
+// heartbeat so Ask Omi never looks pill-less for the whole turn.
+const SPAWN_LIST_RETRY_MS = [0, 250, 750, 1500, 3000] as const
 
 export type AgentPillsApi = {
   /** The live pills, projection-merged + lifecycle-trimmed. */
@@ -49,6 +55,8 @@ export type AgentPillsApi = {
   markViewed: (id: string) => void
   /** Manually remove a pill from the bar (Mac dismiss → cleanup). */
   dismiss: (id: string) => void
+  /** Force a list (+ active-run) poll now — e.g. when the bar flips to conversation. */
+  refresh: () => void
   /** The client-synthesized transcript for a pill — its OWN messages, never the
    *  shared Omi thread (INV-CHAT-1). Empty when the pill is unknown. */
   transcriptFor: (id: string) => { messages: ChatMsg[]; sending: boolean }
@@ -174,6 +182,95 @@ export function useAgentPills(activePillId: string | null): AgentPillsApi {
   // eslint-disable-next-line react-hooks/refs -- latest-ref for interval closures
   activePillIdRef.current = activePillId
 
+  const applyListRows = useCallback((rows: PillProjectionRow[] | null): void => {
+    if (rows === null) return
+    const visibleRows = rows.filter((row) => !isRowDismissed(dismissedRef.current, row))
+    const now = Date.now()
+    setPills((prev) => {
+      const merged = mergeProjectedPills(prev, visibleRows, now).pills
+      const expired = expireViewedFinished(
+        merged,
+        now,
+        VIEWED_FINISHED_TTL_MS,
+        activePillIdRef.current
+      )
+      const trimmed = trimForSoftCap(expired, activePillIdRef.current)
+      setFinalTextByPillId((textPrev) => retainTextForPills(textPrev, trimmed))
+      return samePills(prev, trimmed) ? prev : trimmed
+    })
+  }, [])
+
+  const runListPoll = useCallback(async (): Promise<void> => {
+    const rows = await callList()
+    applyListRows(rows)
+  }, [applyListRows])
+
+  const runRunPoll = useCallback(async (): Promise<void> => {
+    const targets = pillsRef.current.filter((p) => !isFinished(p.displayStatus) && p.runId)
+    await Promise.all(
+      targets.map(async (pill) => {
+        const detail = await callRun(pill.runId)
+        if (detail === null) return
+        const row = runDetailToProjectionRow(pill, detail)
+        if (row && !isRowDismissed(dismissedRef.current, row)) {
+          setPills((prev) => {
+            const next = mergeProjectedPills(prev, [row], Date.now()).pills
+            return samePills(prev, next) ? prev : next
+          })
+        }
+        const finalText = runDetailFinalText(detail)
+        setFinalTextByPillId((prev) =>
+          prev[pill.id] === finalText ? prev : { ...prev, [pill.id]: finalText }
+        )
+      })
+    )
+  }, [])
+
+  const refresh = useCallback((): void => {
+    void runListPoll()
+    void runRunPoll()
+  }, [runListPoll, runRunPoll])
+
+  const spawnRetryTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const clearSpawnRetries = useCallback((): void => {
+    for (const timer of spawnRetryTimersRef.current) clearTimeout(timer)
+    spawnRetryTimersRef.current = []
+  }, [])
+
+  const scheduleSpawnListRetries = useCallback((): void => {
+    clearSpawnRetries()
+    for (const delayMs of SPAWN_LIST_RETRY_MS) {
+      const timer = setTimeout(() => {
+        void runListPoll()
+        void runRunPoll()
+      }, delayMs)
+      spawnRetryTimersRef.current.push(timer)
+    }
+  }, [clearSpawnRetries, runListPoll, runRunPoll])
+
+  const onSpawnCard = useCallback(
+    (card: AgentThreadCardMsg): void => {
+      if (card.block.type !== 'agentSpawn') return
+      const row = spawnCardToProjectionRow({
+        pillId: card.block.pillId ?? null,
+        runId: card.block.runId,
+        sessionId: card.block.sessionId,
+        title: card.block.title,
+        objective: card.block.objective,
+        provider: card.block.provider ?? null,
+        createdAtMs: card.createdAtMs
+      })
+      if (row && !isRowDismissed(dismissedRef.current, row)) {
+        setPills((prev) => {
+          const next = mergeProjectedPills(prev, [row], Date.now()).pills
+          return samePills(prev, next) ? prev : next
+        })
+      }
+      scheduleSpawnListRetries()
+    },
+    [scheduleSpawnListRetries]
+  )
+
   // Run/session ids the user dismissed this session. The kernel override
   // (callDismissOverride) is the durable, restart-proof record; this in-memory
   // set is only a race guard, consulted synchronously by the list poll so a
@@ -189,82 +286,44 @@ export function useAgentPills(activePillId: string | null): AgentPillsApi {
   useEffect(() => {
     let cancelled = false
 
-    // List poll → merge + lifecycle. mergeProjectedPills keeps pills absent from
-    // the rows; expire/trim are the only removers.
-    const runListPoll = async (): Promise<void> => {
-      const rows = await callList()
-      if (cancelled || rows === null) return
-      // Drop rows for pills dismissed this session but not yet filtered by the
-      // kernel (its override may not have committed before this snapshot was
-      // fetched) — closes the in-flight-poll resurrection race.
-      const visibleRows = rows.filter((row) => !isRowDismissed(dismissedRef.current, row))
-      const now = Date.now()
-      const merged = mergeProjectedPills(pillsRef.current, visibleRows, now).pills
-      const expired = expireViewedFinished(
-        merged,
-        now,
-        VIEWED_FINISHED_TTL_MS,
-        activePillIdRef.current
-      )
-      const trimmed = trimForSoftCap(expired, activePillIdRef.current)
-      setPills((prev) => (samePills(prev, trimmed) ? prev : trimmed))
-      // Drop cached assistant text for pills the lifecycle just evicted (soft-cap /
-      // viewed-TTL), so the text map can't grow unbounded across a long session.
-      setFinalTextByPillId((prev) => retainTextForPills(prev, trimmed))
+    const pollList = async (): Promise<void> => {
+      if (cancelled) return
+      await runListPoll()
+    }
+    const pollRuns = async (): Promise<void> => {
+      if (cancelled) return
+      await runRunPoll()
     }
 
-    // Per-run poll → refresh status + transcript for each active pill with a
-    // runId. A finished pill is skipped, so it is never polled again (Mac stops
-    // its per-run timer at terminal); the B2 merge also guards resurrection.
-    const runRunPoll = async (): Promise<void> => {
-      const targets = pillsRef.current.filter((p) => !isFinished(p.displayStatus) && p.runId)
-      await Promise.all(
-        targets.map(async (pill) => {
-          const detail = await callRun(pill.runId)
-          if (cancelled || detail === null) return
-          const row = runDetailToProjectionRow(pill, detail)
-          // Same guard as the list poll: if this pill was dismissed while its
-          // get_agent_run was in flight, don't let the refreshed row re-create it.
-          if (row && !isRowDismissed(dismissedRef.current, row)) {
-            setPills((prev) => {
-              const next = mergeProjectedPills(prev, [row], Date.now()).pills
-              return samePills(prev, next) ? prev : next
-            })
-          }
-          const finalText = runDetailFinalText(detail)
-          setFinalTextByPillId((prev) =>
-            prev[pill.id] === finalText ? prev : { ...prev, [pill.id]: finalText }
-          )
-        })
-      )
-    }
-
-    void runListPoll()
-    void runRunPoll()
+    void pollList()
+    void pollRuns()
     // With no pills on the bar, poll the list on a slow heartbeat instead of every
     // 2s, and skip the per-run timer entirely (it has nothing to refresh). A new
     // agent re-arms this via the kernel push below (which flips `hasPills` and
     // re-runs this effect at the fast cadence); the heartbeat only backstops a lost
     // push. With pills present, keep Mac's 2s cadence for both.
     const listTimer = setInterval(
-      () => void runListPoll(),
+      () => void pollList(),
       hasPills ? LIST_POLL_MS : IDLE_LIST_POLL_MS
     )
-    const runTimer = hasPills ? setInterval(() => void runRunPoll(), RUN_POLL_MS) : null
+    const runTimer = hasPills ? setInterval(() => void pollRuns(), RUN_POLL_MS) : null
     // Kernel push: a background run reaching queued/terminal broadcasts an agent
-    // card to every window. Poll immediately so a spawned agent's pill appears at
-    // once rather than waiting for the (slow, idle) heartbeat.
-    const unsubCards = window.omi?.onAgentCardEvent?.(() => {
-      void runListPoll()
-      void runRunPoll()
+    // card to every window. Seed the pill from the spawn card immediately, then
+    // poll (with short retries) so list projection reconciles without waiting for
+    // the idle heartbeat.
+    const unsubCards = window.omi?.onAgentCardEvent?.((card) => {
+      if (card?.block) onSpawnCard(card)
+      void pollList()
+      void pollRuns()
     })
     return () => {
       cancelled = true
       clearInterval(listTimer)
       if (runTimer) clearInterval(runTimer)
+      clearSpawnRetries()
       unsubCards?.()
     }
-  }, [hasPills])
+  }, [hasPills, runListPoll, runRunPoll, onSpawnCard, clearSpawnRetries])
 
   const markViewed = useCallback((id: string): void => {
     setPills((prev) => markViewedPure(prev, id, Date.now()))
@@ -306,5 +365,5 @@ export function useAgentPills(activePillId: string | null): AgentPillsApi {
     [pills, finalTextByPillId]
   )
 
-  return { pills, markViewed, dismiss, transcriptFor }
+  return { pills, markViewed, dismiss, refresh, transcriptFor }
 }
