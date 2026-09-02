@@ -30,6 +30,7 @@ import type { CloudConversationLite } from '../lib/sync/outbox'
 import {
   applyFilters,
   buildConversationQuery,
+  shouldShowCloudError,
   groupConversationsByDate,
   hasActiveFilters,
   mergeableRows,
@@ -206,7 +207,12 @@ export function Conversations(): React.JSX.Element {
         const r = await omiApi.get<CloudConversation[]>('/v1/conversations', {
           params: buildConversationQuery(folderFilter, dateRange)
         })
-        const list = Array.isArray(r.data) ? r.data : []
+        // A 200 HTML/object (wrong base, Vite SPA fallback) used to become
+        // `[]` and look like "this account has no other devices' conversations".
+        if (!Array.isArray(r.data)) {
+          throw new Error('Cloud conversation list was not an array')
+        }
+        const list = r.data
         cloudLite = list
         cloudIds = new Set(list.map((c) => c.id))
         for (const c of list) {
@@ -693,10 +699,10 @@ export function Conversations(): React.JSX.Element {
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 lg:px-10 lg:py-8">
-        {/* Silent revalidation: only surface the cloud error when there's nothing
-            cached to show. A failed revalidation over already-visible rows (offline
-            cold start) stays quiet — the last-known list is on screen. */}
-        {error && rows.length === 0 && (
+        {/* Silent revalidation stays quiet only when a cloud row is already on
+            screen. Local-only recordings must not hide a failed GET — that made
+            a fresh Windows install look like it had no other devices' history. */}
+        {shouldShowCloudError(error, rows) && (
           <div className="surface-panel mb-5 px-4 py-3 text-sm text-white/60">
             Cloud conversations: {error}
           </div>
