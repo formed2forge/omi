@@ -12,7 +12,6 @@ import { join } from 'path'
 import { appendFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { supportsMica } from './windowsVersion'
-import { detectLinuxCompositor } from './linuxCompositor'
 import { APP_BG_HEX, HOME_BG_HEX, WCO_SYMBOL_HEX } from '../shared/chrome'
 import iconPath from '../../resources/icon.png?asset'
 import { listCaptureSources } from './ipc/capture'
@@ -469,12 +468,12 @@ if (gotSingleInstanceLock) initCrashSentinel()
 
 // Linux: portal identity + session facts (phase 0 shortcuts groundwork).
 // Default to XWayland (x11 ozone) for the broadest shortcut + active-window
-// support today. On compositors known to lack reliable XWayland (niri, sway,
-// hyprland — see linuxCompositor.ts) the default is native Wayland instead,
-// because XWayland can fail to map the main window at all. Set
-// OMI_OZONE=wayland/x11 to override either way. Also enable the PipeWire
-// capturer (portal screen share) and PulseAudio monitor-source loopback for
-// system-audio capture when pipewire-pulse/Pulse is present.
+// support today. On compositors where XWayland fails to map windows (niri,
+// sway, hyprland, and Plasma Wayland — see linuxCompositor.ts) the default is
+// native Wayland instead. Set OMI_OZONE=wayland/x11 to override either way.
+// Also enable the PipeWire capturer (portal screen share) and PulseAudio
+// monitor-source loopback for system-audio capture when pipewire-pulse/Pulse
+// is present.
 if (process.platform === 'linux') {
   // app.setDesktopName is a newer Linux/Wayland-portal-only Electron API, undeclared
   // in this project's pinned Electron 39 types and absent at runtime on it — guard so
@@ -491,7 +490,6 @@ if (process.platform === 'linux') {
   )
   console.info(
     `[linux] ${formatLinuxSessionSummary(detectLinuxSession())}`,
-    `compositor=${detectLinuxCompositor() ?? 'none'}`,
     `OMI_OZONE=${process.env.OMI_OZONE ?? '(unset)'}`
   )
 }

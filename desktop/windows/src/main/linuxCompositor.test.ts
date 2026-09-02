@@ -56,7 +56,7 @@ describe('defaultOzonePlatform', () => {
     delete process.env.XDG_SESSION_TYPE
     expect(defaultOzonePlatform()).toBe('x11')
   })
-  it('is x11 on a Wayland session with no recognized compositor (e.g. GNOME, KDE)', () => {
+  it('is x11 on a Wayland session with no recognized compositor (e.g. GNOME)', () => {
     process.env.XDG_SESSION_TYPE = 'wayland'
     expect(defaultOzonePlatform()).toBe('x11')
   })
@@ -75,15 +75,20 @@ describe('defaultOzonePlatform', () => {
     process.env.NIRI_SOCKET = '/run/user/1000/niri.sock'
     expect(defaultOzonePlatform()).toBe('wayland')
   })
-  it('is x11 on a generic Wayland session with no recognized compositor socket (GNOME, KDE)', () => {
+  it('is x11 on a generic Wayland session with no recognized compositor socket (GNOME)', () => {
     process.env.XDG_SESSION_TYPE = 'wayland'
-    // no compositor sockets set
+    process.env.XDG_CURRENT_DESKTOP = 'GNOME'
     expect(defaultOzonePlatform()).toBe('x11')
   })
-  it('is x11 on Plasma Wayland even if a stale NIRI_SOCKET remains', () => {
+  it('is wayland on Plasma Wayland (XWayland fails to map windows there)', () => {
+    process.env.XDG_SESSION_TYPE = 'wayland'
+    process.env.XDG_CURRENT_DESKTOP = 'KDE'
+    expect(defaultOzonePlatform()).toBe('wayland')
+  })
+  it('is wayland on Plasma Wayland even if a stale NIRI_SOCKET remains', () => {
     process.env.XDG_SESSION_TYPE = 'wayland'
     process.env.XDG_CURRENT_DESKTOP = 'KDE'
     process.env.NIRI_SOCKET = '/run/user/1000/niri.sock'
-    expect(defaultOzonePlatform()).toBe('x11')
+    expect(defaultOzonePlatform()).toBe('wayland')
   })
 })

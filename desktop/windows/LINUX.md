@@ -98,11 +98,10 @@ pnpm run build:linux
 
 The app targets X11 by default on Linux (`ozone-platform=x11`, i.e. XWayland on
 Wayland hosts) because that path keeps global shortcuts and the X11 active-window
-seam working today. On compositors known to have limited XWayland support (niri,
-Sway, Hyprland — detected via each compositor's session-marker env var in
-`src/main/linuxCompositor.ts`) it instead defaults to native Wayland, since
-XWayland there can fail to map the main window at all. Set `OMI_OZONE=x11` or
-`OMI_OZONE=wayland` to override the auto-detected choice either way.
+seam working today. On compositors where XWayland fails to map windows at all —
+niri / Sway / Hyprland (session-marker env) **and Plasma Wayland** (`XDG_CURRENT_DESKTOP`
+contains `KDE`/`Plasma`) — it defaults to native Wayland instead. Set
+`OMI_OZONE=x11` or `OMI_OZONE=wayland` to override either way.
 
 **Portal identity (global shortcuts on native Wayland):** Electron binds
 `globalShortcut` through `org.freedesktop.portal.GlobalShortcuts` when running
