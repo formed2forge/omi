@@ -220,6 +220,21 @@ export function aggregateStatusGroup(pills: readonly AgentPill[]): AgentStatusGr
   return null
 }
 
+/** The pill that drives the collapsed-bar aggregate glow / header mark: same
+ *  filter and priority as `aggregateStatusGroup`, but returns the contributing
+ *  row (for provider logo + display status). */
+export function representativePillForAggregate(
+  pills: readonly AgentPill[]
+): AgentPill | null {
+  const group = aggregateStatusGroup(pills)
+  if (!group) return null
+  for (const pill of pills) {
+    if (isFinished(pill.displayStatus) && pill.viewedAtMs !== null) continue
+    if (statusGroupFromDisplay(pill.displayStatus) === group) return pill
+  }
+  return null
+}
+
 /** The neutral tint token (never a raw color) B3 maps to a Tailwind class. */
 export function displayTintToken(display: AgentPillDisplayStatus): AgentPillTintToken {
   return DISPLAY_TINT[display]

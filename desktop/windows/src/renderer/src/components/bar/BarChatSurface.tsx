@@ -8,7 +8,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { ChatMessages } from '../chat/ChatMessages'
 import { useLiveEdgeFollow } from '../../hooks/useLiveEdgeFollow'
-import { displayLabel, displayTintToken, isFinished, type AgentPill } from './agentPills'
+import { displayLabel, displayTintToken, isFinished, representativePillForAggregate, type AgentPill } from './agentPills'
 import { pillChipClasses } from './agentPillTranscript'
 import { AgentStatusMark } from './AgentStatusMark'
 import type { BarChatState } from '../../../../shared/types'
@@ -408,6 +408,7 @@ export function BarChatSurface(props: BarChatSurfaceProps): React.JSX.Element {
   // in flight or the draft is blank). Passed to the memoized composer as a plain
   // bool so a chat tick that doesn't change it can't force a composer re-render.
   const sendDisabled = chat.sending || props.recording || props.transcribing || !props.draft.trim()
+  const conversationLeadPill = representativePillForAggregate(props.pills)
 
   if (view === 'list') {
     return (
@@ -475,7 +476,15 @@ export function BarChatSurface(props: BarChatSurfaceProps): React.JSX.Element {
         >
           <ChevronLeft />
         </button>
-        <span className="text-sm font-medium text-neutral-200">{props.conversationTitle}</span>
+        {conversationLeadPill ? (
+          <AgentStatusMark
+            displayStatus={conversationLeadPill.displayStatus}
+            provider={conversationLeadPill.provider}
+          />
+        ) : null}
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-200">
+          {props.conversationTitle}
+        </span>
         <button
           type="button"
           onClick={props.onClose}

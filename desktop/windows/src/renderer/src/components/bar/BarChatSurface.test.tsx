@@ -344,6 +344,27 @@ describe('BarChatSurface', () => {
     expect(props.onOpenConversation).not.toHaveBeenCalled()
   })
 
+  it('conversation: header shows aggregate agent status while expanded', () => {
+    const pill = {
+      id: 'p1',
+      runId: 'r1',
+      sessionId: 's1',
+      title: 'Research the latest news',
+      displayStatus: 'failed' as const,
+      latestActivity: 'Agent failed',
+      query: 'research',
+      createdAtMs: 1,
+      completedAtMs: 2,
+      errorMessage: 'boom',
+      provider: 'hermes',
+      viewedAtMs: null
+    }
+    renderSurface({ view: 'conversation', pills: [pill], conversationTitle: 'Ask Omi' })
+    const marks = screen.getAllByTestId('agent-status-mark')
+    expect(marks.length).toBeGreaterThanOrEqual(1)
+    expect(marks[0].getAttribute('data-agent-status')).toBe('failed')
+  })
+
   it('conversation: renders the thread and the back chevron returns to the list', () => {
     const props = renderSurface({ view: 'conversation' })
     expect(screen.getByTestId('messages').textContent).toBe('1')

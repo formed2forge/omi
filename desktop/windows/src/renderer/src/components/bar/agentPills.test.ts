@@ -8,6 +8,7 @@ import {
   displayTintToken,
   statusGroupFromDisplay,
   aggregateStatusGroup,
+  representativePillForAggregate,
   deriveTitle,
   mergeProjectedPills,
   spawnCardToProjectionRow,
@@ -555,5 +556,18 @@ describe('statusGroupFromDisplay / aggregateStatusGroup (Mac NotchAgentStatusGro
         pill({ id: 'r', displayStatus: 'running', viewedAtMs: null })
       ])
     ).toBe('running')
+  })
+})
+
+describe('representativePillForAggregate', () => {
+  it('returns the pill that drives the aggregate group', () => {
+    const failed = pill({ id: 'f', displayStatus: 'failed', viewedAtMs: null })
+    const done = pill({ id: 'd', displayStatus: 'done', viewedAtMs: null })
+    expect(representativePillForAggregate([done, failed])?.id).toBe('f')
+    expect(representativePillForAggregate([done])?.id).toBe('d')
+    expect(representativePillForAggregate([])).toBeNull()
+    expect(
+      representativePillForAggregate([pill({ id: 'd', displayStatus: 'done', viewedAtMs: 9_000 })])
+    ).toBeNull()
   })
 })
