@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "Agent status orbs now appear in the Ask Omi conversation header and per-pill transcript header, matching the hub list rows and collapsed-bar glow."
+  ]
+}

@@ -10,6 +10,7 @@ import { ChatMessages } from '../chat/ChatMessages'
 import { useLiveEdgeFollow } from '../../hooks/useLiveEdgeFollow'
 import { displayLabel, displayTintToken, isFinished, type AgentPill } from './agentPills'
 import { pillChipClasses } from './agentPillTranscript'
+import { AgentStatusMark } from './AgentStatusMark'
 import type { ChatMsg } from '../../hooks/useChat'
 
 function ChevronLeft(): React.JSX.Element {
@@ -67,6 +68,7 @@ export function AgentPillView(props: AgentPillViewProps): React.JSX.Element {
         >
           <ChevronLeft />
         </button>
+        <AgentStatusMark displayStatus={pill.displayStatus} provider={pill.provider} />
         <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-200">
           {pill.title}
         </span>
