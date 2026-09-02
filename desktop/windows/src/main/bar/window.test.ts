@@ -35,6 +35,12 @@ vi.mock('electron', () => {
     ipcMain: { on: vi.fn(), handle: vi.fn(), removeAllListeners: vi.fn(), removeHandler: vi.fn() },
     screen: {
       getCursorScreenPoint: vi.fn(() => ({ x: 0, y: 0 })),
+      getPrimaryDisplay: vi.fn(() => ({
+        id: 1,
+        bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+        workArea: { x: 0, y: 0, width: 1920, height: 1040 },
+        scaleFactor: 1
+      })),
       getDisplayNearestPoint: vi.fn(() => ({
         id: 1,
         bounds: { x: 0, y: 0, width: 1920, height: 1080 },

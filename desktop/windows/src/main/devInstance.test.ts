@@ -13,7 +13,8 @@ import {
   DEV_CDP_BASE,
   DEV_CDP_SPAN,
   PRIMARY_RENDERER_PORT,
-  PRIMARY_CDP_PORT
+  PRIMARY_CDP_PORT,
+  PRIMARY_AUTOMATION_PORT
 } from './devInstance'
 
 describe('deriveRendererPort / deriveCdpPort', () => {
@@ -79,6 +80,7 @@ describe('computeDevInstance', () => {
       isPrimary: true,
       rendererPort: PRIMARY_RENDERER_PORT,
       cdpPort: PRIMARY_CDP_PORT,
+      automationPort: PRIMARY_AUTOMATION_PORT,
       titleSuffix: ''
     })
   })
