@@ -113,7 +113,7 @@ print(path)
       params="$params\"$key\":\"$val\""
     done
     body="{\"name\":\"$name\""
-    [ -n "$params" ] && body="$body,\"params\":{$params}}"
+    [ -n "$params" ] && body="$body,\"params\":{$params}"
     body="$body}"
     resp=$(curl_bridge_post -X POST "$BASE/action" -H 'content-type: application/json' -d "$body")
     printf '%s\n' "$resp"
