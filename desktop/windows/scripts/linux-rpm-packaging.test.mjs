@@ -9,6 +9,11 @@
 // The packaged proof is CI `rpm -qpR` / `rpm -qpl` after `pnpm build:linux`.
 import { describe, it, expect } from 'vitest'
 import builderConfig from '../electron-builder.config.mjs'
+import {
+  LINUX_PRODUCT_NAME,
+  WINDOWS_PRODUCT_NAME,
+  resolveElectronBuilderProductName
+} from './electron-builder-product-name.mjs'
 
 const RPM_RUNTIME_DEFAULTS = [
   'gtk3',
@@ -24,6 +29,19 @@ const RPM_RUNTIME_DEFAULTS = [
 const RPM_OMI_EXTRAS = ['tesseract', 'tesseract-langpack-eng', '(xprop or xorg-x11-utils)']
 
 describe('Linux RPM packaging', () => {
+  it('uses a space-free productName for Linux so /opt install paths are rpm-safe', () => {
+    expect(LINUX_PRODUCT_NAME).not.toMatch(/\s/)
+    expect(resolveElectronBuilderProductName(['node', 'electron-builder', '--linux'])).toBe(
+      LINUX_PRODUCT_NAME
+    )
+    expect(resolveElectronBuilderProductName(['node', 'electron-builder', '--win'])).toBe(
+      WINDOWS_PRODUCT_NAME
+    )
+    // Vitest imports the config without --linux, so the default export keeps
+    // the Windows display name; packaging argv selects Linux at pack time.
+    expect(builderConfig.productName).toBe(WINDOWS_PRODUCT_NAME)
+  })
+
   it('includes rpm next to AppImage and deb', () => {
     expect(builderConfig.linux.target).toEqual(['AppImage', 'deb', 'rpm'])
   })

@@ -1,0 +1,7 @@
+{
+  "entries": [
+    {
+      "change": "Linux: space-free /opt/Omi install name for rpm/deb; add pnpm build:linux:appimage for Fedora/Asahi"
+    }
+  ]
+}
