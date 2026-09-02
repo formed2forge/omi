@@ -88,24 +88,29 @@ environment** row shows portal/ozone/session facts from `linuxSession.ts`.
 
 **niri / sway:** these compositors do not deliver in-app global shortcut events to
 Electron apps — registration (and the Test button) can succeed while key presses
-never reach Omi. Use compositor keybinds that spawn Omi with an action flag:
+never reach Omi.
+
+**niri (packaged builds):** Settings → Shortcuts prompts to **Apply** compositor
+keybinds. Omi scans `config.kdl` **and included KDL files** for conflicts, then
+writes a marked managed block (never overwrites a chord already bound to something
+else). Cancel shows the manual config note instead.
 
 ```text
 omi-windows --omi-action summon
 omi-windows --omi-action record-mic
 ```
 
-Example niri config:
+Example niri config (manual / Cancel path):
 
 ```kdl
 binds {
-    Mod+Shift+Space { spawn "omi-windows --omi-action summon"; }
-    Mod+Ctrl+Space { spawn "omi-windows --omi-action record-mic"; }
+    Mod+Shift+Space { spawn "omi-windows" "--omi-action" "summon"; }
+    Mod+Ctrl+Space { spawn "omi-windows" "--omi-action" "record-mic"; }
 }
 ```
 
-Settings → Shortcuts shows the exact commands and a starter `binds { … }` block
-when niri or sway is detected.
+Automatic install requires a packaged AppImage/deb (`process.execPath`). `pnpm dev`
+keeps the manual note only.
 
 ## What works / what's next
 - ✅ Sign-in, mic → cloud transcription, chat, memory (inherited, cross-platform)

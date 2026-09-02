@@ -673,6 +673,40 @@ export type LinuxShortcutSessionDiagnostics = {
   summary: string
 }
 
+export type NiriCompositorKeybindConflict = {
+  action: 'summon' | 'record-mic'
+  electronAccelerator: string
+  niriChord: string
+  existingBind: string
+  filePath: string
+}
+
+export type NiriCompositorKeybindStatus = {
+  autoApply: boolean
+  consentGranted: boolean
+  consentConfigPath: string | null
+  state:
+    | 'unsupported'
+    | 'dev-unsupported'
+    | 'config-missing'
+    | 'scan-failed'
+    | 'scan-incomplete'
+    | 'needs-consent'
+    | 'not-installed'
+    | 'installed'
+    | 'conflict'
+    | 'write-failed'
+  configPath?: string
+  unreadableIncludes?: string[]
+  conflicts?: NiriCompositorKeybindConflict[]
+  reason?: string
+}
+
+export type NiriCompositorKeybindInstallResult = {
+  ok: boolean
+  status: NiriCompositorKeybindStatus
+}
+
 /** Outcome of a manual "check for updates" from Settings → About.
  *  - `unsupported`: the updater is inert (unpackaged dev build) — updates install
  *    automatically only in packaged builds, so there is nothing to check.
@@ -1283,6 +1317,14 @@ export type OmiBridgeApi = {
   testShortcutAccelerator: (accelerator: string) => Promise<ShortcutAcceleratorProbeResult>
   /** Linux-only session + portal facts for Settings diagnostics. Null elsewhere. */
   getLinuxShortcutSession: () => Promise<LinuxShortcutSessionDiagnostics | null>
+  /** niri compositor-keybind status (null off Linux / non-niri). */
+  getNiriCompositorKeybindStatus: () => Promise<NiriCompositorKeybindStatus | null>
+  /** Install/re-sync niri managed binds. grantConsent=true records Apply consent. */
+  installNiriCompositorKeybinds: (
+    opts?: { grantConsent?: boolean }
+  ) => Promise<NiriCompositorKeybindInstallResult>
+  setNiriKeybindAutoApply: (enabled: boolean) => Promise<boolean>
+  clearNiriKeybindConsent: () => Promise<void>
   /** The update staged for install-on-quit, if any (query on Settings mount —
    *  the one-shot update:ready event usually fires while Settings is unmounted). */
   getPendingUpdate: () => Promise<{ version: string } | null>

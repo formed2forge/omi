@@ -14,6 +14,8 @@ const suspendShortcutCapture = vi.fn()
 const resumeShortcutCapture = vi.fn()
 const testShortcutAccelerator = vi.fn()
 const getLinuxShortcutSession = vi.fn()
+const getNiriCompositorKeybindStatus = vi.fn()
+const installNiriCompositorKeybinds = vi.fn()
 
 const renderTab = (): void => {
   render(
@@ -38,6 +40,8 @@ beforeEach(() => {
   resumeShortcutCapture.mockReset()
   testShortcutAccelerator.mockReset().mockResolvedValue({ available: true })
   getLinuxShortcutSession.mockReset().mockResolvedValue(null)
+  getNiriCompositorKeybindStatus.mockReset().mockResolvedValue(null)
+  installNiriCompositorKeybinds.mockReset()
   ;(globalThis as unknown as { window: { omi: unknown } }).window.omi = {
     getRecordHotkey,
     setRecordHotkey,
@@ -47,7 +51,9 @@ beforeEach(() => {
     suspendShortcutCapture,
     resumeShortcutCapture,
     testShortcutAccelerator,
-    getLinuxShortcutSession
+    getLinuxShortcutSession,
+    getNiriCompositorKeybindStatus,
+    installNiriCompositorKeybinds
   }
 })
 afterEach(cleanup)
@@ -181,7 +187,7 @@ describe('ShortcutsTab', () => {
     expect(screen.getByText(/session=wayland/)).toBeTruthy()
   })
 
-  it('shows niri compositor-keybind guidance when delivery is unreliable', async () => {
+  it('shows niri Apply consent when delivery is unreliable and binds are missing', async () => {
     getLinuxShortcutSession.mockResolvedValue({
       sessionType: 'wayland',
       compositor: 'niri',
@@ -203,14 +209,76 @@ describe('ShortcutsTab', () => {
       summary:
         'session=wayland ozone=x11 portal=com.omiwindows.app shortcuts=x11-grab delivery=compositor-keybind compositor=niri'
     })
+    getNiriCompositorKeybindStatus.mockResolvedValue({
+      autoApply: true,
+      consentGranted: false,
+      consentConfigPath: null,
+      state: 'not-installed',
+      configPath: '/home/u/.config/niri/config.kdl'
+    })
     testShortcutAccelerator.mockResolvedValue({ available: true })
     renderTab()
     await waitFor(() =>
-      expect(screen.getByText(/does not deliver in-app global shortcuts to Electron apps/)).toBeTruthy()
+      expect(screen.getByText(/needs to add keybinds to your niri config/)).toBeTruthy()
     )
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.getByText(/Manual niri config/)).toBeTruthy())
+
     fireEvent.click(screen.getAllByText('Test')[0])
     await waitFor(() =>
       expect(screen.getByText(/Use the compositor-keybind commands shown above/)).toBeTruthy()
+    )
+  })
+
+  it('installs niri keybinds when Apply is clicked', async () => {
+    getLinuxShortcutSession.mockResolvedValue({
+      sessionType: 'wayland',
+      compositor: 'niri',
+      currentDesktop: null,
+      desktopSession: null,
+      ozonePlatform: 'x11',
+      portalAppId: 'com.omiwindows.app',
+      globalShortcuts: {
+        available: true,
+        mechanism: 'x11-grab',
+        deliveryReliable: false,
+        compositorWorkaround: {
+          compositor: 'niri',
+          summonCommand: 'omi-windows --omi-action summon',
+          recordMicCommand: 'omi-windows --omi-action record-mic',
+          niriConfigExample: 'binds {}'
+        }
+      },
+      summary: 'session=wayland compositor=niri'
+    })
+    getNiriCompositorKeybindStatus.mockResolvedValue({
+      autoApply: true,
+      consentGranted: false,
+      consentConfigPath: null,
+      state: 'not-installed',
+      configPath: '/home/u/.config/niri/config.kdl'
+    })
+    installNiriCompositorKeybinds.mockResolvedValue({
+      ok: true,
+      status: {
+        autoApply: true,
+        consentGranted: true,
+        consentConfigPath: '/home/u/.config/niri/config.kdl',
+        state: 'installed',
+        configPath: '/home/u/.config/niri/config.kdl'
+      }
+    })
+    renderTab()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Apply' })).toBeTruthy())
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    await waitFor(() =>
+      expect(installNiriCompositorKeybinds).toHaveBeenCalledWith({ grantConsent: true })
+    )
+    await waitFor(() =>
+      expect(screen.getByText(/Compositor shortcuts installed/)).toBeTruthy()
     )
   })
 })
