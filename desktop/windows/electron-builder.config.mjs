@@ -141,9 +141,9 @@ export default {
     artifactName: '${name}-${version}.${ext}'
   },
   linux: {
-    // AppImage + deb only — snap omitted: strict confinement blocks
+    // AppImage + deb + rpm — snap omitted: strict confinement blocks
     // xprop/tesseract/proc used by Linux active-window and OCR seams.
-    target: ['AppImage', 'deb'],
+    target: ['AppImage', 'deb', 'rpm'],
     // Matches LINUX_STARTUP_WM_CLASS / package.json desktopName
     // (com.omiwindows.app). Portal identity and task-switcher grouping depend
     // on desktopName + StartupWMClass staying aligned with linuxSession.ts.
@@ -189,6 +189,35 @@ export default {
     // (["libappindicator3-1"], needed for the tray icon) rather than
     // appending, so it must be listed explicitly here too.
     recommends: ['libappindicator3-1', 'xdg-desktop-portal']
+  },
+  rpm: {
+    // electron-builder `depends` REPLACES its v26 RPM default
+    // (gtk3, libnotify, nss, libXScrnSaver, libXtst, xdg-utils,
+    // at-spi2-core, libuuid) rather than appending — same trap as
+    // `deb.recommends`. Keep that Chromium/GTK runtime set and add
+    // the OCR/xprop extras the .deb already declares, using Fedora /
+    // RHEL names. `(xprop or xorg-x11-utils)` covers Fedora's split
+    // `xprop` package and older RHEL's `xorg-x11-utils`.
+    depends: [
+      'gtk3',
+      'libnotify',
+      'nss',
+      'libXScrnSaver',
+      '(libXtst or libXtst6)',
+      'xdg-utils',
+      'at-spi2-core',
+      '(libuuid or libuuid1)',
+      'tesseract',
+      'tesseract-langpack-eng',
+      '(xprop or xorg-x11-utils)'
+    ],
+    // RpmOptions has no `recommends` (that's DebOptions-only). fpm
+    // `--rpm-tag` is the equivalent of the .deb Recommends for tray
+    // + portal front-end. Do not hard-depend a compositor backend.
+    fpm: [
+      '--rpm-tag=Recommends: libappindicator-gtk3',
+      '--rpm-tag=Recommends: xdg-desktop-portal'
+    ]
   },
   npmRebuild: false,
   // See scripts/fix-pimono-chalk-unpack.mjs: corrects chalk's packaged version for

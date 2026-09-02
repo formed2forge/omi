@@ -146,7 +146,9 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 install -y imagemagick fonts-dejavu-core tesseract-ocr tesseract-ocr-eng xvfb
+          # `rpm` provides rpmbuild for electron-builder's fpm RPM target and
+          # `rpm -qp*` for the Verify RPM package contents step below.
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 install -y imagemagick fonts-dejavu-core tesseract-ocr tesseract-ocr-eng xvfb rpm
       - name: Provision .env
         run: cp .env.example .env
       - name: Install dependencies
@@ -170,6 +172,14 @@ jobs:
           dpkg-deb -I dist/*.deb | grep -F 'tesseract-ocr'
           dpkg-deb -I dist/*.deb | grep -F 'x11-utils'
           dpkg-deb -c dist/*.deb | grep -F 'resources/linux-ocr-helper/omi-ocr-helper'
+      - name: Verify RPM package contents
+        run: |
+          rpm -qpR dist/*.rpm | grep -F 'tesseract'
+          rpm -qpR dist/*.rpm | grep -E 'xprop|xorg-x11-utils'
+          rpm -qpR dist/*.rpm | grep -F 'gtk3'
+          rpm -qp --recommends dist/*.rpm | grep -F 'xdg-desktop-portal'
+          rpm -qp --recommends dist/*.rpm | grep -F 'libappindicator-gtk3'
+          rpm -qpl dist/*.rpm | grep -F 'resources/linux-ocr-helper/omi-ocr-helper'
       - name: Launch unpacked app on X11
         run: |
           # shellcheck disable=SC2016
