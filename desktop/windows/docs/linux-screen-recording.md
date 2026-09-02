@@ -14,22 +14,24 @@ companion fix — nothing told the user why.
   `getRewindCaptureDiagnostics` in `src/main/rewind/sourceId.ts`).
 - The `.deb` package `Recommends` (not `Depends`) the generic `xdg-desktop-portal`
   front-end (`electron-builder.config.mjs`) — the universal front-end almost every
-  desktop already has. It deliberately does **not** depend on a specific backend
-  package, because the correct one is compositor-specific (see below) and there is
-  no single correct hard dependency across GNOME/KDE/wlroots-family desktops.
+  desktop already has. The `.rpm` emits the same Recommends via fpm `--rpm-tag`
+  (`RpmOptions` has no `recommends` field). It deliberately does **not** depend
+  on a specific backend package, because the correct one is compositor-specific
+  (see below) and there is no single correct hard dependency across
+  GNOME/KDE/wlroots-family desktops.
 
 ## Why this can't be fully automated
 
 A portal **backend** (`xdg-desktop-portal-wlr`/`-gnome`/`-kde`/…) has to run on the
 host, register on the system D-Bus session bus, and integrate with whichever
 compositor is actually running. That's true regardless of how Omi is packaged —
-`.deb`, `AppImage`, or a hypothetical future Flatpak — none of these formats can
+`.deb`, `.rpm`, `AppImage`, or a hypothetical future Flatpak — none of these formats can
 bundle or install a working backend themselves:
 
 - **Flatpak** sandboxes the app; it can only *ask* the host's portal dispatcher.
   It cannot bundle a backend — that must already be installed and preferred on
   the host.
-- **`.deb`** dependencies resolve once at install time, but the correct backend
+- **`.deb` / `.rpm`** dependencies resolve once at install time, but the correct backend
   depends on which compositor the user runs, which the package can't know in
   advance.
 - **AppImage** has zero ability to install or configure anything system-level.

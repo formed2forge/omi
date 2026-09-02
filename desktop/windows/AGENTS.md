@@ -76,10 +76,11 @@ Cloud agents: push normally — do not skip the WAF fold unless the hook is bloc
   OCR/UI-automation helpers, rebuilds `better-sqlite3`, runs
   `pnpm build:unpack`. Verifies packaging succeeds; does **not** launch or
   smoke-test the packaged binary at runtime.
-- **build-linux** (ubuntu): builds the Linux variant, then actually launches
-  it under `xvfb-run` and runs targeted integration tests (OCR helper, Wayland
-  degradation) against the real running app — more runtime coverage than the
-  Windows job gets today.
+- **build-linux** (ubuntu): builds the Linux variant (AppImage + deb + rpm),
+  inspects `.deb`/`.rpm` Depends and the OCR helper path, then actually launches
+  the unpacked app under `xvfb-run` and runs targeted integration tests (OCR
+  helper, Wayland degradation) against the real running app — more runtime
+  coverage than the Windows job gets today.
 
 ## Release Pipeline
 
