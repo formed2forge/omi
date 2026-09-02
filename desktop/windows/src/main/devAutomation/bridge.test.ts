@@ -86,6 +86,46 @@ describe('devAutomation bridge routes', () => {
     expect(res.status).toBe(200)
     expect(res.body.ok).toBe(true)
   })
+
+  it('returns HTTP 200 with an action error when owner is not ready (mac parity)', async () => {
+    startDevAutomationBridge(options)
+    const token = getDevAutomationTokenForTests()
+    const res = await routeDevAutomationRequest(
+      {
+        method: 'POST',
+        path: '/action',
+        headers: {
+          host: '127.0.0.1:47777',
+          authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: 'ask_main_chat', params: { query: 'hello' } })
+      },
+      options
+    )
+    expect(res.status).toBe(200)
+    expect(res.body.ok).toBe(true)
+    const action = (res.body as { result?: { action?: { error?: string } } }).result?.action
+    expect(action?.error).toMatch(/sign-in/)
+  })
+
+  it('returns HTTP 400 for unknown actions', async () => {
+    startDevAutomationBridge(options)
+    const token = getDevAutomationTokenForTests()
+    const res = await routeDevAutomationRequest(
+      {
+        method: 'POST',
+        path: '/action',
+        headers: {
+          host: '127.0.0.1:47777',
+          authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: 'nope', params: {} })
+      },
+      options
+    )
+    expect(res.status).toBe(400)
+    expect(res.body.ok).toBe(false)
+  })
 })
 
 describe('devAutomation actions', () => {
