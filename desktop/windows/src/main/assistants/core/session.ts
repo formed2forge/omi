@@ -47,15 +47,32 @@ let abortController: AbortController | null = null
 type SessionResetListener = () => void
 const sessionResetListeners = new Set<SessionResetListener>()
 
+// Fired on the null → session transition (first relay after launch, or the first
+// relay after a sign-out). Same-user token refreshes and A→B switches without an
+// intervening null do NOT fire — those keep the existing epoch-guard / throttle
+// story. App startup wires the task engine's first pull here: a Tasks read that
+// beat the renderer relay used to no-op and then wait for window-focus or the
+// 5-min interval, so a fresh Windows profile showed an empty list.
+type SessionReadyListener = (session: BackendSession) => void
+const sessionReadyListeners = new Set<SessionReadyListener>()
+
 /** Register a reset run when the session is cleared (sign-out). */
 export function onSessionReset(fn: SessionResetListener): void {
   sessionResetListeners.add(fn)
+}
+
+/** Register a run when a session first arrives (null → credentials). */
+export function onSessionReady(fn: SessionReadyListener): void {
+  sessionReadyListeners.add(fn)
 }
 
 /** Set/refresh (or clear, on null) the shared session. Every in-flight job for
  *  the previous session is invalidated: its epoch check now fails, and its
  *  network work is aborted. */
 export function setBackendSession(session: BackendSession | null): void {
+  // Snapshot BEFORE the write: becameReady is the null→session edge the task
+  // engine (and any similar deferred main-side REST) needs to wake on.
+  const becameReady = session !== null && cached === null
   // Bump FIRST: anything already in flight belongs to the previous session and
   // must be stale from this instant on (jobs re-read the epoch at each write).
   epoch += 1
@@ -71,6 +88,15 @@ export function setBackendSession(session: BackendSession | null): void {
       } catch (e) {
         console.warn('[session] reset listener threw:', (e as Error)?.message)
       }
+    }
+    return
+  }
+  if (!becameReady) return
+  for (const fn of sessionReadyListeners) {
+    try {
+      fn(session)
+    } catch (e) {
+      console.warn('[session] ready listener threw:', (e as Error)?.message)
     }
   }
 }

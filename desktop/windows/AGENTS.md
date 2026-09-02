@@ -45,7 +45,10 @@ Cloud agents: push normally — do not skip the WAF fold unless the hook is bloc
 
 - **Install**: `pnpm install --frozen-lockfile` (postinstall rebuilds
   `better-sqlite3`, builds Windows-only OCR/audio/automation `.NET` helpers —
-  those steps no-op on Linux/macOS dev machines).
+  those steps no-op on Linux/macOS dev machines). On Windows the helpers are
+  `net10.0-windows`; without a .NET 10 SDK, postinstall warns and OCR / PTT
+  mute / UI automation stay disabled. Fresh-machine setup:
+  `docs/windows-dev-setup.md`.
 - **Run**: `pnpm dev` (electron-vite dev server + Electron). Multiple parallel
   worktrees auto-isolate ports/profiles — see `docs/multi-worktree-dev.md`.
 - **Typecheck**: `pnpm typecheck` (`typecheck:node` + `typecheck:web`).
@@ -107,6 +110,8 @@ starting this from scratch.
 
 ## Docs index
 
+- `docs/windows-dev-setup.md` — **fresh Windows install → working desktop
+  dev/test box** (toolchain, helpers, permissions, daily test commands).
 - `docs/release-pipeline.md` — Windows release/tagging/signing/auto-update, in
   depth.
 - `docs/bar-gotchas.md` — **read before touching bar window/animation code**:

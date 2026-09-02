@@ -30,8 +30,10 @@ try {
       '[ensure-ocr-helper] WARNING: win-ocr-helper.exe was NOT built.\n' +
       '  Feature DISABLED: screen OCR / screen-reading (the app will not read\n' +
       '  on-screen text).\n' +
-      '  Likely cause: the .NET SDK is not installed on this machine.\n' +
-      '  To enable it: install the .NET SDK, then run: npm run build:ocr-helper\n' +
+      '  Likely cause: no .NET 10 SDK, or NU1100 (nuget.org missing — fresh\n' +
+      '  Windows SDK installs often have zero package sources).\n' +
+      '  Fix: install the SDK, `dotnet nuget list source`, add nuget.org if empty,\n' +
+      '  then run: npm run build:ocr-helper\n' +
       '========================================================================\n'
   )
 }
