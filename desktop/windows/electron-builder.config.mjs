@@ -21,14 +21,21 @@
 import { computeUnpackGlobs } from './scripts/gen-pimono-unpack.mjs'
 import { KGWORKER_NATIVE_UNPACK_GLOBS } from './scripts/kgworker-native-closure.mjs'
 import fixPimonoChalkUnpack from './scripts/fix-pimono-chalk-unpack.mjs'
+import {
+  resolveElectronBuilderProductName,
+  WINDOWS_PRODUCT_NAME
+} from './scripts/electron-builder-product-name.mjs'
 
 // Fresh at every pack: the closure is recomputed from the installed node_modules,
 // so it can never be stale relative to what is actually on disk.
 const { globs: pimonoUnpackGlobs } = computeUnpackGlobs()
 
+// Linux fpm installs to `/opt/${productName}`; spaces break Fedora rpmbuild.
+const productName = resolveElectronBuilderProductName()
+
 export default {
   appId: 'com.omiwindows.app',
-  productName: 'Omi for Windows',
+  productName,
   directories: {
     buildResources: 'build'
   },
@@ -117,8 +124,9 @@ export default {
     // Windows") url-encodes to a path that no longer matches the uploaded asset —
     // every auto-update would 404. Keep this literal and space-free.
     artifactName: 'Omi-for-Windows-Setup-${version}.${ext}',
-    shortcutName: '${productName}',
-    uninstallDisplayName: '${productName}',
+    // Keep Windows display strings even if productName is ever shared with Linux.
+    shortcutName: WINDOWS_PRODUCT_NAME,
+    uninstallDisplayName: WINDOWS_PRODUCT_NAME,
     createDesktopShortcut: 'always'
   },
   mac: {

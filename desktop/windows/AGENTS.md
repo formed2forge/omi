@@ -52,7 +52,8 @@ Cloud agents: push normally — do not skip the WAF fold unless the hook is bloc
 - **Lint**: `pnpm lint` (ESLint; Prettier formatting is non-blocking in CI).
 - **Unit tests**: `pnpm test` (vitest, ~550 tests, runs against an Electron
   stub — no real Electron binary needed).
-- **Build**: `pnpm build:win` / `pnpm build:mac` / `pnpm build:linux`. Every
+- **Build**: `pnpm build:win` / `pnpm build:mac` / `pnpm build:linux`
+  (AppImage+deb+rpm) / `pnpm build:linux:appimage` (Fedora/Asahi local). Every
   build must pass `--config electron-builder.config.mjs` explicitly (not
   auto-detected — see `docs/release-pipeline.md`) and `--publish never`
   outside the release workflow.

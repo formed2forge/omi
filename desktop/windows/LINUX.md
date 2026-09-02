@@ -77,6 +77,23 @@ sudo dnf install zlib-devel fuse
   cannot install devel packages:
   `sudo ln -sf /usr/lib64/libz.so.1 /usr/lib64/libz.so`
 
+### Build packaged Linux binaries (Fedora / Asahi)
+```bash
+# Recommended on Fedora Asahi — AppImage only (skips deb/rpm):
+pnpm run build:linux:appimage
+
+# Full AppImage + deb + rpm (needs rpm-build for the rpm target):
+sudo dnf install -y rpm-build
+pnpm run build:linux
+```
+- `pnpm build:linux` includes an `.rpm`. Host `rpmbuild` comes from Fedora's
+  `rpm-build` package (not installed by default). Without it, fpm fails with an
+  opaque `rpmbuild failed (exit code )`.
+- Linux packages install under `/opt/Omi` (space-free). electron-builder's fpm
+  target uses `productName` as the `/opt/` directory; `"Omi for Windows"` broke
+  Fedora rpm builds. Windows display names stay `Omi for Windows` via NSIS
+  shortcut/uninstall strings.
+
 ## Wayland
 
 The app targets X11 by default on Linux (`ozone-platform=x11`, i.e. XWayland on
