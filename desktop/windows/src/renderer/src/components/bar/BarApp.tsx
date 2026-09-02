@@ -563,11 +563,11 @@ export function BarApp(): React.JSX.Element {
     continuousListening,
     agentsActive
   })
-  // Ambient agent status (Mac compactPillFill + AgentStatusGlow). Voice
-  // capturing/replying owns the pill; otherwise the highest-priority unviewed
-  // pill group tints the surface (failed > running > queued > done > stopped).
-  // Glow stays on through peek → short expand → full expand so finished/running
-  // status remains visible after click-to-expand (not peek-only).
+  // Collapsed-bar ambient agent status (Mac compactPillFill + AgentStatusGlow).
+  // Voice capturing/replying owns the pill; otherwise the highest-priority
+  // unviewed pill group tints the surface (failed > running > queued > done >
+  // stopped). Expanded chrome stays un-tinted so the glow is peek-only; status
+  // while expanded is via list/header orbs and chips (Mac parity).
   const turnPhase = deriveTurnPhase({
     recording: recordingNow,
     transcribing: thinkingNow,
@@ -577,7 +577,7 @@ export function BarApp(): React.JSX.Element {
   })
   const agentGroup = aggregateStatusGroup(pills)
   const showAgentGlow =
-    agentGroup !== null && !voiceSuppressesAgentStatus(turnPhase)
+    !expanded && agentGroup !== null && !voiceSuppressesAgentStatus(turnPhase)
   // The orb's live level, by lane: the user's mic while capturing (hub-projected
   // or local analyser), the reply's own played audio while Omi speaks (fresh
   // playback tap only — stale ⇒ null ⇒ pose-only choreography), else none.
