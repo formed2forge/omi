@@ -2,6 +2,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs'
 import { dirname, isAbsolute, join, resolve } from 'path'
 import { normalizeNiriChord } from './acceleratorToNiri'
+import { findAllBindsRanges } from './kdlBraces'
 import {
   OMI_MANAGED_BEGIN,
   OMI_MANAGED_END,
@@ -75,28 +76,6 @@ function parseIncludes(text: string, baseDir: string): string[] {
   return out
 }
 
-function findBindsBlockRanges(text: string): Array<{ start: number; end: number }> {
-  const ranges: Array<{ start: number; end: number }> = []
-  const re = /\bbinds\s*\{/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(text)) !== null) {
-    const open = m.index + m[0].length - 1
-    let depth = 0
-    for (let i = open; i < text.length; i++) {
-      const ch = text[i]
-      if (ch === '{') depth++
-      else if (ch === '}') {
-        depth--
-        if (depth === 0) {
-          ranges.push({ start: open + 1, end: i })
-          break
-        }
-      }
-    }
-  }
-  return ranges
-}
-
 function managedRanges(text: string): Array<{ start: number; end: number }> {
   const ranges: Array<{ start: number; end: number }> = []
   let from = 0
@@ -117,7 +96,7 @@ function inAnyRange(index: number, ranges: Array<{ start: number; end: number }>
 
 function parseBindsInFile(filePath: string, text: string): NiriBindHit[] {
   const hits: NiriBindHit[] = []
-  const bindRanges = findBindsBlockRanges(text)
+  const bindRanges = findAllBindsRanges(text)
   const managed = managedRanges(text)
   if (bindRanges.length === 0) return hits
 

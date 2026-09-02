@@ -2,22 +2,8 @@
 import { copyFileSync, renameSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
 import { LINUX_CLI_ACTION_FLAG } from '../linuxCliAction'
+import { findTopLevelBindsRange } from './kdlBraces'
 import { OMI_MANAGED_BEGIN, OMI_MANAGED_END, type NiriChordPlan } from './types'
-
-function findBindsInnerRange(text: string): { openBrace: number; closeBrace: number } | null {
-  const m = /\bbinds\s*\{/.exec(text)
-  if (!m) return null
-  const openBrace = m.index + m[0].length - 1
-  let depth = 0
-  for (let i = openBrace; i < text.length; i++) {
-    if (text[i] === '{') depth++
-    else if (text[i] === '}') {
-      depth--
-      if (depth === 0) return { openBrace, closeBrace: i }
-    }
-  }
-  return null
-}
 
 export function buildManagedBlock(binaryPath: string, plans: NiriChordPlan[]): string {
   const lines = plans.map(
@@ -27,34 +13,49 @@ export function buildManagedBlock(binaryPath: string, plans: NiriChordPlan[]): s
   return [`    ${OMI_MANAGED_BEGIN}`, ...lines, `    ${OMI_MANAGED_END}`].join('\n')
 }
 
-/** Insert or replace the managed block in config text. Returns new full text. */
+/** Remove every Omi managed block (including misplaced ones under recent-windows). */
+export function stripManagedBlocks(text: string): string {
+  let out = text
+  for (;;) {
+    const begin = out.indexOf(OMI_MANAGED_BEGIN)
+    if (begin < 0) break
+    const end = out.indexOf(OMI_MANAGED_END, begin)
+    if (end < 0) {
+      // Incomplete marker — drop from BEGIN through EOL to avoid leaving a half-block.
+      const lineStart = out.lastIndexOf('\n', begin - 1) + 1
+      const lineEnd = out.indexOf('\n', begin)
+      out = out.slice(0, lineStart) + (lineEnd >= 0 ? out.slice(lineEnd + 1) : '')
+      break
+    }
+    const lineStart = out.lastIndexOf('\n', begin - 1) + 1
+    const endLineEnd = out.indexOf('\n', end)
+    const replaceEnd = endLineEnd >= 0 ? endLineEnd + 1 : out.length
+    out = out.slice(0, lineStart) + out.slice(replaceEnd)
+  }
+  return out
+}
+
+/** Insert or replace the managed block in the top-level `binds {}` only. */
 export function applyManagedBlockToText(
   text: string,
   binaryPath: string,
   plans: NiriChordPlan[]
 ): string {
   const block = buildManagedBlock(binaryPath, plans)
-  const begin = text.indexOf(OMI_MANAGED_BEGIN)
-  const end = text.indexOf(OMI_MANAGED_END)
-  if (begin >= 0 && end > begin) {
-    // Replace from start of line containing BEGIN through END marker line.
-    const lineStart = text.lastIndexOf('\n', begin - 1) + 1
-    const endLineEnd = text.indexOf('\n', end)
-    const replaceEnd = endLineEnd >= 0 ? endLineEnd + 1 : text.length
-    return text.slice(0, lineStart) + block + '\n' + text.slice(replaceEnd)
-  }
+  // Always strip first so a prior write into `recent-windows { binds {…} }` is relocated.
+  let next = stripManagedBlocks(text)
 
-  const range = findBindsInnerRange(text)
+  const range = findTopLevelBindsRange(next)
   if (range) {
-    const before = text.slice(0, range.closeBrace)
-    const after = text.slice(range.closeBrace)
+    const before = next.slice(0, range.closeBrace)
+    const after = next.slice(range.closeBrace)
     const needsNl = !before.endsWith('\n')
     return `${before}${needsNl ? '\n' : ''}${block}\n${after}`
   }
 
-  // No binds block — append one (niri users almost always have one; this is a safety net).
+  // No top-level binds block — append one (niri users almost always have one).
   const suffix = `\n\nbinds {\n${block}\n}\n`
-  return text.endsWith('\n') ? text + suffix.trimStart() : text + suffix
+  return next.endsWith('\n') ? next + suffix.trimStart() : next + suffix
 }
 
 export type WriteNiriConfigResult =

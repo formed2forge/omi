@@ -3,8 +3,14 @@ import {
   electronAcceleratorToNiriChord,
   normalizeNiriChord
 } from './acceleratorToNiri'
+import { findTopLevelBindsRange } from './kdlBraces'
+import { resolvePackagedSpawnPath } from './packagedSpawnPath'
 import { decideChord, scanNiriConfigTree } from './scanNiriConfig'
-import { applyManagedBlockToText, buildManagedBlock } from './writeNiriConfig'
+import {
+  applyManagedBlockToText,
+  buildManagedBlock,
+  stripManagedBlocks
+} from './writeNiriConfig'
 import { OMI_MANAGED_BEGIN, OMI_MANAGED_END } from './types'
 
 describe('electronAcceleratorToNiriChord', () => {
@@ -18,6 +24,59 @@ describe('electronAcceleratorToNiriChord', () => {
   it('normalizes chord mod order', () => {
     expect(normalizeNiriChord('Shift+Mod+Space')).toBe('Mod+Shift+Space')
     expect(normalizeNiriChord('Mod+Shift+Space')).toBe('Mod+Shift+Space')
+  })
+})
+
+describe('resolvePackagedSpawnPath', () => {
+  it('prefers APPIMAGE over ephemeral execPath', () => {
+    expect(
+      resolvePackagedSpawnPath(
+        { APPIMAGE: '/home/u/Omi-x.AppImage' },
+        '/tmp/.mount_omi-abc/omi-windows',
+        true
+      )
+    ).toBe('/home/u/Omi-x.AppImage')
+  })
+
+  it('falls back to execPath when APPIMAGE is unset', () => {
+    expect(resolvePackagedSpawnPath({}, '/usr/bin/omi-windows', true)).toBe('/usr/bin/omi-windows')
+  })
+
+  it('returns null when not packaged', () => {
+    expect(
+      resolvePackagedSpawnPath({ APPIMAGE: '/x.AppImage' }, '/tmp/mount/omi', false)
+    ).toBeNull()
+  })
+})
+
+describe('findTopLevelBindsRange', () => {
+  it('skips recent-windows nested binds', () => {
+    const text = `recent-windows {
+    binds {
+        Alt+Tab { next-window; }
+        Alt+Shift+Tab { previous-window; }
+    }
+}
+
+binds {
+    Mod+T { spawn "alacritty"; }
+}
+`
+    const range = findTopLevelBindsRange(text)
+    expect(range).not.toBeNull()
+    const inner = text.slice(range!.openBrace + 1, range!.closeBrace)
+    expect(inner).toContain('Mod+T')
+    expect(inner).not.toContain('next-window')
+  })
+
+  it('ignores braces inside spawn strings', () => {
+    const text = `binds {
+    Mod+T { spawn "sh" "-c" "echo {hello}"; }
+}
+`
+    const range = findTopLevelBindsRange(text)
+    expect(range).not.toBeNull()
+    expect(text.slice(range!.openBrace, range!.closeBrace + 1)).toContain('echo {hello}')
   })
 })
 
@@ -147,5 +206,55 @@ describe('applyManagedBlockToText', () => {
     expect(second.match(new RegExp(OMI_MANAGED_BEGIN, 'g'))).toHaveLength(1)
     expect(second).toContain('Alt+Space')
     expect(second).not.toContain('Shift+Space { spawn')
+  })
+
+  it('writes into top-level binds, not recent-windows nested binds', () => {
+    const input = `recent-windows {
+    binds {
+        Alt+Tab { next-window; }
+        Alt+Shift+Tab { previous-window; }
+    }
+}
+
+binds {
+    Mod+T { spawn "alacritty"; }
+}
+`
+    const out = applyManagedBlockToText(input, '/home/u/Omi.AppImage', [
+      { electronAccelerator: 'Shift+Space', niriChord: 'Shift+Space', action: 'summon' },
+      { electronAccelerator: 'Ctrl+Space', niriChord: 'Ctrl+Space', action: 'record-mic' }
+    ])
+    const recentInner = out.slice(out.indexOf('recent-windows'), out.indexOf('\nbinds {'))
+    expect(recentInner).not.toContain(OMI_MANAGED_BEGIN)
+    expect(recentInner).not.toContain('spawn')
+    const topBinds = out.slice(out.lastIndexOf('\nbinds {'))
+    expect(topBinds).toContain(OMI_MANAGED_BEGIN)
+    expect(topBinds).toContain('Shift+Space { spawn "/home/u/Omi.AppImage"')
+    expect(topBinds).toContain('Ctrl+Space { spawn "/home/u/Omi.AppImage"')
+  })
+
+  it('relocates a managed block wrongly placed under recent-windows', () => {
+    const misplaced = `recent-windows {
+    binds {
+        Alt+Tab { next-window; }
+        ${OMI_MANAGED_BEGIN}
+        Shift+Space { spawn "/tmp/.mount_omi/omi-windows" "--omi-action" "summon"; }
+        ${OMI_MANAGED_END}
+    }
+}
+
+binds {
+    Mod+T { spawn "alacritty"; }
+}
+`
+    const out = applyManagedBlockToText(misplaced, '/home/u/Omi.AppImage', [
+      { electronAccelerator: 'Shift+Space', niriChord: 'Shift+Space', action: 'summon' }
+    ])
+    expect(stripManagedBlocks(out).match(new RegExp(OMI_MANAGED_BEGIN, 'g'))).toBeNull()
+    expect(out.match(new RegExp(OMI_MANAGED_BEGIN, 'g'))).toHaveLength(1)
+    const recentInner = out.slice(out.indexOf('recent-windows'), out.indexOf('\nbinds {'))
+    expect(recentInner).not.toContain(OMI_MANAGED_BEGIN)
+    expect(out).toContain('Shift+Space { spawn "/home/u/Omi.AppImage"')
+    expect(out).not.toContain('/tmp/.mount_omi')
   })
 })
