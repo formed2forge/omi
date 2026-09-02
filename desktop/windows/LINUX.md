@@ -172,6 +172,12 @@ Automatic install requires a packaged AppImage/deb/rpm. For AppImage, spawn uses
 `/tmp/.mount_*` extract (`process.execPath`). `pnpm dev` keeps the manual note
 only.
 
+**KDE / Plasma:** in-app `globalShortcut` is expected to deliver (unlike niri).
+Settings → Shortcuts also **scans** `~/.config/kglobalshortcutsrc` (KGlobalAccel)
+read-only and warns when summon/record chords collide with a Plasma binding.
+Omi does not write Plasma shortcuts in this phase — change the chord in Omi or
+in System Settings → Shortcuts.
+
 ## What works / what's next
 - ✅ Sign-in, mic → cloud transcription, chat, memory (inherited, cross-platform)
 - ⚠️ App-usage tracking (X11 active-window via `linuxForeground.ts`;

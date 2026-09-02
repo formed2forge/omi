@@ -198,6 +198,7 @@ import {
   maybeAutoSyncNiriKeybinds,
   setNiriKeybindAutoApply
 } from './linux/compositorKeybinds/niriKeybindService'
+import { scanLinuxDeConflicts } from './linux/conflictScanners/scanLinuxDeConflicts'
 
 // Default main-window content size. Single source of truth for both window
 // creation and the Settings → Font Size "Reset Window Size" affordance
@@ -1547,6 +1548,11 @@ app.whenReady().then(async () => {
   })
 
   ipcMain.handle('shortcuts:get-linux-session', () => getLinuxSessionDiagnostics())
+
+  ipcMain.handle('shortcuts:scan-de-conflicts', () => {
+    if (process.platform !== 'linux') return null
+    return scanLinuxDeConflicts()
+  })
 
   ipcMain.handle('shortcuts:get-niri-keybind-status', () => {
     if (process.platform !== 'linux') return null
