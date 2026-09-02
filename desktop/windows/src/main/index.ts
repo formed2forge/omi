@@ -438,7 +438,6 @@ if (gotSingleInstanceLock) initCrashSentinel()
 // the PipeWire capturer (portal screen share) and PulseAudio monitor-source loopback
 // for system-audio capture when pipewire-pulse/Pulse is present.
 if (process.platform === 'linux') {
-<<<<<<< HEAD
   // app.setDesktopName is a newer Linux/Wayland-portal-only Electron API, undeclared
   // in this project's pinned Electron 39 types and absent at runtime on it — guard so
   // a version without it degrades to a no-op instead of throwing on launch.
@@ -446,11 +445,6 @@ if (process.platform === 'linux') {
   const setDesktopName = (app as unknown as { setDesktopName?: (name: string) => void })
     .setDesktopName
   applyLinuxPortalIdentity((name) => setDesktopName?.call(app, name))
-=======
-  applyLinuxPortalIdentity((name) => {
-    ;(app as Electron.App & { setDesktopName(name: string): void }).setDesktopName(name)
-  })
->>>>>>> 2e0c871a53 (feat(desktop): Linux shortcuts phase 1 — test probe and session diagnostics)
   app.commandLine.appendSwitch('ozone-platform', resolveLinuxOzonePlatform())
   app.commandLine.appendSwitch(
     'enable-features',
