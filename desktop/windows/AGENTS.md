@@ -98,8 +98,8 @@ starting this from scratch.
   the top-edge companion bar has real, non-obvious pathologies (OS show-fade,
   clip-reveal, orb remount blink, eaten hardware clicks).
 - `docs/conversation-sync.md` — offline-retry outbox design.
-- `docs/multi-worktree-dev.md` — parallel-worktree port/profile isolation, dev
-  env var reference.
+- `docs/multi-worktree-dev.md` — parallel-worktree port/profile isolation,
+  `omi-ctl` dev bridge, env var reference.
 - `docs/linux-screen-recording.md` — Rewind needs a Wayland desktop portal;
   wlroots compositors (niri, Sway, Hyprland) often ship none configured.
 - `docs/perf-invisible-wins.md`, `docs/perf-startup-burst-2026-07-19.md` — perf notes.
