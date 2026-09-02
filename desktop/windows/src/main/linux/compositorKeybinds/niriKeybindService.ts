@@ -6,6 +6,7 @@ import { electronAcceleratorToNiriChord } from './acceleratorToNiri'
 import { resolveNiriConfigPath } from './resolveNiriConfigPath'
 import { decideChord, scanNiriConfigTree } from './scanNiriConfig'
 import { applyManagedBlockToText, writeNiriConfigAtomic } from './writeNiriConfig'
+import { resolvePackagedSpawnPath } from './packagedSpawnPath'
 import type { NiriChordPlan, NiriScanResult } from './types'
 import { detectLinuxCompositor } from '../linuxSession'
 import { getAppSettings, setAppSettings } from '../../appSettings'
@@ -16,8 +17,7 @@ import type {
 } from '../../../shared/types'
 
 function packagedBinaryPath(): string | null {
-  if (!app.isPackaged) return null
-  return process.execPath
+  return resolvePackagedSpawnPath(process.env, process.execPath, app.isPackaged)
 }
 
 function buildPlans(summonAccel: string, recordAccel: string | null): NiriChordPlan[] | { error: string } {
