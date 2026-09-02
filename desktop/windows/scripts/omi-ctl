@@ -28,6 +28,47 @@ curl_bridge() {
   curl -fsS -H "Authorization: Bearer $TOKEN" "$@"
 }
 
+# POST helper: always prints the response body; exits non-zero on HTTP >=400.
+curl_bridge_post() {
+  load_token
+  local out code
+  out="$(mktemp)"
+  # shellcheck disable=SC2064
+  trap "rm -f '$out'" RETURN
+  code=$(curl -sS -w '%{http_code}' -o "$out" -H "Authorization: Bearer $TOKEN" "$@") || {
+    cat "$out" >&2
+    return 1
+  }
+  cat "$out"
+  if [ "$code" -ge 400 ]; then
+    echo "omi-ctl: HTTP $code" >&2
+    return 22
+  fi
+}
+
+# Exit 1 when a successful HTTP envelope carries an action-level error (mac parity).
+assert_action_ok() {
+  python3 -c '
+import json
+import sys
+
+try:
+    envelope = json.load(sys.stdin)
+except json.JSONDecodeError:
+    raise SystemExit(0)
+
+action = (envelope.get("result") or {}).get("action") or {}
+err = action.get("error")
+if err:
+    print(f"omi-ctl: action failed: {err}", file=sys.stderr)
+    raise SystemExit(1)
+if action.get("ok") == "false":
+    msg = action.get("error") or "main chat failed"
+    print(f"omi-ctl: action failed: {msg}", file=sys.stderr)
+    raise SystemExit(1)
+'
+}
+
 cmd="${1:-help}"; shift || true
 case "$cmd" in
   state)
@@ -74,7 +115,9 @@ print(path)
     body="{\"name\":\"$name\""
     [ -n "$params" ] && body="$body,\"params\":{$params}}"
     body="$body}"
-    curl_bridge -X POST "$BASE/action" -H 'content-type: application/json' -d "$body"; echo ;;
+    resp=$(curl_bridge_post -X POST "$BASE/action" -H 'content-type: application/json' -d "$body")
+    printf '%s\n' "$resp"
+    printf '%s' "$resp" | assert_action_ok ;;
   wait-ready)
     tries="${1:-30}"
     for _ in $(seq 1 "$tries"); do

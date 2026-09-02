@@ -76,7 +76,11 @@ async function askMainChat(
 ): Promise<DevAutomationActionResult> {
   const query = (params.query ?? '').trim()
   if (!query) return { error: "missing 'query'" }
-  if (!ctx.ownerReady) return { error: 'sign-in has not completed yet' }
+  if (!ctx.ownerReady) {
+    return {
+      error: 'sign-in has not completed yet — run ./scripts/omi-ctl wait-ready before actions'
+    }
+  }
   if (ctx.isMainChatBusy()) {
     return {
       accepted: 'false',
@@ -147,7 +151,11 @@ async function voiceToolExecute(
   params: Record<string, string>,
   ctx: DevAutomationActionContext
 ): Promise<DevAutomationActionResult> {
-  if (!ctx.ownerReady) return { error: 'sign-in has not completed yet' }
+  if (!ctx.ownerReady) {
+    return {
+      error: 'sign-in has not completed yet — run ./scripts/omi-ctl wait-ready before actions'
+    }
+  }
   const name = (params.name ?? '').trim()
   if (!name) return { error: "missing 'name'" }
   const argumentsJSON = params.argumentsJSON ?? params.arguments ?? '{}'
