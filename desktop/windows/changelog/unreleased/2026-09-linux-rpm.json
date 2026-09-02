@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "Linux packages now include an RPM for Fedora/RHEL alongside the existing AppImage and .deb."
+  ]
+}

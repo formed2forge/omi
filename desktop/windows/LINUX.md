@@ -31,11 +31,24 @@ sudo apt-get install -y x11-utils tesseract-ocr tesseract-ocr-eng
   app is unaffected).
 - Packaged `.deb` depends on `tesseract-ocr`, `tesseract-ocr-eng`,
   `libnotify4`, `libxss1`, and `x11-utils` (for `xprop`). AppImage users still
-  need the packages above.
+  need the packages above. Fedora/RHEL `.rpm` packaging is in the next section.
 - System-audio loopback (meeting capture) needs PulseAudio or `pipewire-pulse`.
   Chromium flag `PulseaudioLoopbackForScreenShare` is enabled on Linux; without
   a Pulse layer the flag is inert and capture falls back to mic-only.
 - Headless/CI: run under `xvfb-run` and pass `--no-sandbox`.
+
+## Runtime dependencies (Fedora / RHEL)
+```bash
+sudo dnf install -y xprop tesseract tesseract-langpack-eng
+```
+- `xprop` is the same binary Debian packages as `x11-utils`. Older RHEL
+  still ships it as `xorg-x11-utils`; the RPM `Requires` accepts either.
+- `tesseract` + `tesseract-langpack-eng` back screen OCR (Debian's
+  `tesseract-ocr` / `tesseract-ocr-eng`).
+- Packaged `.rpm` Depends on those plus Electron's GTK/NSS runtime set
+  (`gtk3`, `nss`, `libnotify`, `libXScrnSaver`, …). AppImage users still
+  need the packages above. openSUSE package names differ (`tesseract-ocr`);
+  that distro is not a first-class RPM target yet.
 
 ## Runtime dependencies (Arch)
 ```bash
@@ -135,7 +148,7 @@ binds {
 }
 ```
 
-Automatic install requires a packaged AppImage/deb (`process.execPath`). `pnpm dev`
+Automatic install requires a packaged AppImage/deb/rpm (`process.execPath`). `pnpm dev`
 keeps the manual note only.
 
 ## What works / what's next
@@ -152,7 +165,7 @@ keeps the manual note only.
 - ⏳ Tray / Quit (reuse Windows tray module when it lands — Linux needs
   context-menu-first tray, not double-click).
 - ⏳ Auto-update (AppImage-only: gate on `process.env.APPIMAGE`, not just
-  `isPackaged`; `.deb` stays package-manager).
+  `isPackaged`; `.deb` / `.rpm` stay package-manager).
 - ⏳ XDG autostart (`.desktop` under `~/.config/autostart`) when launch-at-login
   Settings exists on this tree. Base `.desktop` ships in `resources/linux/` for
   packaging; autostart wiring is still TODO.
@@ -176,11 +189,11 @@ keeps the manual note only.
   backed by the `tesseract` CLI for OCR and `xprop`/`/proc` for window info.
   `ocr/helperProcess.ts` spawns it with **Electron's bundled Node**
   (`process.execPath` + `ELECTRON_RUN_AS_NODE=1`), so it needs no system `node`
-  in packaged AppImage/deb builds.
+  in packaged AppImage/deb/rpm builds.
 - `src/main/ocr/resolveHelperPath.ts` — returns the Linux helper path on Linux;
   the Windows path is unchanged. `electron-builder.config.mjs` unpacks `resources/**`,
   so packaged Linux builds ship the helper.
-- `electron-builder.config.mjs` — Linux targets are **AppImage + deb** (snap omitted:
+- `electron-builder.config.mjs` — Linux targets are **AppImage + deb + rpm** (snap omitted:
   strict confinement blocks `xprop`/`tesseract`/`/proc`).
 
 ### Future enhancement
