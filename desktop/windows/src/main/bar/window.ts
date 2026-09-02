@@ -51,10 +51,12 @@ import {
   type Rect
 } from './placement'
 import {
+  isNativeWaylandLinux,
   linuxBarParkStrategy,
   linuxBarSkipAlwaysOnTop,
   linuxBarUsesShellBounds
 } from '../linux/nativeWayland'
+import { raiseWaylandBarWindow } from '../linux/waylandActivation'
 import { SummonGesture, type GestureKind } from './gesture'
 import { recordVoiceFlight } from '../voice/flightRecorder'
 import {
@@ -530,7 +532,10 @@ function commitReveal(token: number): void {
   // shown (primed), so this is a fade-free move, leaving only the CSS grow visible.
   unparkWindow(win, pending.bounds)
   diag(`commitReveal mode=${pending.mode}`)
-  if (pending.mode === 'expanded') win.focus()
+  if (waylandCompositorSummonRaise) {
+    waylandCompositorSummonRaise = false
+    raiseWaylandBarWindow(win)
+  } else if (pending.mode === 'expanded') win.focus()
   // Watch runs in every visible collapsed mode (peek + ptt) — it drives
   // click-to-expand interactivity; only peek also runs the retract grace.
   if (pending.mode !== 'expanded') startPeekWatch()
@@ -922,6 +927,9 @@ export function handleSummonPress(): void {
 }
 
 let barSummonMainWindow: BrowserWindow | null = null
+/** Compositor-keybind summon on native Wayland: raise after reveal (showInactive
+ *  alone leaves the pill behind other clients even when Plasma grants activation). */
+let waylandCompositorSummonRaise = false
 
 /** Main process registers the primary chat window so native-Wayland summon can
  *  tuck it without relying on Electron's non-typed skipTaskbar getter. */
@@ -950,6 +958,23 @@ export function summonFromTray(): void {
   broadcast('overlay:summoned')
   if (isBarCleanlyPresented()) hideBar()
   else showBar('peek', 'summon')
+}
+
+/** Compositor/KDE `--omi-action summon` — same bar toggle as the tray, but on
+ *  native Wayland also raises the pill with the XDG activation token instead of
+ *  only flashing the taskbar entry. */
+export function summonFromCompositorShortcut(): void {
+  if (!barEnabled) return
+  tuckMainWindowForBarSummon()
+  broadcast('overlay:summoned')
+  const win = barWindow
+  if (isBarCleanlyPresented()) {
+    if (isNativeWaylandLinux() && win && !win.isDestroyed()) raiseWaylandBarWindow(win)
+    else hideBar()
+    return
+  }
+  waylandCompositorSummonRaise = isNativeWaylandLinux()
+  showBar('peek', 'summon')
 }
 
 /** (Re)build the gesture machine for an accelerator — call at startup and
