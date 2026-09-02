@@ -109,10 +109,11 @@ function buildCompositorWorkaround(
       recordMicCommand,
       plasmaSettingsSteps: [
         'System Settings → Shortcuts → Add New → Command or Script',
-        `Summon: ${summonCommand}`,
-        `Record mic: ${recordMicCommand}`,
-        'Assign the same chords you set in Omi, then Apply.',
-        'If the chord does not fire immediately, log out and back in once.'
+        'Command (one line, no line breaks):',
+        `/path/to/omi-windows.AppImage --omi-action summon`,
+        'Keep Omi running in the tray (close window ≠ quit). Test from a terminal:',
+        '/path/to/omi-windows.AppImage --omi-action summon',
+        'Assign the same chord in Plasma and in Omi. Log out/in once if Plasma ignores the bind.'
       ].join('\n')
     }
   }
