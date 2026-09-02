@@ -46,6 +46,7 @@ import {
   destroyBar,
   handleSummonPress,
   summonFromTray,
+  summonFromCompositorShortcut,
   registerBarSummonMainWindow,
   setSummonGestureAccelerator,
   setBarEnabled,
@@ -190,6 +191,11 @@ import {
   parseLinuxCliAction,
   type LinuxCliAction
 } from './linux/linuxCliAction'
+import {
+  applyLinuxActivationToken,
+  stashLinuxActivationFromEnv,
+  stashLinuxActivationFromSecondInstance
+} from './linux/waylandActivation'
 import { probeGlobalAccelerator } from './shortcutProbe'
 import {
   clearNiriKeybindConsent,
@@ -224,6 +230,7 @@ function withMainWindow(fn: (win: BrowserWindow) => void): void {
 
 /** Surface the main window: un-minimize, show, focus. */
 function surfaceMainWindow(): void {
+  applyLinuxActivationToken()
   withMainWindow((win) => {
     if (win.isMinimized()) win.restore()
     win.show()
@@ -253,8 +260,7 @@ function runLinuxCliAction(action: LinuxCliAction): void {
     // (Win32 key sampler) and toggle the bar directly, same as the tray item.
     summon: () => {
       setBarEnabled(true)
-      stealAppFocus()
-      summonFromTray()
+      summonFromCompositorShortcut()
     },
     recordMic: () => {
       surfaceMainWindow()
@@ -453,6 +459,8 @@ if (import.meta.env.DEV) devBench.applySandboxUserDataOverride()
 // harness's --user-data-dir) each get their own lock instead of contending.
 const gotSingleInstanceLock = app.requestSingleInstanceLock()
 if (!gotSingleInstanceLock) app.quit()
+// Plasma/niri compositor spawns may carry a one-shot XDG activation token.
+if (gotSingleInstanceLock) stashLinuxActivationFromEnv()
 // Compositor/KDE command shortcuts: cold launch must parse argv here — the
 // second-instance handler only runs when a copy is already alive.
 if (gotSingleInstanceLock) handleLinuxCliActionFromArgv(process.argv)
@@ -1671,7 +1679,8 @@ app.whenReady().then(async () => {
 // A second launch attempt handed off to us (see requestSingleInstanceLock):
 // surface the existing window instead of starting a new instance, or dispatch a
 // compositor-keybind action (`omi-windows --omi-action summon|record-mic`).
-app.on('second-instance', (_event, argv) => {
+app.on('second-instance', (_event, argv, _workingDirectory, additionalData) => {
+  stashLinuxActivationFromSecondInstance(argv, additionalData)
   if (handleLinuxCliActionFromArgv(argv)) return
   surfaceMainWindow()
 })
