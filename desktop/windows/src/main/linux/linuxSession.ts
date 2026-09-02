@@ -3,8 +3,13 @@
 // portal app ID (desktopName + .desktop) and centralize session detection so
 // later phases (conflict scanners, Settings UX) read one source of truth.
 import { formatLinuxCliSpawnCommand } from './linuxCliAction'
-
+import {
+  detectLinuxCompositor,
+  type LinuxCompositorKind
+} from './compositorDetect'
 import { defaultOzonePlatform } from '../linuxCompositor'
+
+export type { LinuxCompositorKind }
 
 /** Reverse-DNS portal identity — must match appId, package.json desktopName, and
  *  the installed .desktop basename (com.omiwindows.app.desktop). */
@@ -18,8 +23,6 @@ export const LINUX_STARTUP_WM_CLASS = 'omi-windows'
 export type LinuxSessionType = 'wayland' | 'x11' | 'unknown'
 
 export type LinuxOzonePlatform = 'x11' | 'wayland'
-
-export type LinuxCompositorKind = 'niri' | 'sway' | 'hyprland' | 'gnome' | 'kde' | 'unknown'
 
 export type LinuxCompositorKeybindWorkaround = {
   compositor: LinuxCompositorKind
@@ -74,16 +77,7 @@ export function isLinuxWaylandSession(env: NodeJS.ProcessEnv = process.env): boo
   return normalizeSessionType(env.XDG_SESSION_TYPE) === 'wayland'
 }
 
-export function detectLinuxCompositor(env: NodeJS.ProcessEnv = process.env): LinuxCompositorKind {
-  if (env.NIRI_SOCKET?.trim()) return 'niri'
-  const desktop = (env.XDG_CURRENT_DESKTOP ?? '').toLowerCase()
-  if (desktop.includes('niri')) return 'niri'
-  if (env.SWAYSOCK?.trim()) return 'sway'
-  if (env.HYPRLAND_INSTANCE_SIGNATURE?.trim()) return 'hyprland'
-  if (desktop.includes('gnome') || desktop.includes('unity')) return 'gnome'
-  if (desktop.includes('kde') || desktop.includes('plasma')) return 'kde'
-  return 'unknown'
-}
+export { detectLinuxCompositor }
 
 function buildCompositorWorkaround(
   compositor: LinuxCompositorKind

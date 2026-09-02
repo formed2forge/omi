@@ -92,6 +92,20 @@ describe('detectLinuxCompositor', () => {
   it('detects sway from SWAYSOCK', () => {
     expect(detectLinuxCompositor({ SWAYSOCK: '/run/user/1000/sway-ipc.0' })).toBe('sway')
   })
+
+  it('prefers Plasma XDG identity over a stale NIRI_SOCKET', () => {
+    expect(
+      detectLinuxCompositor({
+        XDG_CURRENT_DESKTOP: 'KDE',
+        XDG_SESSION_TYPE: 'wayland',
+        NIRI_SOCKET: '/run/user/1000/niri.sock'
+      })
+    ).toBe('kde')
+  })
+
+  it('still detects niri when XDG names niri even without a socket', () => {
+    expect(detectLinuxCompositor({ XDG_CURRENT_DESKTOP: 'niri' })).toBe('niri')
+  })
 })
 
 describe('resolveGlobalShortcutsCapability', () => {
@@ -166,7 +180,7 @@ describe('detectLinuxSession', () => {
     })
   })
 
-  it('formats a stable one-line summary', () => {
+  it('formats a stable one-line summary for Plasma (ignores stale NIRI_SOCKET)', () => {
     const summary = formatLinuxSessionSummary(
       detectLinuxSession({
         XDG_SESSION_TYPE: 'wayland',
@@ -178,8 +192,22 @@ describe('detectLinuxSession', () => {
     expect(summary).toContain('session=wayland')
     expect(summary).toContain('ozone=wayland')
     expect(summary).toContain('shortcuts=wayland-portal')
+    expect(summary).toContain('delivery=ok')
+    expect(summary).toContain('compositor=kde')
+    expect(summary).toContain('desktop=KDE')
+    expect(summary).not.toContain('compositor=niri')
+  })
+
+  it('formats a compositor-keybind summary under niri', () => {
+    const summary = formatLinuxSessionSummary(
+      detectLinuxSession({
+        XDG_SESSION_TYPE: 'wayland',
+        XDG_CURRENT_DESKTOP: 'niri',
+        OMI_OZONE: 'wayland',
+        NIRI_SOCKET: '/run/niri/0'
+      })
+    )
     expect(summary).toContain('delivery=compositor-keybind')
     expect(summary).toContain('compositor=niri')
-    expect(summary).toContain('desktop=KDE')
   })
 })
