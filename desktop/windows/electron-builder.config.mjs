@@ -144,11 +144,27 @@ export default {
     // AppImage + deb only — snap omitted: strict confinement blocks
     // xprop/tesseract/proc used by Linux active-window and OCR seams.
     target: ['AppImage', 'deb'],
-    // Matches LINUX_STARTUP_WM_CLASS / resources/linux/com.omiwindows.app.desktop —
-    // portal identity and task switcher grouping depend on this staying aligned with
-    // package.json desktopName (com.omiwindows.app).
+    // Matches LINUX_STARTUP_WM_CLASS / package.json desktopName
+    // (com.omiwindows.app). Portal identity and task-switcher grouping depend
+    // on desktopName + StartupWMClass staying aligned with linuxSession.ts.
     executableName: 'omi-windows',
-    desktop: 'resources/linux/com.omiwindows.app.desktop',
+    // electron-builder v26+: `desktop` is a LinuxDesktopFile object, not a path.
+    // Values mirror resources/linux/com.omiwindows.app.desktop (kept as the
+    // checked-in reference for portal identity / docs).
+    syncDesktopName: true,
+    desktop: {
+      entry: {
+        Name: 'Omi',
+        GenericName: 'AI Assistant',
+        Comment: 'AI that sees your screen, listens, and remembers',
+        Type: 'Application',
+        Terminal: 'false',
+        Categories: 'Utility',
+        // X11 WM_CLASS from executableName; Wayland app_id uses desktopName.
+        StartupWMClass: 'omi-windows',
+        MimeType: 'x-scheme-handler/omi;'
+      }
+    },
     maintainer: 'Based Hardware <team@basedhardware.com>',
     category: 'Utility',
     synopsis: 'AI that sees your screen, listens, and remembers'
