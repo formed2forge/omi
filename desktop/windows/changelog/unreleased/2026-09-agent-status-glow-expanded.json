@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "The companion bar keeps its green/red agent status glow after you expand it — not only on the collapsed peek pill."
+  ]
+}
