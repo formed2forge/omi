@@ -1,3 +1,6 @@
+# Reference desktop entry for portal identity / docs.
+# Packaged builds generate the installed .desktop from electron-builder.config.mjs
+# (`linux.desktop.entry` + syncDesktopName) — keep these fields in sync.
 [Desktop Entry]
 Type=Application
 Name=Omi
