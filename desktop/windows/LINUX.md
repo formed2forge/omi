@@ -47,6 +47,23 @@ sudo pacman -S --needed libxcrypt-compat tesseract xorg-xprop
   app fails to launch at all. This isn't Omi-specific (Mattermost Desktop and
   other Electron apps hit the same gap on Arch).
 
+## Runtime dependencies (Fedora / Asahi aarch64 AppImage)
+```bash
+sudo dnf install zlib-devel fuse
+```
+- **AppImage on aarch64** (including Fedora Asahi Remix): the AppImage *runtime*
+  stub is linked against unversioned `libz.so`, which Fedora only ships in
+  `zlib-devel` (runtime packages provide `libz.so.1`). Without it, the AppImage
+  prints `error while loading shared libraries: libz.so` and exits before Omi
+  starts — GUI launches fail silently. Same class of bug as
+  [AppImageKit#1092](https://github.com/AppImage/AppImageKit/issues/1092) /
+  Beekeeper Studio on Asahi.
+- `fuse` (or `fuse3` + compatibility) is required for AppImage mounting.
+- Prefer the `.deb` artifact on Debian/Ubuntu; on Fedora Asahi the AppImage +
+  `zlib-devel` path above is the usual local-dev route. One-shot symlink if you
+  cannot install devel packages:
+  `sudo ln -sf /usr/lib64/libz.so.1 /usr/lib64/libz.so`
+
 ## Wayland
 
 The app targets X11 by default on Linux (`ozone-platform=x11`, i.e. XWayland on
