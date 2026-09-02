@@ -16,6 +16,7 @@ const win = { isDestroyed: () => false, isVisible: () => false, show, moveTop, f
 import { app } from 'electron'
 import {
   applyLinuxActivationToken,
+  hasPendingLinuxActivationToken,
   raiseWaylandBarWindow,
   stashLinuxActivationFromEnv,
   stashLinuxActivationFromSecondInstance
@@ -40,6 +41,7 @@ describe('waylandActivation', () => {
   it('stashes XDG_ACTIVATION_TOKEN from the environment', () => {
     process.env.XDG_ACTIVATION_TOKEN = 'token-from-env'
     stashLinuxActivationFromEnv()
+    expect(hasPendingLinuxActivationToken()).toBe(true)
     expect(applyLinuxActivationToken()).toBe(true)
     expect(appWithToken.setActivationToken).toHaveBeenCalledWith('token-from-env')
     expect(process.env.XDG_ACTIVATION_TOKEN).toBeUndefined()

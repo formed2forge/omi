@@ -109,8 +109,11 @@ function buildCompositorWorkaround(
       recordMicCommand,
       plasmaSettingsSteps: [
         'System Settings → Shortcuts → Add New → Command or Script',
-        'Command (one line, no line breaks):',
+        'Command (one line, no line breaks) — must include --omi-action summon:',
         `/path/to/omi-windows.AppImage --omi-action summon`,
+        'A bare AppImage path (no --omi-action) surfaces the main chat window, not the bar.',
+        'Plasma Command/Script does not pass XDG_ACTIVATION_TOKEN — summon cannot raise over other apps without',
+        'System Settings → Window Management → Focus → Focus Stealing Prevention → Low.',
         'Keep Omi running in the tray (close window ≠ quit). Test from a terminal:',
         '/path/to/omi-windows.AppImage --omi-action summon',
         'Assign the same chord in Plasma and in Omi. Log out/in once if Plasma ignores the bind.'
