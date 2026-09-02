@@ -80,8 +80,9 @@ environment variable reference and parallel-worktree port/profile isolation.
 
 Everything below is blank in `.env.example` and safe to leave unset:
 
-- `VITE_OMI_API_KEY` — cloud-sync recorded conversations (generate in Omi → Settings →
-  Developer). Blank = recordings save locally only.
+- `VITE_OMI_API_KEY` — unused by the running app (kept for a couple of live
+  probe scripts). Conversation, task, and memory sync use the signed-in
+  Firebase session against `VITE_OMI_API_BASE`.
 - `MAIN_VITE_GOOGLE_CLIENT_ID` / `MAIN_VITE_GOOGLE_CLIENT_SECRET` /
   `VITE_ENABLE_GOOGLE_INTEGRATION` — the Google integration above.
 
