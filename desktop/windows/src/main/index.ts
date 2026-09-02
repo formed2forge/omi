@@ -87,6 +87,8 @@ import { registerAutomationHandlers } from './ipc/automation'
 import { registerCodingAgentHandlers } from './ipc/codingAgent'
 import { initClaudeAgentConfigDir } from './codingAgent/agentConfigDir'
 import { registerMainChatHandlers } from './ipc/mainChat'
+import { resolveDevInstance } from './devInstance'
+import { isDevAutomationEnabled, startDevAutomationBridge } from './devAutomation/bridge'
 import { registerAgentCardHandlers } from './ipc/agentCards'
 import { registerVoiceHubHandlers } from './ipc/voiceHub'
 import { registerVoiceToolHandlers } from './ipc/voiceTool'
@@ -181,6 +183,11 @@ import {
   getLinuxSessionDiagnostics,
   resolveLinuxOzonePlatform
 } from './linux/linuxSession'
+import {
+  dispatchLinuxCliAction,
+  parseLinuxCliAction,
+  type LinuxCliAction
+} from './linux/linuxCliAction'
 import { probeGlobalAccelerator } from './shortcutProbe'
 
 // Default main-window content size. Single source of truth for both window
@@ -217,6 +224,28 @@ function surfaceMainWindow(): void {
 // Tray-only start: when launched at login with --hidden, create the window but
 // don't show it (the user opens it from the tray). See setLoginItemSettings.
 const startHidden = process.argv.includes('--hidden')
+
+/** Compositor-keybind workaround: a second `omi-windows --omi-action …` launch. */
+let pendingLinuxCliAction: LinuxCliAction | null = null
+
+function runLinuxCliAction(action: LinuxCliAction): void {
+  dispatchLinuxCliAction(action, {
+    summon: () => handleSummonPress(),
+    recordMic: () => {
+      surfaceMainWindow()
+      withMainWindow((w) => w.webContents.send('recorder:hotkey', 'mic'))
+    }
+  })
+}
+
+/** Returns true when argv carried a Linux compositor-keybind action. */
+function handleLinuxCliActionFromArgv(argv: readonly string[]): boolean {
+  const action = parseLinuxCliAction(argv)
+  if (!action) return false
+  if (app.isReady()) runLinuxCliAction(action)
+  else pendingLinuxCliAction = action
+  return true
+}
 
 // In dev, default the perf log to userData so marks capture to disk (the bench
 // runner overrides OMI_PERF_LOG). Packaged builds write nothing unless the env
@@ -1068,6 +1097,19 @@ app.whenReady().then(async () => {
   // bench); long-lived consumers read the module-level `mainWindow` instead.
   const win = (mainWindow = createWindow())
 
+  if (import.meta.env.DEV && !app.isPackaged && isDevAutomationEnabled()) {
+    const inst = resolveDevInstance()
+    startDevAutomationBridge({
+      port: inst.automationPort,
+      userDataPath: app.getPath('userData'),
+      appName: app.getName(),
+      appVersion: app.getVersion(),
+      devInstanceName: inst.name,
+      rendererOrigin: `http://localhost:${inst.rendererPort}`,
+      getMainWindow: () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null)
+    })
+  }
+
   // Pull-based token freshness: let main-process REST callers (task sync, and any
   // other assistant on the shared core/session) refresh the Firebase token on
   // demand by asking the renderer, instead of 401ing on a stale relayed token when
@@ -1381,6 +1423,11 @@ app.whenReady().then(async () => {
     console.warn(`[shortcut] record chord "${recordState.accelerator}" is unavailable (in use?)`)
   }
 
+  if (pendingLinuxCliAction) {
+    runLinuxCliAction(pendingLinuxCliAction)
+    pendingLinuxCliAction = null
+  }
+
   // Surface a failed startup registration to the user ONCE (same first-run pattern
   // as maybeShowCloseToTrayNotice): the console.warns above only reach the logs and
   // the conflict is otherwise visible only in Settings → Shortcuts, which a new
@@ -1562,8 +1609,10 @@ app.whenReady().then(async () => {
 })
 
 // A second launch attempt handed off to us (see requestSingleInstanceLock):
-// surface the existing window instead of starting a new instance.
-app.on('second-instance', () => {
+// surface the existing window instead of starting a new instance, or dispatch a
+// compositor-keybind action (`omi-windows --omi-action summon|record-mic`).
+app.on('second-instance', (_event, argv) => {
+  if (handleLinuxCliActionFromArgv(argv)) return
   surfaceMainWindow()
 })
 

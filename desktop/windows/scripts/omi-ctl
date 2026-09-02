@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+# omi-ctl — drive the running Omi Windows/Linux desktop app via its local dev automation bridge.
+#
+# The bridge auto-enables in `pnpm dev` (dev-only) and listens on 127.0.0.1:<port>.
+# Env: OMI_AUTOMATION_PORT (default 47777 on the primary checkout; worktrees derive their own)
+#      OMI_AUTOMATION_TOKEN can override the per-launch token file.
+set -euo pipefail
+
+PORT="${OMI_AUTOMATION_PORT:-47777}"
+BASE="http://127.0.0.1:${PORT}"
+TOKEN="${OMI_AUTOMATION_TOKEN:-}"
+# shellcheck source=automation-token-path.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/automation-token-path.sh"
+TOKEN_FILE="$(omi_automation_token_file "$PORT")"
+
+load_token() {
+  if [ -z "$TOKEN" ] && [ -f "$TOKEN_FILE" ]; then
+    TOKEN="$(tr -d '\r\n' < "$TOKEN_FILE")"
+  fi
+  if [ -z "$TOKEN" ]; then
+    echo "omi-ctl: missing automation token; set OMI_AUTOMATION_TOKEN or wait for $TOKEN_FILE" >&2
+    exit 1
+  fi
+}
+
+curl_bridge() {
+  load_token
+  curl -fsS -H "Authorization: Bearer $TOKEN" "$@"
+}
+
+# POST helper: always prints the response body; exits non-zero on HTTP >=400.
+curl_bridge_post() {
+  load_token
+  local out code
+  out="$(mktemp)"
+  # shellcheck disable=SC2064
+  trap "rm -f '$out'" RETURN
+  code=$(curl -sS -w '%{http_code}' -o "$out" -H "Authorization: Bearer $TOKEN" "$@") || {
+    cat "$out" >&2
+    return 1
+  }
+  cat "$out"
+  if [ "$code" -ge 400 ]; then
+    echo "omi-ctl: HTTP $code" >&2
+    return 22
+  fi
+}
+
+# Exit 1 when a successful HTTP envelope carries an action-level error (mac parity).
+assert_action_ok() {
+  python3 -c '
+import json
+import sys
+
+try:
+    envelope = json.load(sys.stdin)
+except json.JSONDecodeError:
+    raise SystemExit(0)
+
+action = (envelope.get("result") or {}).get("action") or {}
+err = action.get("error")
+if err:
+    print(f"omi-ctl: action failed: {err}", file=sys.stderr)
+    raise SystemExit(1)
+if action.get("ok") == "false":
+    msg = action.get("error") or "main chat failed"
+    print(f"omi-ctl: action failed: {msg}", file=sys.stderr)
+    raise SystemExit(1)
+'
+}
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  state)
+    curl_bridge "$BASE/state"; echo ;;
+  health)
+    curl -fsS "$BASE/health"; echo ;;
+  log-path)
+    curl -fsS "$BASE/health" | python3 -c '
+import json, sys
+health = json.load(sys.stdin)
+path = health.get("logFilePath")
+if not isinstance(path, str) or not path:
+    raise SystemExit("omi-ctl: health did not provide logFilePath")
+print(path)
+' ;;
+  navigate)
+    target="${1:?usage: omi-ctl navigate <screen> [settings-section] [--show]}"; shift || true
+    section=""
+    activate=false
+    for value in "$@"; do
+      if [ "$value" = "--show" ]; then
+        activate=true
+      elif [ -z "$section" ]; then
+        section="$value"
+      else
+        echo "omi-ctl: unexpected navigate argument: $value" >&2
+        exit 2
+      fi
+    done
+    body="{\"target\":\"$target\",\"activateApp\":$activate"
+    [ -n "$section" ] && body="$body,\"settingsSection\":\"$section\""
+    body="$body}"
+    curl_bridge -X POST "$BASE/navigate" -H 'content-type: application/json' -d "$body"; echo ;;
+  actions)
+    curl_bridge "$BASE/actions"; echo ;;
+  action)
+    name="${1:?usage: omi-ctl action <name> [key=value ...]}"; shift || true
+    params=""
+    for kv in "$@"; do
+      key="${kv%%=*}"; val="${kv#*=}"
+      [ -n "$params" ] && params="$params,"
+      params="$params\"$key\":\"$val\""
+    done
+    body="{\"name\":\"$name\""
+    [ -n "$params" ] && body="$body,\"params\":{$params}"
+    body="$body}"
+    resp=$(curl_bridge_post -X POST "$BASE/action" -H 'content-type: application/json' -d "$body")
+    printf '%s\n' "$resp"
+    printf '%s' "$resp" | assert_action_ok ;;
+  wait-ready)
+    tries="${1:-30}"
+    for _ in $(seq 1 "$tries"); do
+      s=$(curl_bridge "$BASE/state" 2>/dev/null || true)
+      if printf '%s' "$s" | python3 -c '
+import json
+import sys
+
+try:
+    envelope = json.load(sys.stdin)
+    snapshot = envelope["result"]
+except (json.JSONDecodeError, KeyError, TypeError):
+    raise SystemExit(1)
+
+ready = (
+    envelope.get("ok") is True
+    and isinstance(snapshot, dict)
+    and snapshot.get("appState") == "main"
+    and snapshot.get("isSignedIn") is True
+    and snapshot.get("hasCompletedOnboarding") is True
+    and snapshot.get("isRestoringAuth") is False
+    and snapshot.get("snapshotStale") is False
+)
+raise SystemExit(0 if ready else 1)
+'; then
+        echo "$s"
+        exit 0
+      fi
+      sleep 0.5
+    done
+    echo "omi-ctl: timed out waiting for a live signed-in owner-ready main state" >&2
+    exit 1 ;;
+  screens)
+    echo "dashboard|home  conversations  chat  memories  tasks  goals  rewind  apps|integrations  settings  insights" ;;
+  *)
+    cat <<EOF
+omi-ctl — drive the Omi Windows/Linux desktop app via the local dev automation bridge
+
+Usage:
+  omi-ctl state                          App state snapshot (pathname, auth, onboarding)
+  omi-ctl health                         Bundle/backend/runtime identity (unauthenticated)
+  omi-ctl log-path                       Print the main-process log path from /health
+  omi-ctl navigate <screen> [section] [--show]
+  omi-ctl wait-ready [tries]             Block until signed-in main state (0.5s/try)
+  omi-ctl screens                        List valid screen targets
+  omi-ctl actions                        List semantic actions the app exposes
+  omi-ctl action <name> [key=value ...]  Run a semantic action (cursor-free, in-process)
+
+Examples:
+  omi-ctl navigate rewind
+  omi-ctl navigate settings shortcuts
+  omi-ctl wait-ready && omi-ctl action ask_main_chat query="hello"
+  omi-ctl action voice_tool_execute name=web_search argumentsJSON='{}'
+
+Env: OMI_AUTOMATION_PORT (default 47777), OMI_AUTOMATION_TOKEN, OMI_AUTOMATION_TOKEN_FILE
+EOF
+    ;;
+esac
