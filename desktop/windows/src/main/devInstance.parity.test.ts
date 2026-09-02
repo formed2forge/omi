@@ -9,10 +9,13 @@ describe('dev-ports.mjs parity with devInstance.ts', () => {
   it('shares the same constants', () => {
     expect(mjs.PRIMARY_RENDERER_PORT).toBe(ts.PRIMARY_RENDERER_PORT)
     expect(mjs.PRIMARY_CDP_PORT).toBe(ts.PRIMARY_CDP_PORT)
+    expect(mjs.PRIMARY_AUTOMATION_PORT).toBe(ts.PRIMARY_AUTOMATION_PORT)
     expect(mjs.DEV_RENDERER_BASE).toBe(ts.DEV_RENDERER_BASE)
     expect(mjs.DEV_RENDERER_SPAN).toBe(ts.DEV_RENDERER_SPAN)
     expect(mjs.DEV_CDP_BASE).toBe(ts.DEV_CDP_BASE)
     expect(mjs.DEV_CDP_SPAN).toBe(ts.DEV_CDP_SPAN)
+    expect(mjs.DEV_AUTOMATION_BASE).toBe(ts.DEV_AUTOMATION_BASE)
+    expect(mjs.DEV_AUTOMATION_SPAN).toBe(ts.DEV_AUTOMATION_SPAN)
   })
 
   it('derives identical ports + slugs across a name corpus', () => {
@@ -29,6 +32,7 @@ describe('dev-ports.mjs parity with devInstance.ts', () => {
     for (const n of names) {
       expect(mjs.deriveRendererPort(n)).toBe(ts.deriveRendererPort(n))
       expect(mjs.deriveCdpPort(n)).toBe(ts.deriveCdpPort(n))
+      expect(mjs.deriveAutomationPort(n)).toBe(ts.deriveAutomationPort(n))
       expect(mjs.sanitizeInstanceName(n)).toBe(ts.sanitizeInstanceName(n))
     }
   })

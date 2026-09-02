@@ -6,8 +6,8 @@ const inst = resolveInstance(process.cwd())
 if (process.argv.includes('--human')) {
   console.log(
     inst.isPrimary
-      ? `primary checkout — renderer http://localhost:${inst.rendererPort}, CDP ${inst.cdpPort}`
-      : `instance "${inst.name}" — renderer http://localhost:${inst.rendererPort}, CDP ${inst.cdpPort}, profile omi-windows-sandbox-${inst.name}`
+      ? `primary checkout — renderer http://localhost:${inst.rendererPort}, CDP ${inst.cdpPort}, automation ${inst.automationPort}`
+      : `instance "${inst.name}" — renderer http://localhost:${inst.rendererPort}, CDP ${inst.cdpPort}, automation ${inst.automationPort}, profile omi-windows-sandbox-${inst.name}`
   )
 } else {
   console.log(JSON.stringify(inst))
