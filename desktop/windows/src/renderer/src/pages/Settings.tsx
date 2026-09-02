@@ -70,6 +70,15 @@ function SettingsInner(): React.JSX.Element {
     []
   )
 
+  // Dev automation bridge (`omi-ctl navigate settings <tab>`) stashes a one-shot tab
+  // request on window before changing the hash; consume it on mount / re-entry.
+  useEffect(() => {
+    const devTab = (window as Window & { __omiDevSettingsTab?: SettingsTabId }).__omiDevSettingsTab
+    if (!devTab) return
+    delete (window as Window & { __omiDevSettingsTab?: SettingsTabId }).__omiDevSettingsTab
+    setActive(devTab)
+  }, [])
+
   return (
     <div className="flex h-full min-h-0">
       <SettingsTabRail
