@@ -45,6 +45,13 @@ describe('looksLikeAction', () => {
     expect(looksLikeAction('which button do I click to submit?')).toBe(false)
     expect(looksLikeAction('should I click save?')).toBe(false)
   })
+  it('is false for filesystem/repo tasks that belong in kernel spawn', () => {
+    expect(looksLikeAction('In my omi repo, create spawn-hint-test.txt with content hello')).toBe(
+      false
+    )
+    expect(looksLikeAction('Create /home/me/notes.txt with hello')).toBe(false)
+    expect(looksLikeAction('spawn a background agent to fix the failing test')).toBe(false)
+  })
 })
 
 describe('looksLikeRawPlan', () => {

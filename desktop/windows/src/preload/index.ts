@@ -70,6 +70,7 @@ import type {
   McpCloudConnectorInfo
 } from '../shared/mcpExports'
 import { GPU_CONTEXT_LOST_CHANNEL } from '../shared/types'
+import { isDesktopAutomationAvailable } from '../shared/automationAvailability'
 
 const omi: OmiBridgeApi = {
   getCaptureSources: () => ipcRenderer.invoke('capture:getSources'),
@@ -587,9 +588,9 @@ const omi: OmiBridgeApi = {
   // True only in the E2E harness (OMI_E2E=1) — gates renderer-side test hooks
   // (e.g. the capture window's YAMNet classify hook). Never true in prod.
   isE2E: process.env.OMI_E2E === '1',
-  // Desktop automation bridge. ON by default; OMI_AUTOMATION='0' disables it.
+  // Desktop automation bridge. Windows-only; OMI_AUTOMATION='0' disables it.
   // The renderer checks `automationEnabled` before its planner pre-step.
-  automationEnabled: process.env.OMI_AUTOMATION !== '0',
+  automationEnabled: isDesktopAutomationAvailable(process.platform, process.env.OMI_AUTOMATION),
   automationSnapshot: (windowHandle?: string) =>
     ipcRenderer.invoke('automation:snapshot', windowHandle),
   automationTargetWindow: () => ipcRenderer.invoke('automation:targetWindow'),

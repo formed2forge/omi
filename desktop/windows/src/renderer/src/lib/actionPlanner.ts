@@ -29,9 +29,15 @@ const ACTION_KEYWORDS = [
 // this cleanly separates "advise me about X" from "do X".
 const GUIDANCE_QUESTION = /^\s*(where|what|which|how|why|when|who)\b|\b(should i|do i)\b/i
 
+// Filesystem / coding work the UI planner cannot perform — route to kernel chat
+// (spawn_agent) instead. Matches spawn cwd hints and explicit paths.
+const FILESYSTEM_OR_CODING_TASK =
+  /(?:^|[\s"'(])(?:\/[^\s"')]+|[A-Za-z]:[\\/][^\s"')]+)\b|\b[\w.-]+\.[a-z0-9]{1,8}\b|\b(?:in|inside|under)\s+(?:my|the|our)\s+[\w][\w .-]{0,40}?\s+(?:repo|repository|project|folder|directory|codebase)\b|\b(?:spawn(?:_|-)?(?:background\s+)?agent|background agent)\b/i
+
 export function looksLikeAction(text: string): boolean {
   const lower = text.toLowerCase()
   if (GUIDANCE_QUESTION.test(lower)) return false
+  if (FILESYSTEM_OR_CODING_TASK.test(text)) return false
   return ACTION_KEYWORDS.some((k) => lower.includes(k))
 }
 
