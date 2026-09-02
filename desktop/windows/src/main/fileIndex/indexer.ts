@@ -49,6 +49,7 @@ const nodeScanFs: ScanFs = {
 function scanEnv(): ScanEnv {
   return {
     USERPROFILE: process.env.USERPROFILE,
+    HOME: process.env.HOME,
     ProgramData: process.env.ProgramData,
     APPDATA: process.env.APPDATA
   }
