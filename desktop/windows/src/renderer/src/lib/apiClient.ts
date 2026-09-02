@@ -149,5 +149,15 @@ function makeClient(baseURL: string): AxiosInstance {
   return client
 }
 
-export const omiApi = makeClient(import.meta.env.VITE_OMI_API_BASE as string)
+// Main-process callers already fall back to api.omi.me when the Vite env is
+// missing. The renderer did not — `pnpm dev` without a copied `.env` sent
+// /v1/conversations at the Vite origin, got a non-list, and showed only local
+// recordings.
+const OMI_API_BASE =
+  typeof import.meta.env.VITE_OMI_API_BASE === 'string' &&
+  import.meta.env.VITE_OMI_API_BASE.trim()
+    ? import.meta.env.VITE_OMI_API_BASE.trim()
+    : 'https://api.omi.me'
+
+export const omiApi = makeClient(OMI_API_BASE)
 export const desktopApi = makeClient(import.meta.env.VITE_OMI_DESKTOP_API_BASE as string)

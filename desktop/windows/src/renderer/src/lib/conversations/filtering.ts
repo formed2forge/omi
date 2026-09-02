@@ -34,6 +34,16 @@ export function isCloudBacked(r: ConversationRow): boolean {
   return r.source === 'cloud' && !r.pending
 }
 
+/** Show the cloud-list error unless a cloud row is already on screen.
+ *  Local-only rows must not hide it: a failed GET /v1/conversations plus a
+ *  few Windows recordings used to look like "this install has no other
+ *  devices' conversations" (the banner was `error && rows.length === 0`).
+ *  A failed revalidation over an already-visible cloud list stays quiet. */
+export function shouldShowCloudError(error: string | null, rows: ConversationRow[]): boolean {
+  if (!error) return false
+  return !rows.some((r) => r.source === 'cloud')
+}
+
 /** Folder/starred are cloud concepts — a local row can never match them, so it is
  *  hidden whenever such a filter is active. 'all' shows everything. */
 export function matchesFolder(r: ConversationRow, folder: FolderFilter): boolean {
