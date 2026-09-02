@@ -31,7 +31,7 @@ import {
   synthesizePillTranscript,
   type AgentRunDetail
 } from '../components/bar/agentPillTranscript'
-import type { AgentThreadCardMsg } from '../../../../shared/types'
+import type { AgentThreadCardMsg } from '../../../shared/types'
 import type { ChatMsg } from './useChat'
 
 // Both poll cadences mirror Mac's 2s canonical-run poll (AgentPill.swift:1775).
