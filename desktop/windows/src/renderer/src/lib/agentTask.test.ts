@@ -48,6 +48,7 @@ describe('working-directory extraction', () => {
   it('finds an explicit absolute Windows path', () => {
     expect(explicitPathIn('ask codex to fix C:\\work\\omi\\app please')).toBe('C:\\work\\omi\\app')
     expect(explicitPathIn('use claude code in D:/projects/site')).toBe('D:/projects/site')
+    expect(explicitPathIn('fix /home/me/projects/omi now')).toBe('/home/me/projects/omi')
     expect(explicitPathIn('no path here')).toBeUndefined()
   })
 
