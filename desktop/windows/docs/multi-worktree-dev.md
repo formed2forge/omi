@@ -18,6 +18,8 @@ pnpm seed:auth        # optional: boot signed-in by copying the primary app's se
 - Each **linked worktree** derives its own renderer port (5180-5279) and CDP port
   (9230-9329) from its folder name, plus its own userData profile
   (`omi-windows-sandbox-<worktree>`) and a ` — <worktree>` window-title suffix.
+- The **dev automation bridge** (`omi-ctl`) listens on `127.0.0.1:<automationPort>`
+  (primary `47777`; worktrees derive `47877-47976`). See `scripts/omi-ctl`.
 - Run `pnpm dev:instance` in any checkout to see exactly what it resolves to.
 
 ## Creating a worktree
@@ -57,9 +59,9 @@ copies the session across origins when you want to skip the web login.
   the default profile — nothing about the main flow changes.
 - **Ports**: derived from the worktree folder name with the same FNV-1a + avalanche
   hash used for packaged builds (`portDerivation.ts`). Renderer ports land in
-  5180-5279, CDP ports in 9230-9329 (a separate band so the two never coincide).
-  Deterministic, so a worktree keeps the same port across launches (stable origin =
-  stable saved session).
+  5180-5279, CDP ports in 9230-9329 (a separate band so the two never coincide),
+  automation ports in 47877-47976. Deterministic, so a worktree keeps the same port
+  across launches (stable origin = stable saved session).
 - **Collisions fail loud**: Vite runs with `strictPort`, so if two worktrees happen
   to hash to the same renderer port the second `pnpm dev` errors out instead of
   drifting to a new origin. Set `OMI_DEV_PORT` on one of them to move it.
@@ -113,6 +115,9 @@ seam, which is dev-only: the packaged app never opens a CDP port
 | `OMI_DEV_REMOTE_DEBUG=<n>`  | Pin the CDP port; **wins over `OMI_DEV_CDP_PORT`** (it is the switch actually bound). `pnpm dev:instance` / `seed:auth` resolve the same precedence, so set it in the shell you run both from. |
 | `OMI_SANDBOX=<name>`        | Pin the userData profile suffix (`OMI_SANDBOX=1` = legacy `chat-kg`)                                                                                                                           |
 | `OMI_DEV_NO_REMOTE_DEBUG=1` | Don't open a CDP port for this instance                                                                                                                                                        |
+| `OMI_AUTOMATION_PORT=<n>`   | Pin the dev automation bridge port (`omi-ctl`; primary default `47777`)                                                                                                                        |
+| `OMI_DEV_AUTOMATION=0`      | Disable the dev automation HTTP bridge in `pnpm dev` (product UIA automation is separate: `OMI_AUTOMATION=0`)                                                                                  |
+| `OMI_AUTOMATION_TOKEN_FILE` | Override the per-launch bearer token file path (default `${TMPDIR}/omi-automation-<port>.token`)                                                                                               |
 | `OMI_DEV_HW_GPU=1`          | Use hardware GPU instead of the dev software-render default                                                                                                                                    |
 | `OMI_OZONE=wayland` / `OMI_OZONE=x11` | Linux only: force native Wayland or XWayland, overriding the auto-detected default. XWayland is the default everywhere except niri/Sway/Hyprland (detected via each one's own session marker env var — see `src/main/linuxCompositor.ts`), where the main window can otherwise fail to map at all and native Wayland is the default instead. Native Wayland costs global shortcuts (push-to-talk/overlay summon) and active-window detection, and the companion bar can't be positioned off-screen. |
 
