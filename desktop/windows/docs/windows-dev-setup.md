@@ -26,8 +26,10 @@ WASAPI, or the companion bar.
 
 ## 0. Hardware and OS
 
-- **Windows 11 x64** (recommended). Windows 10 2004+ (build 19041) is the floor
-  the .NET helpers target (`net10.0-windows10.0.19041.0`).
+- **Windows 10 2004+ or Windows 11, x64.** The .NET helpers target
+  `net10.0-windows10.0.19041.0` — confirm with `winver` that the build is
+  **19041 or newer** (Windows 10 22H2 is 19045; that is fine). Older 1909-and-
+  below boxes need an OS update before this toolchain will even install.
 - **x64**. CI and the helpers publish `win-x64`. ARM64 (Snapdragon X) may run
   the x64 Electron build under emulation; it is not what CI packages.
 - A real **microphone** and speakers. Meeting/system-audio capture uses
@@ -36,6 +38,13 @@ WASAPI, or the companion bar.
   exclusion, and Visual Studio Build Tools).
 
 Skip Insider / Dev Channel unless you are reproducing an OS-specific bug.
+
+Windows 10 vs 11 does **not** change Node, pnpm, MSVC, the .NET 10 SDK, or the
+`pnpm install` / `pnpm dev` / test commands. Differences are Settings labels,
+whether `winget` is already present, and one cosmetic backdrop (Mica is
+Win11-22H2-only; Win10 gets the flat `#0f0f0f` canvas). There is no separate
+OS screen-recording consent prompt on either version — onboarding's screen
+step is an in-app Rewind opt-in.
 
 ## 1. First-boot Windows settings (once, as Administrator)
 
@@ -55,24 +64,40 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 Add-MpPreference -ExclusionPath 'C:\src\omi'
 ```
 
-Then in **Settings**:
+Then in **Settings** (labels differ slightly by OS):
 
-1. **System → For developers → Developer Mode** — on.
-2. **Privacy & security → Microphone** — "Let desktop apps access your
-   microphone" on. You will grant Omi itself during onboarding.
-3. **Privacy & security → Screenshots and screen recording** (Windows 11) —
-   allow desktop apps. Rewind and meeting capture need this.
-4. **System → Optional features / App execution aliases** — turn **off** the
-   Microsoft Store aliases for `python.exe` and `python3.exe`. They shadow a
-   real Python 3.11 install and break `node-gyp` / the backend venv.
+1. **Developer Mode** — on.
+   - Windows 11: **System → For developers**
+   - Windows 10: **Update & Security → For developers**
+2. **Microphone** — "Let desktop apps access your microphone" on. You will
+   grant Omi itself during onboarding.
+   - Windows 11: **Privacy & security → Microphone**
+   - Windows 10: **Privacy → Microphone**
+3. **Screen capture** — Windows 10 has no "Screenshots and screen recording"
+   privacy page (that is Windows 11). Skip this row. Desktop capture has no
+   OS consent prompt; Rewind is an in-app toggle during onboarding.
+   On Windows 11, **Privacy & security → Screenshots and screen recording**
+   should allow desktop apps.
+4. **App execution aliases** — turn **off** the Microsoft Store aliases for
+   `python.exe` and `python3.exe`. They shadow a real Python 3.11 install and
+   break `node-gyp` / the backend venv.
+   - Windows 11: **System → Optional features → App execution aliases** (or
+     **Apps → Advanced app settings**)
+   - Windows 10: **Apps → App execution aliases**
 
 Reboot once after enabling long paths.
 
 ## 2. Install the toolchain
 
-`winget` ships with Windows 11. Run these in an elevated Windows Terminal.
-Close and reopen the terminal after the Visual Studio and fnm installs so PATH
-updates.
+`winget` ships with Windows 11. On Windows 10 it is usually missing until you
+install **App Installer** from the Microsoft Store, or
+[the GitHub `.msixbundle`](https://aka.ms/getwinget). Then `winget --version`
+should print something. Windows Terminal is also not preinstalled on Windows
+10 — the `Microsoft.WindowsTerminal` line below installs it; an elevated
+**Windows PowerShell** window is enough until then.
+
+Run these in an elevated terminal. Close and reopen it after the Visual
+Studio and fnm installs so PATH updates.
 
 ### 2a. Git, Make, Terminal, gh
 
@@ -511,7 +536,8 @@ Use Bun, not npm/pnpm. See `web/app/AGENTS.md`.
 | `make setup` / `make preflight` cannot find bash | Git for Windows not installed, or Make is using cmd.exe. Use Git Bash; the Makefile sets `SHELL` from `git --exec-path`. |
 | `python` is 3.12+ or a Store alias | Step 1 aliases + step 2e PATH. Backend **must** be 3.11. |
 | Clone or `pnpm install` fails with path-too-long | Long paths registry + `core.longpaths` + clone to `C:\src\omi`. |
-| Defender pegs CPU during install | Add the clone path as an exclusion. |
+| `winget` not recognized | Windows 10 without App Installer. Install it from the Store or https://aka.ms/getwinget, then reopen the terminal. |
+| Main window looks flat/opaque, no frosted backdrop | Expected on Windows 10. Mica is gated at build 22621 (Win11 22H2); the app uses `#0f0f0f`. |
 
 ## 11. What "fully functional" looks like
 
