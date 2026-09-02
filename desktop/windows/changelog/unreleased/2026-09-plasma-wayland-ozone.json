@@ -1,0 +1,7 @@
+{
+  "entries": [
+    {
+      "change": "Linux: default Plasma Wayland to native Wayland ozone (XWayland was failing to map windows)"
+    }
+  ]
+}
