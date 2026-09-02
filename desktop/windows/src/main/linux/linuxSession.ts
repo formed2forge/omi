@@ -26,10 +26,12 @@ export type LinuxOzonePlatform = 'x11' | 'wayland'
 
 export type LinuxCompositorKeybindWorkaround = {
   compositor: LinuxCompositorKind
-  /** Example niri `binds { … }` stanza using `omi-windows --omi-action …`. */
-  niriConfigExample: string
   summonCommand: string
   recordMicCommand: string
+  /** niri/sway `binds { … }` example (omit for Plasma). */
+  niriConfigExample?: string
+  /** Plasma System Settings steps (omit for niri/sway). */
+  plasmaSettingsSteps?: string
 }
 
 export type LinuxGlobalShortcutsCapability =
@@ -80,25 +82,53 @@ export function isLinuxWaylandSession(env: NodeJS.ProcessEnv = process.env): boo
 export { detectLinuxCompositor }
 
 function buildCompositorWorkaround(
-  compositor: LinuxCompositorKind
+  compositor: LinuxCompositorKind,
+  ozonePlatform: LinuxOzonePlatform
 ): LinuxCompositorKeybindWorkaround | null {
-  if (compositor !== 'niri' && compositor !== 'sway') return null
   const summonCommand = formatLinuxCliSpawnCommand('summon')
   const recordMicCommand = formatLinuxCliSpawnCommand('record-mic')
-  return {
-    compositor,
-    summonCommand,
-    recordMicCommand,
-    niriConfigExample: `binds {
+
+  if (compositor === 'niri' || compositor === 'sway') {
+    return {
+      compositor,
+      summonCommand,
+      recordMicCommand,
+      niriConfigExample: `binds {
     Mod+Shift+Space { spawn "${summonCommand}"; }
     Mod+Ctrl+Space { spawn "${recordMicCommand}"; }
 }`
+    }
   }
+
+  // Plasma Wayland: Electron register() can succeed via the portal while Activated
+  // never fires. Bypass with System Settings command shortcuts → --omi-action.
+  if (compositor === 'kde' && ozonePlatform === 'wayland') {
+    return {
+      compositor,
+      summonCommand,
+      recordMicCommand,
+      plasmaSettingsSteps: [
+        'System Settings → Shortcuts → Add New → Command or Script',
+        `Summon: ${summonCommand}`,
+        `Record mic: ${recordMicCommand}`,
+        'Assign the same chords you set in Omi, then Apply.',
+        'If the chord does not fire immediately, log out and back in once.'
+      ].join('\n')
+    }
+  }
+
+  return null
 }
 
-/** Compositors where in-app globalShortcut does not deliver events (niri, sway). */
-export function compositorNeedsKeybindWorkaround(compositor: LinuxCompositorKind): boolean {
-  return compositor === 'niri' || compositor === 'sway'
+/** Compositors / ozone combos where in-app globalShortcut does not deliver events. */
+export function compositorNeedsKeybindWorkaround(
+  compositor: LinuxCompositorKind,
+  ozonePlatform: LinuxOzonePlatform = 'x11'
+): boolean {
+  if (compositor === 'niri' || compositor === 'sway') return true
+  // Plasma + native Wayland: portal register can succeed without key delivery.
+  if (compositor === 'kde' && ozonePlatform === 'wayland') return true
+  return false
 }
 
 export function detectLinuxSession(env: NodeJS.ProcessEnv = process.env): LinuxSessionInfo {
@@ -124,8 +154,8 @@ export function resolveGlobalShortcutsCapability(
   ozonePlatform: LinuxOzonePlatform,
   compositor: LinuxCompositorKind = 'unknown'
 ): LinuxGlobalShortcutsCapability {
-  const compositorWorkaround = buildCompositorWorkaround(compositor)
-  const needsWorkaround = compositorNeedsKeybindWorkaround(compositor)
+  const compositorWorkaround = buildCompositorWorkaround(compositor, ozonePlatform)
+  const needsWorkaround = compositorNeedsKeybindWorkaround(compositor, ozonePlatform)
 
   if (ozonePlatform === 'x11') {
     // Default path: XWayland on a Wayland host still uses X11 grabs for

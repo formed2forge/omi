@@ -154,9 +154,13 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
       : 'X11 global grab'
     : gs.reason
   const workaround = gs.compositorWorkaround
-  const needsCompositorBinds = gs.available && !gs.deliveryReliable && diag.compositor === 'niri'
+  const deliveryUnreliable = gs.available && !gs.deliveryReliable
+  const needsNiriBinds = deliveryUnreliable && diag.compositor === 'niri'
+  const needsPlasmaManual =
+    deliveryUnreliable && diag.compositor === 'kde' && Boolean(workaround?.plasmaSettingsSteps)
+  const needsSwayManual = deliveryUnreliable && diag.compositor === 'sway' && Boolean(workaround)
   const showManual =
-    needsCompositorBinds &&
+    needsNiriBinds &&
     workaround &&
     (cancelledManual ||
       niriStatus?.state === 'dev-unsupported' ||
@@ -268,7 +272,28 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
           <p className="text-amber-300">{deScan.reason ?? 'Plasma shortcut scan failed.'}</p>
         ) : null}
 
-        {needsCompositorBinds && niriStatus ? (
+        {needsPlasmaManual && workaround?.plasmaSettingsSteps ? (
+          <div className="space-y-2 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-amber-100/90">
+            <p>
+              Plasma Wayland does not deliver in-app global shortcuts to Electron apps. Test can
+              report Available while the chord never fires. Bind command shortcuts in System
+              Settings instead:
+            </p>
+            <p className="font-mono text-[11px] text-white/80">Summon: {workaround.summonCommand}</p>
+            <p className="font-mono text-[11px] text-white/80">
+              Record mic: {workaround.recordMicCommand}
+            </p>
+            <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[10px] text-white/70">
+              {workaround.plasmaSettingsSteps}
+            </pre>
+            <p className="text-white/60">
+              AppImage users: use the full path to the `.AppImage` file instead of{' '}
+              <span className="font-mono">omi-windows</span>.
+            </p>
+          </div>
+        ) : null}
+
+        {needsNiriBinds && niriStatus ? (
           <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
             <p>
               Compositor shortcuts:{' '}
@@ -404,25 +429,21 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
           </div>
         ) : null}
 
-        {needsCompositorBinds &&
-        !showManual &&
-        !showConsent &&
-        niriStatus?.state !== 'installed' &&
-        niriStatus?.state !== 'conflict' &&
-        workaround &&
-        diag.compositor !== 'niri' ? (
+        {needsSwayManual && workaround ? (
           <div className="space-y-2 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-amber-100/90">
             <p>
-              {diag.compositor} does not deliver in-app global shortcuts to Electron apps. Bind
-              these in your compositor config instead:
+              sway does not deliver in-app global shortcuts to Electron apps. Bind these in your
+              compositor config instead:
             </p>
             <p className="font-mono text-[11px] text-white/80">Summon: {workaround.summonCommand}</p>
             <p className="font-mono text-[11px] text-white/80">
               Record mic: {workaround.recordMicCommand}
             </p>
-            <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[10px] text-white/70">
-              {workaround.niriConfigExample}
-            </pre>
+            {workaround.niriConfigExample ? (
+              <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[10px] text-white/70">
+                {workaround.niriConfigExample}
+              </pre>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -655,8 +676,8 @@ function ShortcutCard(props: {
           <p className="text-xs text-white/40">Recording shortcut is off.</p>
         ) : testResult === 'available' && !shortcutDeliveryReliable ? (
           <p className="text-xs text-amber-300">
-            Omi can register this chord, but your compositor does not deliver global shortcut
-            events to apps. Use the compositor-keybind commands shown above.
+            Omi can register this chord, but your desktop does not deliver global shortcut events
+            to apps. Use the command-shortcut steps shown above.
           </p>
         ) : testResult === 'available' ? (
           <p className="text-xs text-emerald-300/90">This shortcut is available on your system.</p>

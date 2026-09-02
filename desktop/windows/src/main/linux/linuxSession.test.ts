@@ -131,6 +131,29 @@ describe('resolveGlobalShortcutsCapability', () => {
     }
   })
 
+  it('marks Plasma Wayland delivery unreliable with System Settings steps', () => {
+    const cap = resolveGlobalShortcutsCapability('wayland', 'wayland', 'kde')
+    expect(cap).toMatchObject({
+      available: true,
+      mechanism: 'wayland-portal',
+      deliveryReliable: false
+    })
+    if (cap.available) {
+      expect(cap.compositorWorkaround?.summonCommand).toContain('--omi-action summon')
+      expect(cap.compositorWorkaround?.plasmaSettingsSteps).toContain('Command or Script')
+      expect(cap.compositorWorkaround?.niriConfigExample).toBeUndefined()
+    }
+  })
+
+  it('keeps Plasma XWayland delivery reliable (no workaround)', () => {
+    expect(resolveGlobalShortcutsCapability('wayland', 'x11', 'kde')).toEqual({
+      available: true,
+      mechanism: 'x11-grab',
+      deliveryReliable: true,
+      compositorWorkaround: null
+    })
+  })
+
   it('uses wayland-portal on native Wayland ozone', () => {
     expect(resolveGlobalShortcutsCapability('wayland', 'wayland', 'gnome')).toEqual({
       available: true,
@@ -151,10 +174,12 @@ describe('resolveGlobalShortcutsCapability', () => {
 })
 
 describe('compositorNeedsKeybindWorkaround', () => {
-  it('is true for niri and sway only', () => {
+  it('is true for niri, sway, and Plasma Wayland', () => {
     expect(compositorNeedsKeybindWorkaround('niri')).toBe(true)
     expect(compositorNeedsKeybindWorkaround('sway')).toBe(true)
     expect(compositorNeedsKeybindWorkaround('gnome')).toBe(false)
+    expect(compositorNeedsKeybindWorkaround('kde', 'x11')).toBe(false)
+    expect(compositorNeedsKeybindWorkaround('kde', 'wayland')).toBe(true)
   })
 })
 
@@ -192,7 +217,7 @@ describe('detectLinuxSession', () => {
     expect(summary).toContain('session=wayland')
     expect(summary).toContain('ozone=wayland')
     expect(summary).toContain('shortcuts=wayland-portal')
-    expect(summary).toContain('delivery=ok')
+    expect(summary).toContain('delivery=compositor-keybind')
     expect(summary).toContain('compositor=kde')
     expect(summary).toContain('desktop=KDE')
     expect(summary).not.toContain('compositor=niri')
