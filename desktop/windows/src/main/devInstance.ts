@@ -23,6 +23,7 @@ import { fnv1a, avalanche } from './portDerivation'
 /** Canonical primary-checkout ports — unchanged from the historical defaults. */
 export const PRIMARY_RENDERER_PORT = 5179
 export const PRIMARY_CDP_PORT = 9222
+export const PRIMARY_AUTOMATION_PORT = 47777
 
 // Worktree renderer ports sit just above the canonical 5179 so they still read as
 // "the Vite dev server". 5180–5279 avoids 5432 (postgres) and stays out of the OS
@@ -33,6 +34,8 @@ export const DEV_RENDERER_SPAN = 100
 // a CDP port can never coincide for the same instance.
 export const DEV_CDP_BASE = 9230
 export const DEV_CDP_SPAN = 100
+export const DEV_AUTOMATION_BASE = 47877
+export const DEV_AUTOMATION_SPAN = 100
 
 export interface DevInstance {
   /** 'primary' for the main checkout, else the sanitized worktree folder name. */
@@ -42,6 +45,8 @@ export interface DevInstance {
   rendererPort: number
   /** Chrome DevTools Protocol port (OMI_DEV_REMOTE_DEBUG) — powers auth seeding + inspection. */
   cdpPort: number
+  /** Local dev automation bridge port (`omi-ctl`). */
+  automationPort: number
   /** Appended to the native window title so overlapping dev windows are tellable apart ('' for primary). */
   titleSuffix: string
 }
@@ -68,6 +73,14 @@ export function deriveCdpPort(name: string): number {
   // Salt so the CDP hash decorrelates from the renderer hash for the same name
   // (otherwise both would share the same low-bit offset within their bands).
   return hashToRange('cdp:' + name, DEV_CDP_BASE, DEV_CDP_SPAN)
+}
+
+export function deriveAutomationPort(name: string): number {
+  return hashToRange('automation:' + name, DEV_AUTOMATION_BASE, DEV_AUTOMATION_SPAN)
+}
+
+function automationFromEnv(env: NodeJS.ProcessEnv, fallback: number): number {
+  return intEnv(env.OMI_AUTOMATION_PORT, fallback)
 }
 
 function intEnv(value: string | undefined, fallback: number): number {
@@ -116,6 +129,7 @@ export function computeDevInstance(
       isPrimary: true,
       rendererPort: intEnv(env.OMI_DEV_PORT, PRIMARY_RENDERER_PORT),
       cdpPort: cdpFromEnv(env, PRIMARY_CDP_PORT),
+      automationPort: automationFromEnv(env, PRIMARY_AUTOMATION_PORT),
       titleSuffix: ''
     }
   }
@@ -126,6 +140,7 @@ export function computeDevInstance(
     isPrimary: false,
     rendererPort: intEnv(env.OMI_DEV_PORT, deriveRendererPort(name)),
     cdpPort: cdpFromEnv(env, deriveCdpPort(name)),
+    automationPort: automationFromEnv(env, deriveAutomationPort(name)),
     titleSuffix: ` — ${name}`
   }
 }
