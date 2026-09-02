@@ -25,7 +25,8 @@ try {
   execSync('npm run build:automation-helper', { stdio: 'inherit', cwd: root })
 } catch {
   console.warn(
-    '[ensure-automation-helper] could NOT build the automation helper (is the .NET SDK installed?). ' +
+    '[ensure-automation-helper] could NOT build the automation helper ' +
+      '(need .NET 10 SDK, and nuget.org for ILLink.Tasks). ' +
       'The app still works; UI automation stays disabled until you run `npm run build:automation-helper`.'
   )
 }
