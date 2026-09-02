@@ -100,10 +100,17 @@ session, **continuous Rewind capture defaults OFF** (`XDG_SESSION_TYPE=wayland`)
 on-demand "what's on my screen" still works (one Share prompt), and you can enable
 continuous capture explicitly. X11 sessions keep continuous Rewind on by default.
 
-**Settings → Shortcuts (phase 1):** each global chord has a **Test** button that
+**Settings → Shortcuts (phase 1 + 2a):** each global chord has a **Test** button that
 probes whether the OS will accept it (`shortcuts:test-accelerator` — suspend live
 chords, register a noop probe, resume). On Linux, a read-only **Linux shortcut
-environment** row shows portal/ozone/session facts from `linuxSession.ts`.
+environment** row shows portal/ozone/session facts from `linuxSession.ts`. On niri,
+packaged builds can **Apply** compositor keybinds (consent → scan includes → write
+managed block).
+
+**Onboarding gap (phase 2b — not done):** `ShortcutSetupStep` still assumes in-app
+shortcut delivery. It does not run the niri Apply consent flow, so first-run on
+niri can stall on “press your shortcut” unless the user Skips. Tracked in
+`formed2forge/handoffs` → `omi-linux-shortcuts.md`.
 
 **niri / sway:** these compositors do not deliver in-app global shortcut events to
 Electron apps — registration (and the Test button) can succeed while key presses
