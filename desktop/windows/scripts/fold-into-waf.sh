@@ -13,6 +13,9 @@
 #   WAF_BRANCH   integration branch (default: windows-all-fixes)
 #   WAF_REMOTE   remote to push (default: origin)
 #   SKIP_VERIFY  set to 1 to skip pnpm vitest on changed renderer/main tests
+#
+# Triggered automatically by scripts/pre-push when pushing a non-WAF branch with
+# desktop/windows changes (disable with OMI_SKIP_WAF_FOLD=1).
 
 set -euo pipefail
 
@@ -34,11 +37,15 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-echo "==> fetch $WAF_REMOTE $WAF_BRANCH and $SOURCE_BRANCH"
-git fetch "$WAF_REMOTE" "$WAF_BRANCH" "$SOURCE_BRANCH"
+echo "==> fetch $WAF_REMOTE $WAF_BRANCH"
+git fetch "$WAF_REMOTE" "$WAF_BRANCH"
+if git show-ref --verify --quiet "refs/remotes/$WAF_REMOTE/$SOURCE_BRANCH"; then
+  git fetch "$WAF_REMOTE" "$SOURCE_BRANCH"
+fi
 
-if ! git show-ref --verify --quiet "refs/remotes/$WAF_REMOTE/$SOURCE_BRANCH"; then
-  echo "fold-into-waf: $WAF_REMOTE/$SOURCE_BRANCH not found — push the feature branch first" >&2
+if ! git show-ref --verify --quiet "refs/heads/$SOURCE_BRANCH" \
+  && ! git show-ref --verify --quiet "refs/remotes/$WAF_REMOTE/$SOURCE_BRANCH"; then
+  echo "fold-into-waf: $SOURCE_BRANCH not found locally or on $WAF_REMOTE — commit or push the feature branch first" >&2
   exit 1
 fi
 
@@ -49,8 +56,18 @@ echo "==> checkout $WAF_BRANCH @ $WAF_TIP"
 git checkout "$WAF_BRANCH"
 git reset --hard "$WAF_REMOTE/$WAF_BRANCH"
 
-echo "==> merge $SOURCE_BRANCH into $WAF_BRANCH"
-if ! git merge --no-ff "$WAF_REMOTE/$SOURCE_BRANCH" -m "merge($SOURCE_BRANCH): fold desktop/windows work into $WAF_BRANCH for integration testing"; then
+MERGE_REF=""
+if git show-ref --verify --quiet "refs/heads/$SOURCE_BRANCH"; then
+  MERGE_REF="$SOURCE_BRANCH"
+elif git show-ref --verify --quiet "refs/remotes/$WAF_REMOTE/$SOURCE_BRANCH"; then
+  MERGE_REF="$WAF_REMOTE/$SOURCE_BRANCH"
+else
+  echo "fold-into-waf: cannot find local or remote ref for $SOURCE_BRANCH" >&2
+  exit 1
+fi
+
+echo "==> merge $MERGE_REF into $WAF_BRANCH"
+if ! git merge --no-ff "$MERGE_REF" -m "merge($SOURCE_BRANCH): fold desktop/windows work into $WAF_BRANCH for integration testing"; then
   echo "fold-into-waf: merge conflict — resolve, commit, then push $WAF_REMOTE $WAF_BRANCH" >&2
   exit 1
 fi
