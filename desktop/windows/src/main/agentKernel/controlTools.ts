@@ -45,6 +45,7 @@ import {
   type AgentExecutionRole,
   type ProviderBoundary
 } from './executionPolicy'
+import { resolveSpawnCwd } from './resolveSpawnCwd'
 
 const sessionStatusSchema = z.enum(['open', 'archived', 'closed'])
 const agentSurfaceKindSchema = z.enum([
@@ -465,6 +466,14 @@ function controlRunRecovery(
   adapterId: string
 ): Pick<ExecuteAgentRunInput, 'maxAttempts' | 'recoverAfterError'> {
   return context.recoverRunInput?.(adapterId) ?? {}
+}
+
+async function spawnCwdForMessage(
+  explicitCwd: string | undefined,
+  message: string
+): Promise<string | undefined> {
+  if (explicitCwd) return explicitCwd
+  return resolveSpawnCwd(message)
 }
 
 function defaultControlAdapterId(context: AgentControlToolContext): string {
@@ -898,6 +907,7 @@ export async function handleAgentControlToolCall(
         const adapterId =
           parsed.adapterId ?? parsed.defaultAdapterId ?? defaultControlAdapterId(context)
         assertAdapterAllowedForTopLevelLocalProviderSpawn(context, adapterId)
+        const cwd = await spawnCwdForMessage(parsed.cwd, parsed.prompt)
         const result = await context.kernel.spawnBackgroundAgent({
           ...parsed,
           ...controlRunRecovery(context, adapterId),
@@ -907,6 +917,7 @@ export async function handleAgentControlToolCall(
           ownerId,
           requestId,
           surfaceKind: parsed.surfaceKind ?? 'floating_bar',
+          cwd,
           metadata: { ...(parsed.metadata ?? {}) }
         })
         return stringifyToolResult({
@@ -995,6 +1006,7 @@ export async function handleAgentControlToolCall(
               objective: parsed.objective
             })
           : {}
+        const cwd = await spawnCwdForMessage(parsed.cwd, parsed.objective)
         if (delegateUnderParent && parsed.parentRunId) {
           const result = await context.kernel.delegateAgent({
             ...controlRunRecovery(context, adapterId),
@@ -1009,7 +1021,7 @@ export async function handleAgentControlToolCall(
             childExternalRefKind,
             childExternalRefId: visiblePillExternalRefId,
             childTitle: parsed.title ?? `Delegated: ${parsed.objective.slice(0, 80)}`,
-            cwd: parsed.cwd,
+            cwd,
             model: parsed.model,
             runMode: 'act',
             clientId: parsed.clientId,
@@ -1035,7 +1047,7 @@ export async function handleAgentControlToolCall(
           externalRefId: visiblePillExternalRefId,
           adapterId,
           defaultAdapterId: adapterId,
-          cwd: parsed.cwd,
+          cwd,
           model: parsed.model,
           mode: 'act',
           metadata: {
@@ -1066,6 +1078,7 @@ export async function handleAgentControlToolCall(
         const adapterId =
           parsed.adapterId ?? context.kernel.defaultAdapterIdForRun(parsed.parentRunId)
         assertAdapterAllowedForControlRun(context, adapterId)
+        const cwd = await spawnCwdForMessage(parsed.cwd, parsed.objective)
         const result = await context.kernel.delegateAgent({
           ...controlRunRecovery(context, adapterId),
           mode: 'call',
@@ -1076,7 +1089,7 @@ export async function handleAgentControlToolCall(
           requestId,
           adapterId,
           defaultAdapterId: adapterId,
-          cwd: parsed.cwd,
+          cwd,
           model: parsed.model,
           runMode: parsed.runMode,
           clientId: parsed.clientId,
