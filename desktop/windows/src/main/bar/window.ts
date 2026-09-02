@@ -921,6 +921,20 @@ export function handleSummonPress(): void {
   gesture?.fire()
 }
 
+/** Native Wayland: the bar cannot use always-on-top, so a visible main window
+ *  covers the top-strip pill. Hide it (same as the close button — tray resident). */
+function tuckMainWindowForBarSummon(): void {
+  if (!linuxBarSkipAlwaysOnTop()) return
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (w.isDestroyed() || w === barWindow) continue
+    if (w.skipTaskbar) continue
+    if (w.isVisible() && !w.isMinimized()) {
+      w.hide()
+      return
+    }
+  }
+}
+
 /** Toggle the bar from a non-keyboard source (e.g. tray menu item).
  *  Applies tap UI behavior directly — peek when hidden, hide when cleanly
  *  presented — without routing through the gesture machine or emitting PTT
@@ -929,6 +943,7 @@ export function handleSummonPress(): void {
  *  via the GetAsyncKeyState sampler before the repeat-gap timer ends it. */
 export function summonFromTray(): void {
   if (!barEnabled) return
+  tuckMainWindowForBarSummon()
   broadcast('overlay:summoned')
   if (isBarCleanlyPresented()) hideBar()
   else showBar('peek', 'summon')

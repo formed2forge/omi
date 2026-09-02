@@ -230,6 +230,15 @@ function surfaceMainWindow(): void {
   })
 }
 
+/** Raise the app when a compositor/KDE spawn delivers a global action. */
+function stealAppFocus(): void {
+  try {
+    app.focus({ steal: true })
+  } catch {
+    app.focus()
+  }
+}
+
 // Tray-only start: when launched at login with --hidden, create the window but
 // don't show it (the user opens it from the tray). See setLoginItemSettings.
 const startHidden = process.argv.includes('--hidden')
@@ -243,6 +252,7 @@ function runLinuxCliAction(action: LinuxCliAction): void {
     // (Win32 key sampler) and toggle the bar directly, same as the tray item.
     summon: () => {
       setBarEnabled(true)
+      stealAppFocus()
       summonFromTray()
     },
     recordMic: () => {
@@ -1160,7 +1170,10 @@ app.whenReady().then(async () => {
     // section. Uses summonFromTray() rather than handleSummonPress() so the
     // click does not enter the gesture machine or emit PTT phases — a tray
     // click has no physical key to sample.
-    openBar: () => summonFromTray(),
+    openBar: () => {
+      stealAppFocus()
+      summonFromTray()
+    },
     // Manual update check (mirrors Settings → About and Mac's "Check for Updates").
     // checkForUpdatesNow never throws; log the outcome for a manual tester.
     checkForUpdates: () => {
