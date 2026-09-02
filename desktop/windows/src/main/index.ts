@@ -19,6 +19,7 @@ import { listCaptureSources } from './ipc/capture'
 import { isAllowedExternalScheme } from './externalUrl'
 import { installContextMenu } from './contextMenu'
 import { GPU_CONTEXT_LOST_CHANNEL } from '../shared/types'
+import { isDesktopAutomationAvailable } from '../shared/automationAvailability'
 import type { ConversationFolder, LiveNote } from '../shared/types'
 import {
   isListenSessionOwnedBy,
@@ -412,11 +413,11 @@ app.on('web-contents-created', (_e, wc) => {
   })
 })
 
-// Desktop-automation bridge (real Windows UI actions). ON by default; set
+// Desktop-automation bridge (real Windows UI actions). Windows-only; set
 // OMI_AUTOMATION='0' as a kill-switch to disable it. Gates both the IPC
 // registration and the foreground-target tracker; the renderer reads the same
 // flag (window.omi.automationEnabled) to skip its action-planner pre-step.
-const AUTOMATION_ENABLED = process.env.OMI_AUTOMATION !== '0'
+const AUTOMATION_ENABLED = isDesktopAutomationAvailable(process.platform, process.env.OMI_AUTOMATION)
 
 // OMI_SANDBOX pins a throwaway userData dir for parallel dev worktrees so they
 // don't clobber the real profile (dev-only; see dev/bench). Runs before the
