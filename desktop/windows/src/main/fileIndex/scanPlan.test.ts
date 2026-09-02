@@ -13,9 +13,11 @@ function makeFs(opts: {
   stats?: Record<string, ScanStat>
   failing?: string[]
   shortcuts?: Record<string, string | undefined>
+  realpaths?: Record<string, string>
 }): ScanFs {
   const failing = new Set(opts.failing ?? [])
   const stats = opts.stats ?? {}
+  const realpaths = opts.realpaths ?? {}
   return {
     async readDir(dir) {
       if (failing.has(dir)) throw new Error(`EACCES: simulated enumeration failure at ${dir}`)
@@ -26,7 +28,8 @@ function makeFs(opts: {
       if (!s) throw new Error(`ENOENT: ${path}`)
       return s
     },
-    resolveShortcutTarget: (lnk) => opts.shortcuts?.[lnk]
+    resolveShortcutTarget: (lnk) => opts.shortcuts?.[lnk],
+    realpath: async (path) => realpaths[path] ?? path
   }
 }
 
@@ -248,6 +251,65 @@ describe('planScan — walk behavior', () => {
     expect(upserted).not.toContain(unchanged)
     // The unchanged file is still "seen", so it is NOT pruned by the retention diff.
     expect(plan.toDelete).not.toContain(unchanged)
+  })
+
+  it('descends into a directory exposed via symlink (readDir resolves link target)', async () => {
+    const repos = join('/home/me', 'repos')
+    const omi = join(repos, 'omi')
+    const readme = join(omi, 'README.md')
+
+    const fs = makeFs({
+      dirs: {
+        [repos]: [DIR('omi')],
+        [omi]: [FILE('README.md')]
+      },
+      stats: { [readme]: stat() },
+      realpaths: {
+        [omi]: '/data/actual-omi'
+      }
+    })
+
+    const plan = await planScan({
+      roots: [filesRoot(repos)],
+      absentRootPaths: [],
+      existing: new Map(),
+      fs,
+      sep: '/'
+    })
+
+    expect(plan.toUpsert.map((r) => r.path)).toContain(readme)
+    expect(plan.toUpsert.find((r) => r.path === readme)?.folder).toBe(omi)
+  })
+
+  it('does not loop on symlink cycles', async () => {
+    const root = join('/home/me', 'repos')
+    const a = join(root, 'a')
+    const b = join(root, 'b')
+    const fileA = join(a, 'x.txt')
+    const fileB = join(b, 'y.txt')
+
+    const fs = makeFs({
+      dirs: {
+        [root]: [DIR('a'), DIR('b')],
+        [a]: [FILE('x.txt'), DIR('b')],
+        [b]: [FILE('y.txt'), DIR('a')]
+      },
+      stats: { [fileA]: stat(), [fileB]: stat() },
+      realpaths: {
+        [a]: '/canonical/a',
+        [b]: '/canonical/b'
+      }
+    })
+
+    const plan = await planScan({
+      roots: [filesRoot(root)],
+      absentRootPaths: [],
+      existing: new Map(),
+      fs,
+      sep: '/'
+    })
+
+    expect(plan.toUpsert.map((r) => r.path).sort()).toEqual([fileA, fileB].sort())
   })
 
   it('indexes Start-Menu .lnk shortcuts as apps with resolved targets', async () => {
