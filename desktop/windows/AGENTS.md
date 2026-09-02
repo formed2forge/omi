@@ -30,6 +30,17 @@ for this alone.
 
 ## Development Workflow
 
+**Integration branch (mandatory):** All `desktop/windows` work must be folded into
+`windows-all-fixes` (WAF) on `origin` for Tim's integration testing — not only
+opened as a PR. After you push your feature branch, run:
+
+```bash
+desktop/windows/scripts/fold-into-waf.sh [your-branch]
+```
+
+Cloud agents must run this automatically before ending a Windows task (do not wait
+for the user to ask). `origin/main` stays a clean upstream mirror; WAF is the test tip.
+
 - **Install**: `pnpm install --frozen-lockfile` (postinstall rebuilds
   `better-sqlite3`, builds Windows-only OCR/audio/automation `.NET` helpers —
   those steps no-op on Linux/macOS dev machines).
