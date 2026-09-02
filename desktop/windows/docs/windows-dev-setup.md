@@ -385,11 +385,15 @@ Optional `.env` keys (safe to leave blank):
 
 | Key | Why |
 |---|---|
-| `VITE_OMI_API_KEY` | Cloud-sync recorded conversations. Settings → Developer in the Omi app. Blank = local only. |
+| `VITE_OMI_API_KEY` | Unused by the running app. Left for a couple of live probe scripts. Conversation / task / memory sync uses the signed-in Firebase session, not this key. |
 | `MAIN_VITE_GOOGLE_CLIENT_ID` / `MAIN_VITE_GOOGLE_CLIENT_SECRET` / `VITE_ENABLE_GOOGLE_INTEGRATION=1` | Gmail/Calendar integration. Desktop OAuth client in Google Cloud Console. Never commit. |
 
 Default API targets (already in `.env.example`): `VITE_OMI_API_BASE=https://api.omi.me`
 and `VITE_OMI_DESKTOP_API_BASE=https://desktop-backend-hhibjajaja-uc.a.run.app`.
+Copying `.env.example` does **not** turn cloud sync off. Pointing
+`VITE_OMI_API_BASE` at a local backend (`http://127.0.0.1:8000`) talks to
+**that** database — Linux-local data will not appear on a Windows box that
+still targets `https://api.omi.me`.
 
 ### Parallel worktrees
 
@@ -431,10 +435,34 @@ Then a 5-minute smoke that CI never runs:
 3. Ask Omi something that requires looking at the screen — OCR needs
    `win-ocr-helper.exe`.
 4. Start a screen/meeting session, speak, play system audio, stop. A local
-   conversation should appear. Cloud sync needs `VITE_OMI_API_KEY`
-   ([`conversation-sync.md`](conversation-sync.md)).
-5. Settings → Agents: Claude Code is built in. Optional: connect OpenClaw /
+   conversation should appear. Cloud upload of that row uses the signed-in
+   Firebase session ([`conversation-sync.md`](conversation-sync.md)) — Rewind
+   and mic-only Record do **not** go through that outbox.
+5. After sign-in, open **Memories** and **Tasks**. Cloud memories should list
+   from `GET /v3/memories`. Cloud tasks land in the local store after the
+   Firebase session is relayed to the main process (or immediately if you hit
+   the Tasks refresh button). Same Google/Apple account as Linux/phone, and
+   the same `VITE_OMI_API_BASE`.
+6. Settings → Agents: Claude Code is built in. Optional: connect OpenClaw /
    Hermes / Codex with a launch command and hit **Test**.
+
+### Cloud data (tasks, memories, conversations)
+
+These are three different pipes. An empty list on a fresh Windows profile is
+usually "this pipe never ran" or "this account/API is not the Linux one",
+not a missing `VITE_OMI_API_KEY`.
+
+| Surface | What "synced" means | What is local-only |
+|---|---|---|
+| **Memories** | Renderer `GET/POST /v3/memories` with the Firebase ID token, after sign-in. Same account → same list as phone / Linux / macOS. | Nothing on this page. Rewind facts only show here after they POST. |
+| **Tasks** | Local-first SQLite in the main process. A background census (`GET /v1/action-items/ids`) pulls cloud rows once the renderer relays `{apiBase, token}`. Creates POST to `/v1/action-items`. The Tasks refresh button forces a full reconcile. | Rows created while signed out stay unsynced until the next pull. |
+| **Conversations (list)** | Renderer `GET /v1/conversations` — phone / Linux cloud conversations should appear here with the same account. | Rewind never creates a cloud conversation. |
+| **Conversations (upload)** | Only a **Record → Screen** stop (mic + loopback) writes the from-segments outbox. Mic-only uses `/v4/listen` (server-created). | PTT / Ask Omi is not a conversation. |
+
+Settings → Account email must match the Linux/phone account. DevTools →
+Network: a signed-in Memories load should show `GET https://api.omi.me/v3/memories`
+with `Authorization: Bearer …` and a JSON array (not 401 / empty because the
+request went to `localhost:5179`).
 
 ## 7. Daily test commands
 
@@ -550,6 +578,8 @@ Use Bun, not npm/pnpm. See `web/app/AGENTS.md`.
 | Clone or `pnpm install` fails with path-too-long | Long paths registry + `core.longpaths` + clone to `C:\src\omi`. |
 | `winget` not recognized | Windows 10 without App Installer. Install it from the Store or https://aka.ms/getwinget, then reopen the terminal. |
 | Main window looks flat/opaque, no frosted backdrop | Expected on Windows 10. Mica is gated at build 22621 (Win11 22H2); the app uses `#0f0f0f`. |
+| Tasks / Memories empty after sign-in (Linux/phone have data) | Different Firebase account, or `VITE_OMI_API_BASE` is not the Linux one (local `8000` vs `api.omi.me`). Memories are a live `/v3/memories` pull — an error string on the page is a failed GET, not "not wired". Tasks are local-first: hit the refresh button, or wait for the session relay; a first read before the relay used to leave the list empty until focus / 5 min. `VITE_OMI_API_KEY` is unrelated. |
+| Screen recording stays local / Sync pending / Sync failed | That outbox is Screen (mic+loopback) only. See [`conversation-sync.md`](conversation-sync.md). |
 
 ## 11. What "fully functional" looks like
 
