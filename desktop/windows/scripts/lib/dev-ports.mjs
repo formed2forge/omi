@@ -9,10 +9,13 @@ import { basename, dirname, join, relative, isAbsolute } from 'node:path'
 
 export const PRIMARY_RENDERER_PORT = 5179
 export const PRIMARY_CDP_PORT = 9222
+export const PRIMARY_AUTOMATION_PORT = 47777
 export const DEV_RENDERER_BASE = 5180
 export const DEV_RENDERER_SPAN = 100
 export const DEV_CDP_BASE = 9230
 export const DEV_CDP_SPAN = 100
+export const DEV_AUTOMATION_BASE = 47877
+export const DEV_AUTOMATION_SPAN = 100
 
 /** FNV-1a 32-bit hash. */
 export function fnv1a(input) {
@@ -44,6 +47,10 @@ export function deriveRendererPort(name) {
 
 export function deriveCdpPort(name) {
   return hashToRange('cdp:' + name, DEV_CDP_BASE, DEV_CDP_SPAN)
+}
+
+export function deriveAutomationPort(name) {
+  return hashToRange('automation:' + name, DEV_AUTOMATION_BASE, DEV_AUTOMATION_SPAN)
 }
 
 export function sanitizeInstanceName(raw) {
@@ -101,6 +108,10 @@ function cdpFromEnv(env, fallback) {
   return intEnv(env.OMI_DEV_REMOTE_DEBUG, intEnv(env.OMI_DEV_CDP_PORT, fallback))
 }
 
+function automationFromEnv(env, fallback) {
+  return intEnv(env.OMI_AUTOMATION_PORT, fallback)
+}
+
 /**
  * Mirror of devInstance.ts computeDevInstance (minus titleSuffix): resolve the
  * instance ports honoring the SAME env overrides the app honors, so seed-auth /
@@ -120,7 +131,8 @@ export function computeInstance(rawName, isPrimary, env = process.env) {
       name: 'primary',
       isPrimary: true,
       rendererPort: intEnv(env.OMI_DEV_PORT, PRIMARY_RENDERER_PORT),
-      cdpPort: cdpFromEnv(env, PRIMARY_CDP_PORT)
+      cdpPort: cdpFromEnv(env, PRIMARY_CDP_PORT),
+      automationPort: automationFromEnv(env, PRIMARY_AUTOMATION_PORT)
     }
   }
   const slug = sanitizeInstanceName(rawName)
@@ -128,7 +140,8 @@ export function computeInstance(rawName, isPrimary, env = process.env) {
     name: slug,
     isPrimary: false,
     rendererPort: intEnv(env.OMI_DEV_PORT, deriveRendererPort(slug)),
-    cdpPort: cdpFromEnv(env, deriveCdpPort(slug))
+    cdpPort: cdpFromEnv(env, deriveCdpPort(slug)),
+    automationPort: automationFromEnv(env, deriveAutomationPort(slug))
   }
 }
 
