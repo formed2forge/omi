@@ -4,6 +4,7 @@ export type ScanRoot = { path: string; kind: 'files' | 'apps' }
 
 export type ScanEnv = {
   USERPROFILE?: string
+  HOME?: string
   ProgramData?: string
   APPDATA?: string
 }
@@ -12,12 +13,16 @@ const DOC_DIRS = ['Downloads', 'Documents', 'Desktop']
 const DEV_DIRS = ['Developer', 'Projects', 'Code', 'src', 'repos', 'Sites']
 const START_MENU = join('Microsoft', 'Windows', 'Start Menu', 'Programs')
 
+function homeDir(env: ScanEnv): string | undefined {
+  return env.USERPROFILE ?? env.HOME
+}
+
 // Resolve the Windows scan roots, keeping only paths that exist. Doc + dev
 // folders are 'files'; the Start-Menu shortcut folders are the Windows analog
 // of macOS /Applications and are tagged 'apps' (enumerated as .lnk installs).
 export function resolveScanRoots(env: ScanEnv, exists: (p: string) => boolean): ScanRoot[] {
   const roots: ScanRoot[] = []
-  const home = env.USERPROFILE
+  const home = homeDir(env)
   if (home) {
     for (const d of DOC_DIRS) {
       const p = join(home, d)
