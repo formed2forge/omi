@@ -168,6 +168,17 @@ dotnet --list-sdks
 CI's `setup-dotnet` still asks for `8.0.x`; that is the runner pin, not the
 helper TFM. Locally you need the SDK that can publish `net10.0-windows`.
 
+`PublishSingleFile` restores `Microsoft.NET.ILLink.Tasks` from **nuget.org**.
+A fresh SDK install often has zero package sources (`dotnet nuget list source`
+prints "No sources found"), which fails as `NU1100`. This tree ships
+`desktop/windows/nuget.config` so restore uses nuget.org. On a checkout that
+predates that file, add the source once:
+
+```powershell
+dotnet nuget list source
+dotnet nuget add source https://api.nuget.org/v3/index.json -n nuget.org
+```
+
 ### 2d. Node 22.19+ (not 23, not 24+) and pnpm 10
 
 `package.json` engines: `>=22.19.0 <23`. Node 24+ breaks the jsdom test
@@ -529,6 +540,7 @@ Use Bun, not npm/pnpm. See `web/app/AGENTS.md`.
 | `closure package(s) do not resolve on disk` during postinstall | pnpm 11+ ignored `node-linker=hoisted`. Use `npx pnpm@10`. |
 | Unexplained diffs in `package.json` / `pnpm-lock.yaml` / `pnpm-workspace.yaml` | Someone ran `npm install`. `git restore` those files, `Remove-Item -Recurse node_modules`, reinstall with pnpm. |
 | `[ensure-ocr-helper] WARNING` (and audio/automation) | No .NET 10 SDK, or `dotnet` not on PATH in that shell. Install SDK, reopen terminal, `pnpm run build:ocr-helper` (etc.). |
+| `NU1100` Unable to resolve `Microsoft.NET.ILLink.Tasks` | SDK is fine; NuGet has no nuget.org source. Node version is unrelated. `dotnet nuget list source`, then `dotnet nuget add source https://api.nuget.org/v3/index.json -n nuget.org`, then rebuild the helpers. |
 | `better-sqlite3` rebuild fails | VS 2022 Build Tools C++ workload missing, or Store Python stub. |
 | App starts, tray icon, no window | Rare on Windows (mostly a Linux/Wayland issue). Check the DevTools / main-process console. |
 | Mic step auto-advances or shows Granted when Windows blocked it | Old bug; current code reads the registry. Confirm Privacy → Microphone allows desktop apps. |
