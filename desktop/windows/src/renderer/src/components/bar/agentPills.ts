@@ -51,6 +51,20 @@ export type AgentPillTintToken = 'queued' | 'running' | 'done' | 'stopped' | 'fa
  *  `NotchAgentStatusGroup` (starting shares running; queued stays its own cyan). */
 export type AgentStatusGroup = 'running' | 'queued' | 'failed' | 'stopped' | 'done'
 
+/** Minimal spawn-card fields needed to synthesize a pill row before the list poll
+ *  catches up (Ask Omi: a bar send flips to conversation immediately, so the pill
+ *  must appear on the kernel's `agentCards:event` push, not on the 30s idle
+ *  heartbeat). */
+export type SpawnCardPillSeed = {
+  pillId?: string | null
+  runId: string
+  sessionId: string
+  title: string
+  objective: string
+  provider?: string | null
+  createdAtMs: number
+}
+
 /** One row of the `floating_agent_pills[]` array the renderer receives from the
  *  existing `list_agent_sessions` door. Matches `serializeFloatingPillSnapshot`
  *  in src/main/agentKernel/controlTools.ts exactly. `status` is a kernel WIRE
@@ -228,6 +242,33 @@ export function deriveTitle(row: Pick<PillProjectionRow, 'title' | 'query'>): st
   const query = typeof row.query === 'string' ? row.query.trim() : ''
   if (query) return cap(query.split(/\s+/).slice(0, 3).join(' '))
   return 'Agent'
+}
+
+// ── Spawn-card seed (B4 card push → pill row before list poll lands)
+
+/** Build a list-poll-shaped row from a shared-thread `agentSpawn` card. Returns
+ *  null when the card is missing ids the merge layer requires. */
+export function spawnCardToProjectionRow(seed: SpawnCardPillSeed): PillProjectionRow | null {
+  const runId = nonEmpty(seed.runId)
+  const sessionId = nonEmpty(seed.sessionId)
+  const id = nonEmpty(seed.pillId) ?? runId ?? sessionId
+  if (!id || !runId || !sessionId) return null
+  const title = typeof seed.title === 'string' ? seed.title.trim() : ''
+  const objective = typeof seed.objective === 'string' ? seed.objective.trim() : ''
+  return {
+    id,
+    runId,
+    sessionId,
+    title: title || null,
+    status: 'queued',
+    latestActivity: objective || title || 'Starting…',
+    query: objective,
+    createdAtMs: seed.createdAtMs,
+    completedAtMs: null,
+    provider: nonEmpty(seed.provider),
+    errorCode: null,
+    errorMessage: null
+  }
 }
 
 // ── Projection merge (Mac mergeProjectedPills AgentPill.swift:1176-1244)

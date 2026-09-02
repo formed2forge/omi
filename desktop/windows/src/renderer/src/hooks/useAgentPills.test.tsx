@@ -158,12 +158,12 @@ describe('useAgentPills — idle cadence + card-push re-arm', () => {
     errorMessage: null
   })
 
-  let cardCb: (() => void) | null
+  let cardCb: ((card: unknown) => void) | null
   beforeEach(() => {
     cardCb = null
     listRows = [] // no pills → idle state
     ;(window as unknown as { omi: { onAgentCardEvent: unknown } }).omi.onAgentCardEvent = (
-      cb: () => void
+      cb: (card: unknown) => void
     ) => {
       cardCb = cb
       return () => {
@@ -200,7 +200,19 @@ describe('useAgentPills — idle cadence + card-push re-arm', () => {
     // list snapshot carries the new session.
     listRows = [activeRow()]
     await act(async () => {
-      cardCb?.()
+      cardCb?.({
+        chatId: 'chat-1',
+        createdAtMs: 1000,
+        block: {
+          type: 'agentSpawn',
+          id: 'card-2',
+          pillId: 'pill-2',
+          runId: 'run_2',
+          sessionId: 'session-2',
+          title: 'Refactor the parser',
+          objective: 'refactor the parser'
+        }
+      })
       await vi.advanceTimersByTimeAsync(0)
     })
     // The push polled immediately (didn't wait for the 30s heartbeat), discovering
@@ -213,5 +225,33 @@ describe('useAgentPills — idle cadence + card-push re-arm', () => {
     const before = listCount()
     await flush(2000)
     expect(listCount()).toBeGreaterThan(before)
+  })
+
+  it('seeds a pill immediately from an agentSpawn card even when the list is still empty', async () => {
+    const { result } = renderHook(() => useAgentPills(null))
+    await flush(0)
+    expect(result.current.pills).toHaveLength(0)
+
+    await act(async () => {
+      cardCb?.({
+        chatId: 'chat-1',
+        createdAtMs: 1000,
+        block: {
+          type: 'agentSpawn',
+          id: 'card-1',
+          pillId: 'pill-live',
+          runId: 'run_live',
+          sessionId: 'session_live',
+          title: 'Build a snake game',
+          objective: 'build a snake game in python'
+        }
+      })
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(result.current.pills).toHaveLength(1)
+    expect(result.current.pills[0].id).toBe('pill-live')
+    expect(result.current.pills[0].title).toBe('Build a snake game')
+    expect(result.current.pills[0].displayStatus).toBe('queued')
   })
 })
