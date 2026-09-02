@@ -23,6 +23,8 @@ export type ScanFs = {
   stat(path: string): Promise<ScanStat>
   // Best-effort .lnk → target .exe resolution (Electron shell in production).
   resolveShortcutTarget(lnkPath: string): string | undefined
+  // Optional canonical path for cycle detection when directory symlinks are followed.
+  realpath?(path: string): Promise<string>
 }
 
 export type ScanPlan = {
@@ -82,7 +84,19 @@ export async function planScan(opts: PlanScanOptions): Promise<ScanPlan> {
   }
 
   const walkFiles = async (root: string): Promise<void> => {
+    const visitedReal = new Set<string>()
     const recurse = async (dir: string, depth: number): Promise<void> => {
+      if (fs.realpath) {
+        let canon = dir
+        try {
+          canon = await fs.realpath(dir)
+        } catch {
+          failedPrefixes.add(dir)
+          return
+        }
+        if (visitedReal.has(canon)) return
+        visitedReal.add(canon)
+      }
       for (const ent of await readDirSafe(dir)) {
         if (isHiddenEntry(ent.name)) continue
         const full = join(dir, ent.name)
@@ -114,8 +128,20 @@ export async function planScan(opts: PlanScanOptions): Promise<ScanPlan> {
   }
 
   const walkApps = async (root: string): Promise<void> => {
+    const visitedReal = new Set<string>()
     const recurse = async (dir: string, depth: number): Promise<void> => {
       if (depth > MAX_DEPTH) return
+      if (fs.realpath) {
+        let canon = dir
+        try {
+          canon = await fs.realpath(dir)
+        } catch {
+          failedPrefixes.add(dir)
+          return
+        }
+        if (visitedReal.has(canon)) return
+        visitedReal.add(canon)
+      }
       for (const ent of await readDirSafe(dir)) {
         if (isHiddenEntry(ent.name)) continue
         const full = join(dir, ent.name)

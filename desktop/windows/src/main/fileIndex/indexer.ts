@@ -1,5 +1,6 @@
 import { promises as fs, existsSync } from 'fs'
-import { sep } from 'path'
+import { join, sep } from 'path'
+import { mapScanDirEntry } from './dirEntries'
 import { shell } from 'electron'
 import { resolveScanRoots, candidateScanRoots, type ScanEnv } from './scanRoots'
 import { planScan, type ScanFs } from './scanPlan'
@@ -37,13 +38,26 @@ function resolveShortcutTarget(lnkPath: string): string | undefined {
 const nodeScanFs: ScanFs = {
   async readDir(dir) {
     const ents = await fs.readdir(dir, { withFileTypes: true })
-    return ents.map((e) => ({ name: e.name, isDirectory: e.isDirectory(), isFile: e.isFile() }))
+    const out: Awaited<ReturnType<ScanFs['readDir']>> = []
+    for (const e of ents) {
+      let mapped = mapScanDirEntry(e)
+      if (!mapped && e.isSymbolicLink()) {
+        try {
+          mapped = mapScanDirEntry(e, await fs.stat(join(dir, e.name)))
+        } catch {
+          // Broken symlink — skip.
+        }
+      }
+      if (mapped) out.push(mapped)
+    }
+    return out
   },
   async stat(path) {
     const st = await fs.stat(path)
     return { size: st.size, birthtimeMs: st.birthtimeMs, mtimeMs: st.mtimeMs }
   },
-  resolveShortcutTarget
+  resolveShortcutTarget,
+  realpath: (path) => fs.realpath(path)
 }
 
 function scanEnv(): ScanEnv {
