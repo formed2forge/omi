@@ -277,6 +277,9 @@ export async function routeDevAutomationRequest(
     try {
       const payload = parseJsonBody(request.body)
       const name = String(payload.name ?? '').trim()
+      if (!name) {
+        return { status: 400, body: { ok: false, error: 'missing action name' } }
+      }
       const params =
         payload.params && typeof payload.params === 'object' && !Array.isArray(payload.params)
           ? Object.fromEntries(
@@ -287,8 +290,11 @@ export async function routeDevAutomationRequest(
             )
           : {}
       const result = await runDevAutomationAction(name, params)
-      if (result.error && !result.accepted) {
-        return { status: 400, body: { ok: false, error: result.error, result } }
+      // macOS parity: handler-level failures (missing params, owner not ready, busy)
+      // return HTTP 200 with the error in the action detail. Reserve 400 for transport /
+      // dispatch failures so `curl -fsS` does not hide actionable JSON.
+      if (result.error?.startsWith('unknown action:')) {
+        return { status: 400, body: { ok: false, error: result.error } }
       }
       const snapshot = await buildAutomationSnapshot(options)
       return { status: 200, body: { ok: true, result: { action: result, state: snapshot } } }
