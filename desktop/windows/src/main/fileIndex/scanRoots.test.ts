@@ -29,4 +29,17 @@ describe('resolveScanRoots', () => {
   it('returns nothing when env is empty', () => {
     expect(resolveScanRoots({}, () => true)).toEqual([])
   })
+
+  it('uses HOME when USERPROFILE is unset (Linux dev)', () => {
+    const env = { HOME: '/home/me' }
+    const present = new Set([
+      join('/home/me', 'repos'),
+      join('/home/me', 'Documents')
+    ])
+    const roots = resolveScanRoots(env, (p) => present.has(p))
+    expect(roots.map((r) => r.path)).toEqual([
+      join('/home/me', 'Documents'),
+      join('/home/me', 'repos')
+    ])
+  })
 })
