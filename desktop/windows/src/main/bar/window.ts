@@ -56,7 +56,7 @@ import {
   linuxBarSkipAlwaysOnTop,
   linuxBarUsesShellBounds
 } from '../linux/nativeWayland'
-import { raiseWaylandBarWindow } from '../linux/waylandActivation'
+import { raiseWaylandBarWindow, hasPendingLinuxActivationToken } from '../linux/waylandActivation'
 import { SummonGesture, type GestureKind } from './gesture'
 import { recordVoiceFlight } from '../voice/flightRecorder'
 import {
@@ -962,18 +962,22 @@ export function summonFromTray(): void {
 
 /** Compositor/KDE `--omi-action summon` — same bar toggle as the tray, but on
  *  native Wayland also raises the pill with the XDG activation token instead of
- *  only flashing the taskbar entry. */
+ *  only flashing the taskbar entry. Without a token (Plasma Command/Script) we
+ *  skip tucking the main window — hiding it when the bar cannot be raised leaves
+ *  nothing visible above other clients. */
 export function summonFromCompositorShortcut(): void {
   if (!barEnabled) return
-  tuckMainWindowForBarSummon()
+  const canRaiseOnWayland = !isNativeWaylandLinux() || hasPendingLinuxActivationToken()
+  if (canRaiseOnWayland) tuckMainWindowForBarSummon()
   broadcast('overlay:summoned')
   const win = barWindow
   if (isBarCleanlyPresented()) {
-    if (isNativeWaylandLinux() && win && !win.isDestroyed()) raiseWaylandBarWindow(win)
-    else hideBar()
+    if (isNativeWaylandLinux() && win && !win.isDestroyed() && canRaiseOnWayland) {
+      raiseWaylandBarWindow(win)
+    } else hideBar()
     return
   }
-  waylandCompositorSummonRaise = isNativeWaylandLinux()
+  waylandCompositorSummonRaise = isNativeWaylandLinux() && canRaiseOnWayland
   showBar('peek', 'summon')
 }
 

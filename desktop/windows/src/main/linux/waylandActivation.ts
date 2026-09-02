@@ -46,6 +46,11 @@ export function stashLinuxActivationFromEnv(env: NodeJS.ProcessEnv = process.env
   if (fromEnv) pendingActivationToken = fromEnv
 }
 
+/** True when a compositor spawn stashed an XDG activation token (not consumed). */
+export function hasPendingLinuxActivationToken(): boolean {
+  return !!(pendingActivationToken?.trim() || process.env[XDG_TOKEN_ENV]?.trim())
+}
+
 function consumeActivationToken(): string | null {
   const token = pendingActivationToken ?? normalizeToken(process.env[XDG_TOKEN_ENV])
   pendingActivationToken = null
