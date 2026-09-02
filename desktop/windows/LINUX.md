@@ -119,8 +119,9 @@ startup as `[linux] session=… ozone=… portal=… shortcuts=…`.
 On native Wayland the floating bar uses a **full-width top strip** (pill stays at
 the screen top via in-window layout), **hides with `win.hide()`** when dismissed
 instead of parking off-screen, skips `setAlwaysOnTop`, and does **not** create the
-focus-halo glow window (Win32-only today). Global summon shortcuts remain
-unavailable on native Wayland.
+focus-halo glow window (Win32-only today). Global summon via in-app
+`globalShortcut` is unreliable on several native-Wayland compositors (niri, sway,
+Plasma) — see compositor notes below; use `--omi-action` binds where noted.
 
 Screen capture on Wayland goes through the desktop portal, which asks
 "Share screen?" for consent — and Electron has no persisted-consent path, so
@@ -171,11 +172,26 @@ Automatic install requires a packaged AppImage/deb/rpm. For AppImage, spawn uses
 `/tmp/.mount_*` extract (`process.execPath`). `pnpm dev` keeps the manual note
 only.
 
-**KDE / Plasma:** in-app `globalShortcut` is expected to deliver (unlike niri).
-Settings → Shortcuts also **scans** `~/.config/kglobalshortcutsrc` (KGlobalAccel)
-read-only and warns when summon/record chords collide with a Plasma binding.
-Omi does not write Plasma shortcuts in this phase — change the chord in Omi or
-in System Settings → Shortcuts.
+**KDE / Plasma Wayland:** in-app `globalShortcut` can register (portal) while
+**Activated never fires** — same failure mode as niri. Settings marks
+`deliveryReliable: false` and shows manual **System Settings → Shortcuts →
+Command or Script** steps using:
+
+```text
+omi-windows --omi-action summon
+omi-windows --omi-action record-mic
+```
+
+(AppImage: use the full `.AppImage` path.) Assign the same chords as in Omi;
+logout/login once if Plasma does not pick them up immediately. Omi does **not**
+auto-write Plasma shortcuts yet.
+
+Settings also **scans** `~/.config/kglobalshortcutsrc` (KGlobalAccel) read-only
+and warns when summon/record chords collide with a Plasma binding — change the
+chord in Omi or in System Settings.
+
+**KDE / Plasma + `OMI_OZONE=x11`:** X11 grabs may deliver (when XWayland maps
+windows). Conflict scan still applies.
 
 ## What works / what's next
 - ✅ Sign-in, mic → cloud transcription, chat, memory (inherited, cross-platform)

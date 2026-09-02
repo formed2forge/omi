@@ -232,7 +232,50 @@ describe('ShortcutsTab', () => {
 
     fireEvent.click(screen.getAllByText('Test')[0])
     await waitFor(() =>
-      expect(screen.getByText(/Use the compositor-keybind commands shown above/)).toBeTruthy()
+      expect(screen.getByText(/Use the command-shortcut steps shown above/)).toBeTruthy()
+    )
+  })
+
+  it('shows Plasma Wayland manual System Settings steps when delivery is unreliable', async () => {
+    getLinuxShortcutSession.mockResolvedValue({
+      sessionType: 'wayland',
+      compositor: 'kde',
+      currentDesktop: 'KDE',
+      desktopSession: 'plasma',
+      ozonePlatform: 'wayland',
+      portalAppId: 'com.omiwindows.app',
+      globalShortcuts: {
+        available: true,
+        mechanism: 'wayland-portal',
+        deliveryReliable: false,
+        compositorWorkaround: {
+          compositor: 'kde',
+          summonCommand: 'omi-windows --omi-action summon',
+          recordMicCommand: 'omi-windows --omi-action record-mic',
+          plasmaSettingsSteps:
+            'System Settings → Shortcuts → Add New → Command or Script\nSummon: omi-windows --omi-action summon'
+        }
+      },
+      summary:
+        'session=wayland ozone=wayland portal=com.omiwindows.app shortcuts=wayland-portal delivery=compositor-keybind compositor=kde'
+    })
+    scanLinuxDeConflicts.mockResolvedValue({
+      compositor: 'kde',
+      state: 'ok',
+      sourcePath: '/home/u/.config/kglobalshortcutsrc',
+      conflicts: []
+    })
+    testShortcutAccelerator.mockResolvedValue({ available: true })
+    renderTab()
+    await waitFor(() =>
+      expect(screen.getByText(/Plasma Wayland does not deliver in-app global shortcuts/)).toBeTruthy()
+    )
+    expect(screen.getByText(/Command or Script/)).toBeTruthy()
+    expect(screen.getAllByText(/omi-windows --omi-action summon/).length).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getAllByText('Test')[0])
+    await waitFor(() =>
+      expect(screen.getByText(/Use the command-shortcut steps shown above/)).toBeTruthy()
     )
   })
 

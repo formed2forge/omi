@@ -646,9 +646,12 @@ export type LinuxCompositorKind = 'niri' | 'sway' | 'hyprland' | 'gnome' | 'kde'
 
 export type LinuxCompositorKeybindWorkaround = {
   compositor: LinuxCompositorKind
-  niriConfigExample: string
   summonCommand: string
   recordMicCommand: string
+  /** niri/sway `binds { … }` example (omit for Plasma). */
+  niriConfigExample?: string
+  /** Plasma System Settings steps (omit for niri/sway). */
+  plasmaSettingsSteps?: string
 }
 
 export type LinuxShortcutSessionDiagnostics = {
