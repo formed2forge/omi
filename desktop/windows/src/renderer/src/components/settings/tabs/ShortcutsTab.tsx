@@ -31,7 +31,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Keyboard, MessageSquareText, Monitor } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { LinuxShortcutSessionDiagnostics, RecordHotkeyState } from '../../../../../shared/types'
+import type {
+  LinuxShortcutSessionDiagnostics,
+  NiriCompositorKeybindStatus,
+  RecordHotkeyState
+} from '../../../../../shared/types'
 import { setPreferences } from '../../../lib/preferences'
 import { SettingRow } from '../SettingRow'
 import { acceleratorToTokens, DEFAULT_OVERLAY_ACCELERATOR } from '../../../lib/overlayShortcut'
@@ -93,12 +97,43 @@ export function ShortcutsTab(): React.JSX.Element {
 
 function LinuxShortcutSessionRow(): React.JSX.Element | null {
   const [diag, setDiag] = useState<LinuxShortcutSessionDiagnostics | null | undefined>(undefined)
+  const [niriStatus, setNiriStatus] = useState<NiriCompositorKeybindStatus | null>(null)
+  const [showConsent, setShowConsent] = useState(false)
+  const [cancelledManual, setCancelledManual] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const refresh = async (): Promise<void> => {
+    const [info, status] = await Promise.all([
+      window.omi?.getLinuxShortcutSession?.() ?? Promise.resolve(null),
+      window.omi?.getNiriCompositorKeybindStatus?.() ?? Promise.resolve(null)
+    ])
+    setDiag(info ?? null)
+    setNiriStatus(status)
+    if (
+      status &&
+      status.state === 'not-installed' &&
+      !status.consentGranted &&
+      !cancelledManual
+    ) {
+      setShowConsent(true)
+    }
+  }
 
   useEffect(() => {
     let unmounted = false
-    void window.omi?.getLinuxShortcutSession?.().then((info) => {
-      if (!unmounted) setDiag(info ?? null)
-    })
+    void (async () => {
+      const [info, status] = await Promise.all([
+        window.omi?.getLinuxShortcutSession?.() ?? Promise.resolve(null),
+        window.omi?.getNiriCompositorKeybindStatus?.() ?? Promise.resolve(null)
+      ])
+      if (unmounted) return
+      setDiag(info ?? null)
+      setNiriStatus(status)
+      if (status && status.state === 'not-installed' && !status.consentGranted) {
+        setShowConsent(true)
+      }
+    })()
     return () => {
       unmounted = true
     }
@@ -113,6 +148,36 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
       : 'X11 global grab'
     : gs.reason
   const workaround = gs.compositorWorkaround
+  const needsCompositorBinds = gs.available && !gs.deliveryReliable && diag.compositor === 'niri'
+  const showManual =
+    needsCompositorBinds &&
+    workaround &&
+    (cancelledManual ||
+      niriStatus?.state === 'dev-unsupported' ||
+      niriStatus?.state === 'config-missing')
+
+  const onApply = async (): Promise<void> => {
+    setBusy(true)
+    setActionError(null)
+    try {
+      const res = await window.omi?.installNiriCompositorKeybinds?.({ grantConsent: true })
+      setNiriStatus(res?.status ?? null)
+      setShowConsent(false)
+      setCancelledManual(false)
+      if (!res?.ok && res?.status.state === 'conflict') {
+        setActionError(res.status.reason ?? 'Chord conflict in niri config.')
+      } else if (!res?.ok) {
+        setActionError(res?.status.reason ?? 'Could not install compositor keybinds.')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onCancel = (): void => {
+    setShowConsent(false)
+    setCancelledManual(true)
+  }
 
   return (
     <SettingRow
@@ -136,19 +201,160 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
               {' '}
               · desktop <span className="text-white/80">{diag.currentDesktop}</span>
             </>
-          ) : null}
-          {' '}
+          ) : null}{' '}
           · ozone <span className="text-white/80">{diag.ozonePlatform}</span>
         </p>
         <p>
           Global shortcut path: <span className="text-white/80">{mechanism}</span>
         </p>
-        {gs.available && !gs.deliveryReliable && workaround ? (
+
+        {needsCompositorBinds && niriStatus ? (
+          <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+            <p>
+              Compositor shortcuts:{' '}
+              <span className="text-white/80">{niriStatusLabel(niriStatus.state)}</span>
+              {niriStatus.configPath ? (
+                <>
+                  {' '}
+                  · <span className="font-mono text-[11px] text-white/70">{niriStatus.configPath}</span>
+                </>
+              ) : null}
+            </p>
+
+            {showConsent ? (
+              <div className="space-y-2 rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-amber-100/90">
+                <p>
+                  Omi needs to add keybinds to your niri config so global shortcuts work. Omi will
+                  check included KDL files for conflicts, then write a marked block (your other
+                  binds are not changed).
+                </p>
+                {niriStatus.configPath ? (
+                  <p className="font-mono text-[11px] text-white/80">File: {niriStatus.configPath}</p>
+                ) : null}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onApply()}
+                    className="rounded-lg border border-white/25 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+                  >
+                    {busy ? 'Applying…' : 'Apply'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={onCancel}
+                    className="rounded-lg border border-white/10 bg-transparent px-3 py-1.5 text-xs font-medium text-white/80 hover:bg-white/[0.06] disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {!showConsent && niriStatus.state === 'not-installed' ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setShowConsent(true)}
+                className="rounded-lg border border-white/25 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+              >
+                Apply to niri…
+              </button>
+            ) : null}
+
+            {!showConsent && niriStatus.consentGranted && niriStatus.state !== 'installed' ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onApply()}
+                className="rounded-lg border border-white/25 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+              >
+                {busy ? 'Applying…' : 'Retry Apply'}
+              </button>
+            ) : null}
+
+            {niriStatus.state === 'conflict' && niriStatus.conflicts?.length ? (
+              <div className="space-y-2 rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-amber-100/90">
+                <p>
+                  These chords are already bound in your niri config. Omi will not overwrite them —
+                  pick a different chord in Omi, or change the bind in niri.
+                </p>
+                {niriStatus.conflicts.map((c) => (
+                  <div key={`${c.action}-${c.niriChord}`} className="space-y-1">
+                    <p>
+                      <span className="text-white/90">{c.electronAccelerator}</span> (
+                      {c.action}) →{' '}
+                      <span className="font-mono text-[11px] text-white/80">{c.niriChord}</span>
+                    </p>
+                    <p className="font-mono text-[11px] text-white/70">{c.existingBind}</p>
+                    <p className="font-mono text-[10px] text-white/50">{c.filePath}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {niriStatus.state === 'scan-incomplete' ? (
+              <p className="text-amber-200/90">
+                {niriStatus.reason}
+                {niriStatus.unreadableIncludes?.length ? (
+                  <span className="mt-1 block font-mono text-[11px] text-white/60">
+                    {niriStatus.unreadableIncludes.join(', ')}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+
+            {actionError ? <p className="text-amber-300">{actionError}</p> : null}
+
+            {niriStatus.state === 'installed' ? (
+              <p className="text-emerald-300/90">
+                Compositor shortcuts installed. Try your summon chord now.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {showManual && workaround ? (
           <div className="space-y-2 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-amber-100/90">
             <p>
-              {diag.compositor} does not deliver in-app global shortcuts to Electron apps
-              (registration can succeed while key presses never reach Omi). Bind these in your
-              compositor config instead:
+              Manual niri config — bind these in your compositor config (or click Apply above when
+              ready):
+            </p>
+            <p className="font-mono text-[11px] text-white/80">Summon: {workaround.summonCommand}</p>
+            <p className="font-mono text-[11px] text-white/80">
+              Record mic: {workaround.recordMicCommand}
+            </p>
+            <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[10px] text-white/70">
+              {workaround.niriConfigExample}
+            </pre>
+            {cancelledManual ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCancelledManual(false)
+                  setShowConsent(true)
+                  void refresh()
+                }}
+                className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white/80"
+              >
+                Show Apply prompt again
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {needsCompositorBinds &&
+        !showManual &&
+        !showConsent &&
+        niriStatus?.state !== 'installed' &&
+        niriStatus?.state !== 'conflict' &&
+        workaround &&
+        diag.compositor !== 'niri' ? (
+          <div className="space-y-2 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-amber-100/90">
+            <p>
+              {diag.compositor} does not deliver in-app global shortcuts to Electron apps. Bind
+              these in your compositor config instead:
             </p>
             <p className="font-mono text-[11px] text-white/80">Summon: {workaround.summonCommand}</p>
             <p className="font-mono text-[11px] text-white/80">
@@ -162,6 +368,30 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
       </div>
     </SettingRow>
   )
+}
+
+function niriStatusLabel(state: NiriCompositorKeybindStatus['state']): string {
+  switch (state) {
+    case 'installed':
+      return 'Installed'
+    case 'not-installed':
+    case 'needs-consent':
+      return 'Not installed'
+    case 'conflict':
+      return 'Conflict'
+    case 'dev-unsupported':
+      return 'Packaged build required'
+    case 'config-missing':
+      return 'Config not found'
+    case 'scan-incomplete':
+      return 'Scan incomplete'
+    case 'scan-failed':
+      return 'Scan failed'
+    case 'write-failed':
+      return 'Write failed'
+    default:
+      return 'Unavailable'
+  }
 }
 
 /** Keycap chips for an accelerator (e.g. "Ctrl" + "Space"). */

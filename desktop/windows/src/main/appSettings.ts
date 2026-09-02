@@ -28,6 +28,13 @@ export type AppSettings = {
    *  fails loudly in Settings instead of only a console.warn). Kept in step with
    *  the legacy renderer `overlayShortcut` preference by the Settings rebind. */
   summonHotkey: string
+  /** Linux/niri: after the user consents once, re-sync compositor keybinds when
+   *  summon/record chords change. Default ON; first write still requires Apply. */
+  niriKeybindAutoApply: boolean
+  /** Linux/niri: user clicked Apply on the config-edit consent prompt. */
+  niriKeybindConsentGranted: boolean
+  /** Config path the user consented to edit (re-prompt if path changes). */
+  niriKeybindConsentConfigPath: string | null
   /** Exclude the bar/HUD from screen capture (WDA_EXCLUDEFROMCAPTURE). User
    *  toggle, default on — consistent with the old overlay's behavior. */
   hudContentProtection: boolean
@@ -273,6 +280,11 @@ export function sanitizeAppSettings(raw: Partial<AppSettings> | null | undefined
     // hudContentProtection convention above — non-boolean coerces to the default).
     recordHotkeyEnabled: r.recordHotkeyEnabled !== false,
     summonHotkey: summon,
+    // Default ON (!== false): auto-sync after consent. First write still prompts.
+    niriKeybindAutoApply: r.niriKeybindAutoApply !== false,
+    niriKeybindConsentGranted: r.niriKeybindConsentGranted === true,
+    niriKeybindConsentConfigPath:
+      typeof r.niriKeybindConsentConfigPath === 'string' ? r.niriKeybindConsentConfigPath : null,
     hudContentProtection: r.hudContentProtection !== false,
     meeting: sanitizeMeeting(r.meeting),
     lastShownChangelogVersion:
