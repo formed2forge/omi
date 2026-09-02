@@ -200,7 +200,7 @@ auto-write Plasma shortcuts yet.
    ```
 4. Cold start (Omi not running): the AppImage launch must include `--omi-action summon` on the same command line; Omi dispatches summon once startup finishes.
 
-On **native Wayland**, the main chat window stacks above the bar (no always-on-top). Summon hides a visible main window to the tray first — same as clicking close — so the pill is not covered.
+On **native Wayland**, the main chat window stacks above the bar (no always-on-top). Summon hides a visible main window to the tray first — same as clicking close — so the pill is not covered. Compositor summons apply the `XDG_ACTIVATION_TOKEN` (when Plasma provides one) and call `moveTop()` on the bar so the pill can stack above other clients instead of only flashing the taskbar entry.
 
 Settings also **scans** `~/.config/kglobalshortcutsrc` (KGlobalAccel) read-only
 and warns when summon/record chords collide with a Plasma binding — change the
