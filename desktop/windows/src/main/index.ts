@@ -46,6 +46,7 @@ import {
   destroyBar,
   handleSummonPress,
   summonFromTray,
+  registerBarSummonMainWindow,
   setSummonGestureAccelerator,
   setBarEnabled,
   setPeekWatchSuspended,
@@ -1122,6 +1123,7 @@ app.whenReady().then(async () => {
   // `win` is this launch's instance for one-shot wiring below (ready-to-show,
   // bench); long-lived consumers read the module-level `mainWindow` instead.
   const win = (mainWindow = createWindow())
+  registerBarSummonMainWindow(win)
 
   if (import.meta.env.DEV && !app.isPackaged && isDevAutomationEnabled()) {
     const inst = resolveDevInstance()
@@ -1659,7 +1661,10 @@ app.whenReady().then(async () => {
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      mainWindow = createWindow()
+      registerBarSummonMainWindow(mainWindow)
+    }
   })
 })
 

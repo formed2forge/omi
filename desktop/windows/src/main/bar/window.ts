@@ -921,18 +921,21 @@ export function handleSummonPress(): void {
   gesture?.fire()
 }
 
+let barSummonMainWindow: BrowserWindow | null = null
+
+/** Main process registers the primary chat window so native-Wayland summon can
+ *  tuck it without relying on Electron's non-typed skipTaskbar getter. */
+export function registerBarSummonMainWindow(win: BrowserWindow | null): void {
+  barSummonMainWindow = win
+}
+
 /** Native Wayland: the bar cannot use always-on-top, so a visible main window
  *  covers the top-strip pill. Hide it (same as the close button — tray resident). */
 function tuckMainWindowForBarSummon(): void {
   if (!linuxBarSkipAlwaysOnTop()) return
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (w.isDestroyed() || w === barWindow) continue
-    if (w.skipTaskbar) continue
-    if (w.isVisible() && !w.isMinimized()) {
-      w.hide()
-      return
-    }
-  }
+  const win = barSummonMainWindow
+  if (!win || win.isDestroyed()) return
+  if (win.isVisible() && !win.isMinimized()) win.hide()
 }
 
 /** Toggle the bar from a non-keyboard source (e.g. tray menu item).
