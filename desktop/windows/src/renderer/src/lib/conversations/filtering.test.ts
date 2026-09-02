@@ -9,6 +9,7 @@ import {
   hasActiveFilters,
   isCloudBacked,
   matchesType,
+  shouldShowCloudError,
   mergeableRows,
   startOfLocalDay,
   type ConversationFilters,
@@ -196,5 +197,25 @@ describe('groupConversationsByDate', () => {
   it('keys are stable local-midnight epochs', () => {
     const sections = groupConversationsByDate([row({ sortAt: NOW })], NOW)
     expect(sections[0].key).toBe(String(startOfLocalDay(NOW)))
+  })
+})
+
+describe('shouldShowCloudError', () => {
+  it('is false when there is no error', () => {
+    expect(shouldShowCloudError(null, [row({ source: 'local' })])).toBe(false)
+  })
+
+  it('is true when the cloud fetch failed and only local rows exist', () => {
+    expect(shouldShowCloudError('Network Error', [row({ source: 'local' })])).toBe(true)
+  })
+
+  it('is true when the cloud fetch failed and the list is empty', () => {
+    expect(shouldShowCloudError('Network Error', [])).toBe(true)
+  })
+
+  it('is false when a cloud row is already on screen (silent revalidation)', () => {
+    expect(
+      shouldShowCloudError('Network Error', [row({ source: 'cloud' }), row({ source: 'local' })])
+    ).toBe(false)
   })
 })
