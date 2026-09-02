@@ -32,14 +32,16 @@ for this alone.
 
 **Integration branch (mandatory):** All `desktop/windows` work must be folded into
 `windows-all-fixes` (WAF) on `origin` for Tim's integration testing — not only
-opened as a PR. After you push your feature branch, run:
+opened as a PR. This is **automatic** on `git push`: `scripts/pre-push` calls
+`desktop/windows/scripts/fold-into-waf.sh` when the pushed branch touches
+`desktop/windows/` (skip with `OMI_SKIP_WAF_FOLD=1`). You can also fold manually:
 
 ```bash
 desktop/windows/scripts/fold-into-waf.sh [your-branch]
 ```
 
-Cloud agents must run this automatically before ending a Windows task (do not wait
-for the user to ask). `origin/main` stays a clean upstream mirror; WAF is the test tip.
+Cloud agents: push normally — do not skip the WAF fold unless the hook is blocked.
+`origin/main` stays a clean upstream mirror; WAF is the test tip.
 
 - **Install**: `pnpm install --frozen-lockfile` (postinstall rebuilds
   `better-sqlite3`, builds Windows-only OCR/audio/automation `.NET` helpers —
