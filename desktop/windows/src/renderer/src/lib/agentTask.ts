@@ -7,6 +7,9 @@
 // "agent" delegation phrase).
 
 import type { CodingAgentId } from '../../../shared/types'
+import { resolveSpawnCwdFromText } from '../../../shared/spawnCwd'
+
+export { explicitPathIn, folderHintIn } from '../../../shared/spawnCwd'
 
 export type AgentTaskDetection = {
   /** Named agent, or undefined for "some agent" (Omi picks the best one). */
@@ -67,20 +70,6 @@ export function detectAgentTask(text: string): AgentTaskDetection | null {
   return null
 }
 
-/** An explicit absolute Windows path anywhere in the message. */
-export function explicitPathIn(text: string): string | undefined {
-  const match = text.match(/(?:^|[\s"'(])([A-Za-z]:[\\/][^\s"')]+)/)
-  return match?.[1]
-}
-
-/** A "in my omi repo" / "in the desktop folder" style folder-name hint. */
-export function folderHintIn(text: string): string | undefined {
-  const match = text.match(
-    /\b(?:in|inside|under|to)\s+(?:my|the|our)\s+([\w][\w .-]{0,40}?)\s+(?:repo|repository|project|folder|directory|codebase)\b/i
-  )
-  return match?.[1]?.trim()
-}
-
 type FileSearch = (q: string) => Promise<Array<{ folder: string }>>
 type SqlQuery = (sql: string) => Promise<{ columns: string[]; rows: Record<string, unknown>[] }>
 
@@ -94,25 +83,8 @@ export async function resolveTaskCwd(
   text: string,
   deps: { searchFiles: FileSearch; executeSql: SqlQuery }
 ): Promise<string | undefined> {
-  const explicit = explicitPathIn(text)
-  if (explicit) return explicit
-
-  try {
-    const hint = folderHintIn(text)
-    if (hint) {
-      const files = await deps.searchFiles(hint)
-      const folder = files.find((f) => f.folder.toLowerCase().includes(hint.toLowerCase()))?.folder
-      if (folder) return folder
-    }
-    // Exclude app shortcuts: the index also scans Start-Menu folders (kind
-    // 'apps'), and without the filter "most recent folder" can resolve to
-    // C:\ProgramData\...\Start Menu\Programs\<vendor> (seen live).
-    const recent = await deps.executeSql(
-      "SELECT folder, MAX(modified_at) AS last_modified FROM indexed_files WHERE file_type != 'application' GROUP BY folder ORDER BY last_modified DESC LIMIT 1"
-    )
-    const folder = recent.rows[0]?.folder
-    return typeof folder === 'string' && folder ? folder : undefined
-  } catch {
-    return undefined
-  }
+  return resolveSpawnCwdFromText(text, {
+    searchFiles: deps.searchFiles,
+    executeSql: deps.executeSql
+  })
 }
