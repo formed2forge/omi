@@ -60,6 +60,7 @@ vi.mock('../../hooks/useAgentPills', () => ({
     pills: mockPills,
     markViewed: vi.fn(),
     dismiss: vi.fn(),
+    refresh: vi.fn(),
     transcriptFor: () => ({ messages: [], sending: false })
   })
 }))
