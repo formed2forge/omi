@@ -16,6 +16,7 @@ const testShortcutAccelerator = vi.fn()
 const getLinuxShortcutSession = vi.fn()
 const getNiriCompositorKeybindStatus = vi.fn()
 const installNiriCompositorKeybinds = vi.fn()
+const scanLinuxDeConflicts = vi.fn()
 
 const renderTab = (): void => {
   render(
@@ -42,6 +43,7 @@ beforeEach(() => {
   getLinuxShortcutSession.mockReset().mockResolvedValue(null)
   getNiriCompositorKeybindStatus.mockReset().mockResolvedValue(null)
   installNiriCompositorKeybinds.mockReset()
+  scanLinuxDeConflicts.mockReset().mockResolvedValue(null)
   ;(globalThis as unknown as { window: { omi: unknown } }).window.omi = {
     getRecordHotkey,
     setRecordHotkey,
@@ -53,7 +55,8 @@ beforeEach(() => {
     testShortcutAccelerator,
     getLinuxShortcutSession,
     getNiriCompositorKeybindStatus,
-    installNiriCompositorKeybinds
+    installNiriCompositorKeybinds,
+    scanLinuxDeConflicts
   }
 })
 afterEach(cleanup)
@@ -280,5 +283,46 @@ describe('ShortcutsTab', () => {
     await waitFor(() =>
       expect(screen.getByText(/Compositor shortcuts installed/)).toBeTruthy()
     )
+  })
+
+  it('shows Plasma DE conflicts when kglobalaccel owns an Omi chord', async () => {
+    getLinuxShortcutSession.mockResolvedValue({
+      sessionType: 'wayland',
+      compositor: 'kde',
+      currentDesktop: 'KDE',
+      desktopSession: 'plasma',
+      ozonePlatform: 'x11',
+      portalAppId: 'com.omiwindows.app',
+      globalShortcuts: {
+        available: true,
+        mechanism: 'x11-grab',
+        deliveryReliable: true,
+        compositorWorkaround: null
+      },
+      summary: 'session=wayland compositor=kde'
+    })
+    scanLinuxDeConflicts.mockResolvedValue({
+      compositor: 'kde',
+      state: 'conflicts',
+      sourcePath: '/home/u/.config/kglobalshortcutsrc',
+      conflicts: [
+        {
+          action: 'summon',
+          electronAccelerator: 'Shift+Space',
+          deChord: 'Shift+Space',
+          component: 'Example',
+          actionId: '_launch',
+          label: 'Example summon',
+          sourcePath: '/home/u/.config/kglobalshortcutsrc',
+          existingBind: '_launch=Shift+Space,none,Example summon'
+        }
+      ]
+    })
+    renderTab()
+    await waitFor(() =>
+      expect(screen.getByText(/already bound in Plasma/)).toBeTruthy()
+    )
+    expect(screen.getByText(/Example \/ Example summon/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Rescan Plasma shortcuts/ })).toBeTruthy()
   })
 })

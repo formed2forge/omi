@@ -32,6 +32,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Keyboard, MessageSquareText, Monitor } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type {
+  LinuxDeConflictScanResult,
   LinuxShortcutSessionDiagnostics,
   NiriCompositorKeybindStatus,
   RecordHotkeyState
@@ -98,18 +99,21 @@ export function ShortcutsTab(): React.JSX.Element {
 function LinuxShortcutSessionRow(): React.JSX.Element | null {
   const [diag, setDiag] = useState<LinuxShortcutSessionDiagnostics | null | undefined>(undefined)
   const [niriStatus, setNiriStatus] = useState<NiriCompositorKeybindStatus | null>(null)
+  const [deScan, setDeScan] = useState<LinuxDeConflictScanResult | null>(null)
   const [showConsent, setShowConsent] = useState(false)
   const [cancelledManual, setCancelledManual] = useState(false)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const refresh = async (): Promise<void> => {
-    const [info, status] = await Promise.all([
+    const [info, status, scan] = await Promise.all([
       window.omi?.getLinuxShortcutSession?.() ?? Promise.resolve(null),
-      window.omi?.getNiriCompositorKeybindStatus?.() ?? Promise.resolve(null)
+      window.omi?.getNiriCompositorKeybindStatus?.() ?? Promise.resolve(null),
+      window.omi?.scanLinuxDeConflicts?.() ?? Promise.resolve(null)
     ])
     setDiag(info ?? null)
     setNiriStatus(status)
+    setDeScan(scan)
     if (
       status &&
       status.state === 'not-installed' &&
@@ -123,13 +127,15 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
   useEffect(() => {
     let unmounted = false
     void (async () => {
-      const [info, status] = await Promise.all([
+      const [info, status, scan] = await Promise.all([
         window.omi?.getLinuxShortcutSession?.() ?? Promise.resolve(null),
-        window.omi?.getNiriCompositorKeybindStatus?.() ?? Promise.resolve(null)
+        window.omi?.getNiriCompositorKeybindStatus?.() ?? Promise.resolve(null),
+        window.omi?.scanLinuxDeConflicts?.() ?? Promise.resolve(null)
       ])
       if (unmounted) return
       setDiag(info ?? null)
       setNiriStatus(status)
+      setDeScan(scan)
       if (status && status.state === 'not-installed' && !status.consentGranted) {
         setShowConsent(true)
       }
@@ -184,7 +190,7 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
       icon={Monitor}
       title="Linux shortcut environment"
       subtitle="Session facts Omi uses when registering global shortcuts."
-      keywords="linux wayland x11 portal ozone desktop environment shortcut diagnostics niri sway compositor"
+      keywords="linux wayland x11 portal ozone desktop environment shortcut diagnostics niri sway kde plasma compositor"
     >
       <div className="space-y-2 text-xs text-white/55">
         <p className="font-mono text-[11px] text-white/70">{diag.summary}</p>
@@ -207,6 +213,60 @@ function LinuxShortcutSessionRow(): React.JSX.Element | null {
         <p>
           Global shortcut path: <span className="text-white/80">{mechanism}</span>
         </p>
+
+        {diag.compositor === 'kde' && deScan?.state === 'conflicts' && deScan.conflicts?.length ? (
+          <div className="space-y-2 rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-amber-100/90">
+            <p>
+              These Omi chords are already bound in Plasma (System Settings → Shortcuts). Pick a
+              different chord in Omi, or change that shortcut in Plasma.
+            </p>
+            {deScan.sourcePath ? (
+              <p className="font-mono text-[11px] text-white/70">{deScan.sourcePath}</p>
+            ) : null}
+            {deScan.conflicts.map((c) => (
+              <div key={`${c.action}-${c.deChord}-${c.actionId}`} className="space-y-1">
+                <p>
+                  Omi <span className="text-white/90">{c.action}</span> (
+                  <span className="font-mono text-[11px] text-white/80">{c.electronAccelerator}</span>
+                  ) conflicts with{' '}
+                  <span className="text-white/90">
+                    {c.component} / {c.label}
+                  </span>{' '}
+                  (<span className="font-mono text-[11px] text-white/80">{c.deChord}</span>)
+                </p>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white/80"
+            >
+              Rescan Plasma shortcuts
+            </button>
+          </div>
+        ) : null}
+
+        {diag.compositor === 'kde' && deScan?.state === 'ok' ? (
+          <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+            <p className="text-emerald-300/90">
+              No Plasma global-shortcut conflicts for Omi&apos;s current chords.
+            </p>
+            {deScan.sourcePath ? (
+              <p className="font-mono text-[11px] text-white/60">{deScan.sourcePath}</p>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white/80"
+            >
+              Rescan Plasma shortcuts
+            </button>
+          </div>
+        ) : null}
+
+        {diag.compositor === 'kde' && deScan?.state === 'scan-failed' ? (
+          <p className="text-amber-300">{deScan.reason ?? 'Plasma shortcut scan failed.'}</p>
+        ) : null}
 
         {needsCompositorBinds && niriStatus ? (
           <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">

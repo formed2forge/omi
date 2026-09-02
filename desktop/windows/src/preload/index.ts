@@ -706,6 +706,7 @@ const omi: OmiBridgeApi = {
   testShortcutAccelerator: (accelerator: string) =>
     ipcRenderer.invoke('shortcuts:test-accelerator', accelerator),
   getLinuxShortcutSession: () => ipcRenderer.invoke('shortcuts:get-linux-session'),
+  scanLinuxDeConflicts: () => ipcRenderer.invoke('shortcuts:scan-de-conflicts'),
   getNiriCompositorKeybindStatus: () =>
     ipcRenderer.invoke('shortcuts:get-niri-keybind-status'),
   installNiriCompositorKeybinds: (opts?: { grantConsent?: boolean }) =>

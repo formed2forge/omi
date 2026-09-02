@@ -707,6 +707,28 @@ export type NiriCompositorKeybindInstallResult = {
   status: NiriCompositorKeybindStatus
 }
 
+/** One DE-owned chord that collides with an Omi accelerator (read-only scan). */
+export type LinuxDeShortcutConflict = {
+  action: 'summon' | 'record-mic'
+  electronAccelerator: string
+  /** Chord as stored by the DE (e.g. Qt `Meta+Shift+Space`). */
+  deChord: string
+  /** Component / app group (Plasma section friendly name). */
+  component: string
+  actionId: string
+  label: string
+  sourcePath: string
+  existingBind: string
+}
+
+export type LinuxDeConflictScanResult = {
+  compositor: LinuxCompositorKind
+  state: 'unsupported' | 'ok' | 'conflicts' | 'scan-failed'
+  sourcePath?: string
+  conflicts?: LinuxDeShortcutConflict[]
+  reason?: string
+}
+
 /** Outcome of a manual "check for updates" from Settings → About.
  *  - `unsupported`: the updater is inert (unpackaged dev build) — updates install
  *    automatically only in packaged builds, so there is nothing to check.
@@ -1317,6 +1339,8 @@ export type OmiBridgeApi = {
   testShortcutAccelerator: (accelerator: string) => Promise<ShortcutAcceleratorProbeResult>
   /** Linux-only session + portal facts for Settings diagnostics. Null elsewhere. */
   getLinuxShortcutSession: () => Promise<LinuxShortcutSessionDiagnostics | null>
+  /** Read-only DE shortcut conflict scan (KDE/Plasma today). Null off Linux. */
+  scanLinuxDeConflicts: () => Promise<LinuxDeConflictScanResult | null>
   /** niri compositor-keybind status (null off Linux / non-niri). */
   getNiriCompositorKeybindStatus: () => Promise<NiriCompositorKeybindStatus | null>
   /** Install/re-sync niri managed binds. grantConsent=true records Apply consent. */
