@@ -1,23 +1,13 @@
 // Wlroots-family compositors known to ship without reliable XWayland support
-// (confirmed on niri — see docs/multi-worktree-dev.md's environment-overrides
-// and troubleshooting sections: the XWayland ozone path can fail to map the
-// main window at all there, tray icon only). Sway and Hyprland are the other
-// two wlroots compositors this project's docs call out (same doc) and share
-// the same "XWayland is optional, sometimes absent" shape, so they're
-// treated the same pending their own confirmed repro. Detected via each
-// compositor's own session marker env var — XDG_CURRENT_DESKTOP isn't set
-// consistently across them.
-const WAYLAND_NATIVE_COMPOSITORS: Record<string, string> = {
-  niri: 'NIRI_SOCKET',
-  sway: 'SWAYSOCK',
-  hyprland: 'HYPRLAND_INSTANCE_SIGNATURE'
-}
+// (confirmed on niri — see docs/multi-worktree-dev.md). Ozone defaults use the
+// shared detector so a stale NIRI_SOCKET under Plasma/GNOME does not force
+// native Wayland.
+import { detectWlrootsCompositor } from './linux/compositorDetect'
 
+/** @deprecated Prefer detectLinuxCompositor from linux/compositorDetect — kept
+ *  as a thin alias for existing callers (returns wlroots name or undefined). */
 export function detectLinuxCompositor(env: NodeJS.ProcessEnv = process.env): string | undefined {
-  for (const [name, marker] of Object.entries(WAYLAND_NATIVE_COMPOSITORS)) {
-    if (env[marker]) return name
-  }
-  return undefined
+  return detectWlrootsCompositor(env)
 }
 
 // XWayland (ozone-platform=x11) is the default because it's the only path
@@ -28,12 +18,9 @@ export function detectLinuxCompositor(env: NodeJS.ProcessEnv = process.env): str
 // its own, lesser limitations) is the better default there. OMI_OZONE stays
 // available as an explicit override in either direction.
 export function defaultOzonePlatform(env: NodeJS.ProcessEnv = process.env): 'wayland' | 'x11' {
-  // Known Wayland-only compositors: their socket env var being set is definitive
-  // proof of a Wayland session, more reliable than XDG_SESSION_TYPE which depends
-  // on PAM/logind setup and may be 'tty' or unset when launched from autostart or
-  // a desktop shortcut. Check this first so niri/sway/hyprland always get native
-  // Wayland regardless of how the session type was propagated.
-  if (detectLinuxCompositor(env)) return 'wayland'
+  // Known Wayland-native compositors: detected after DE identity, so Plasma
+  // with a leftover NIRI_SOCKET still gets the XWayland default.
+  if (detectWlrootsCompositor(env)) return 'wayland'
   // Generic Wayland or X11 session without a recognized compositor (GNOME, KDE,
   // etc.): default to XWayland for global shortcuts + active-window detection.
   if (env.XDG_SESSION_TYPE !== 'wayland') return 'x11'

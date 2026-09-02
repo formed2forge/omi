@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { detectLinuxCompositor, defaultOzonePlatform } from './linuxCompositor'
 
-const MARKERS = ['XDG_SESSION_TYPE', 'NIRI_SOCKET', 'SWAYSOCK', 'HYPRLAND_INSTANCE_SIGNATURE']
+const MARKERS = [
+  'XDG_SESSION_TYPE',
+  'XDG_CURRENT_DESKTOP',
+  'DESKTOP_SESSION',
+  'NIRI_SOCKET',
+  'SWAYSOCK',
+  'HYPRLAND_INSTANCE_SIGNATURE'
+]
 const original = Object.fromEntries(MARKERS.map((k) => [k, process.env[k]]))
 
 // Each test starts from a clean slate regardless of the host's own session
@@ -32,6 +39,11 @@ describe('detectLinuxCompositor', () => {
   it('identifies hyprland via HYPRLAND_INSTANCE_SIGNATURE', () => {
     process.env.HYPRLAND_INSTANCE_SIGNATURE = 'abc123'
     expect(detectLinuxCompositor()).toBe('hyprland')
+  })
+  it('does not treat stale NIRI_SOCKET as niri under Plasma', () => {
+    process.env.XDG_CURRENT_DESKTOP = 'KDE'
+    process.env.NIRI_SOCKET = '/run/user/1000/niri.sock'
+    expect(detectLinuxCompositor()).toBeUndefined()
   })
 })
 
@@ -66,6 +78,12 @@ describe('defaultOzonePlatform', () => {
   it('is x11 on a generic Wayland session with no recognized compositor socket (GNOME, KDE)', () => {
     process.env.XDG_SESSION_TYPE = 'wayland'
     // no compositor sockets set
+    expect(defaultOzonePlatform()).toBe('x11')
+  })
+  it('is x11 on Plasma Wayland even if a stale NIRI_SOCKET remains', () => {
+    process.env.XDG_SESSION_TYPE = 'wayland'
+    process.env.XDG_CURRENT_DESKTOP = 'KDE'
+    process.env.NIRI_SOCKET = '/run/user/1000/niri.sock'
     expect(defaultOzonePlatform()).toBe('x11')
   })
 })
