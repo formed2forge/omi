@@ -220,18 +220,6 @@ body.bar-body {
       0 0 12px rgb(51 219 255 / 0.7),
       0 0 22px rgb(51 219 255 / 0.3);
   }
-  .bar-surface.bar-surface-expanded.bar-surface-agent-running {
-    box-shadow:
-      0 0 12px rgb(255 204 102 / 0.7),
-      0 0 22px rgb(255 204 102 / 0.3),
-      0 8px 30px rgba(0, 0, 0, 0.45);
-  }
-  .bar-surface.bar-surface-expanded.bar-surface-agent-queued {
-    box-shadow:
-      0 0 12px rgb(51 219 255 / 0.7),
-      0 0 22px rgb(51 219 255 / 0.3),
-      0 8px 30px rgba(0, 0, 0, 0.45);
-  }
 }
 
 /* Collapsed pill row. */
@@ -254,10 +242,10 @@ body.bar-body {
   white-space: nowrap;
 }
 
-/* Aggregate agent status (Mac AgentStatusGlow / compactPillFill).
+/* Collapsed-bar aggregate agent status (Mac AgentStatusGlow / compactPillFill).
    Colors match NotchAgentStatusGroup — failed red, running amber, queued cyan,
-   done green, stopped gray. Applied in peek and expanded modes; voice reply
-   still clears it in BarApp. Own box-shadow is not clipped by overflow:clip.
+   done green, stopped gray. Applied only while peeked (expanded chrome omits
+   `.bar-surface-agent`). Own box-shadow is not clipped by overflow:clip.
    NEVER purple (INV-UI-1). Do not remount the orb to carry this signal. */
 .bar-surface.bar-surface-agent-failed {
   border-color: rgb(255 107 107 / 0.55);
@@ -285,62 +273,6 @@ body.bar-body {
     0 0 10px rgb(163 168 179 / 0.45),
     0 0 18px rgb(163 168 179 / 0.2);
 }
-
-/* Expanded panel: keep the ambient status glow AND the panel depth shadow so
-   short/full expand still reads agent status (user: glow must not vanish on click). */
-.bar-surface.bar-surface-expanded.bar-surface-agent-failed {
-  box-shadow:
-    0 0 16px rgb(255 107 107 / 0.75),
-    0 0 28px rgb(255 107 107 / 0.35),
-    0 8px 30px rgba(0, 0, 0, 0.45);
-}
-.bar-surface.bar-surface-expanded.bar-surface-agent-done {
-  box-shadow:
-    0 0 16px rgb(69 235 117 / 0.75),
-    0 0 28px rgb(69 235 117 / 0.3),
-    0 8px 30px rgba(0, 0, 0, 0.45);
-}
-.bar-surface.bar-surface-expanded.bar-surface-agent-stopped {
-  box-shadow:
-    0 0 12px rgb(163 168 179 / 0.4),
-    0 0 20px rgb(163 168 179 / 0.2),
-    0 8px 30px rgba(0, 0, 0, 0.45);
-}
-.bar-surface.bar-surface-expanded.bar-surface-agent-running {
-  animation: bar-agent-breathe-running-expanded 1.15s ease-in-out infinite alternate;
-}
-.bar-surface.bar-surface-expanded.bar-surface-agent-queued {
-  animation: bar-agent-breathe-queued-expanded 1.15s ease-in-out infinite alternate;
-}
-@keyframes bar-agent-breathe-running-expanded {
-  from {
-    box-shadow:
-      0 0 10px rgb(255 204 102 / 0.5),
-      0 0 18px rgb(255 204 102 / 0.22),
-      0 8px 30px rgba(0, 0, 0, 0.45);
-  }
-  to {
-    box-shadow:
-      0 0 16px rgb(255 204 102 / 0.85),
-      0 0 28px rgb(255 204 102 / 0.4),
-      0 8px 30px rgba(0, 0, 0, 0.45);
-  }
-}
-@keyframes bar-agent-breathe-queued-expanded {
-  from {
-    box-shadow:
-      0 0 10px rgb(51 219 255 / 0.5),
-      0 0 18px rgb(51 219 255 / 0.22),
-      0 8px 30px rgba(0, 0, 0, 0.45);
-  }
-  to {
-    box-shadow:
-      0 0 16px rgb(51 219 255 / 0.85),
-      0 0 28px rgb(51 219 255 / 0.4),
-      0 8px 30px rgba(0, 0, 0, 0.45);
-  }
-}
-
 @keyframes bar-agent-breathe-running {
   from {
     box-shadow:

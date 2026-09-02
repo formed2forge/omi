@@ -280,25 +280,13 @@ describe('BarApp collapsed agent-status glow', () => {
     expect(surface?.getAttribute('data-agent-status')).toBeNull()
   })
 
-  it('expanded panel keeps the agent glow (short and full expand)', async () => {
+  it('expanded panel does not carry the collapsed glow class', async () => {
     mockPills = [failedPill]
     await mountBar()
     await fire('onShow', { mode: 'expanded', token: 1 })
     const surface = document.querySelector('.bar-surface')
     expect(surface?.className).toContain('bar-surface-expanded')
-    expect(surface?.getAttribute('data-agent-status')).toBe('failed')
-    expect(surface?.className).toContain('bar-surface-agent-failed')
-  })
-
-  it('peek→expand keeps the agent glow across the mode flip', async () => {
-    mockPills = [{ ...failedPill, displayStatus: 'done', errorMessage: null }]
-    await mountBar()
-    await fire('onShow', { mode: 'peek', token: 1 })
-    expect(document.querySelector('.bar-surface')?.getAttribute('data-agent-status')).toBe('done')
-    await fire('onMode', 'expanded')
-    const surface = document.querySelector('.bar-surface')
-    expect(surface?.className).toContain('bar-surface-expanded')
-    expect(surface?.getAttribute('data-agent-status')).toBe('done')
-    expect(surface?.className).toContain('bar-surface-agent-done')
+    expect(surface?.getAttribute('data-agent-status')).toBeNull()
+    expect(surface?.className).not.toContain('bar-surface-agent')
   })
 })
