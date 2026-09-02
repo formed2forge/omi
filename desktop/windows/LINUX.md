@@ -186,6 +186,20 @@ omi-windows --omi-action record-mic
 logout/login once if Plasma does not pick them up immediately. Omi does **not**
 auto-write Plasma shortcuts yet.
 
+**Verify the compositor bind (before blaming Omi):**
+
+1. Leave Omi running (close the main window — it hides to the tray on Linux; use tray → Quit only when done testing).
+2. In a terminal, with Omi already running:
+   ```bash
+   /full/path/to/omi-windows-1.0.35.AppImage --omi-action summon
+   ```
+   The floating bar should peek in. If this fails, the KDE shortcut will fail too — check `~/.config/omi-windows/logs/main.log`.
+3. KDE command must be **one line** (no embedded newlines), AppImage `chmod +x`, and the args after the path:
+   ```text
+   /home/user/dev/omi/desktop/windows/dist/omi-windows-1.0.35.AppImage --omi-action summon
+   ```
+4. Cold start (Omi not running): the AppImage launch must include `--omi-action summon` on the same command line; Omi dispatches summon once startup finishes.
+
 Settings also **scans** `~/.config/kglobalshortcutsrc` (KGlobalAccel) read-only
 and warns when summon/record chords collide with a Plasma binding — change the
 chord in Omi or in System Settings.
