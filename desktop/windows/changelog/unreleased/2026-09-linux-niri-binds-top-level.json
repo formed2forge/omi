@@ -1,0 +1,7 @@
+{
+  "entries": [
+    {
+      "change": "Linux (niri): write managed shortcuts into top-level binds only (skip recent-windows nested binds) and spawn via $APPIMAGE on AppImage builds"
+    }
+  ]
+}

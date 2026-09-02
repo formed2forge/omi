@@ -131,8 +131,10 @@ never reach Omi.
 
 **niri (packaged builds):** Settings → Shortcuts prompts to **Apply** compositor
 keybinds. Omi scans `config.kdl` **and included KDL files** for conflicts, then
-writes a marked managed block (never overwrites a chord already bound to something
-else). Cancel shows the manual config note instead.
+writes a marked managed block into the **top-level** `binds {}` only (never into
+`recent-windows { binds {…} }`, which only allows `next-window` /
+`previous-window`). It never overwrites a chord already bound to something else.
+Cancel shows the manual config note instead.
 
 ```text
 omi-windows --omi-action summon
@@ -148,8 +150,10 @@ binds {
 }
 ```
 
-Automatic install requires a packaged AppImage/deb/rpm (`process.execPath`). `pnpm dev`
-keeps the manual note only.
+Automatic install requires a packaged AppImage/deb/rpm. For AppImage, spawn uses
+`$APPIMAGE` (stable path to the `.AppImage` file), not the ephemeral
+`/tmp/.mount_*` extract (`process.execPath`). `pnpm dev` keeps the manual note
+only.
 
 ## What works / what's next
 - ✅ Sign-in, mic → cloud transcription, chat, memory (inherited, cross-platform)
