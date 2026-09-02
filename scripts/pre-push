@@ -815,5 +815,34 @@ run_step check_desktop_tool_surfaces_if_needed
 run_step check_gauntlet_evidence_if_needed
 run_step check_optional_formatters
 
+fold_into_waf_if_needed() {
+  if [ "${OMI_SKIP_WAF_FOLD:-}" = "1" ]; then
+    echo "Skipping WAF fold because OMI_SKIP_WAF_FOLD=1."
+    return
+  fi
+
+  if [ -z "${CURRENT_BRANCH:-}" ]; then
+    return
+  fi
+
+  case "$CURRENT_BRANCH" in
+    main|windows-all-fixes) return ;;
+  esac
+
+  if ! changed_matches 'desktop/windows/*' 'desktop/windows/**/*'; then
+    return
+  fi
+
+  local fold_script="desktop/windows/scripts/fold-into-waf.sh"
+  if [ ! -x "$fold_script" ]; then
+    echo "FAIL: desktop/windows changes require folding into windows-all-fixes, but $fold_script is missing." >&2
+    exit 1
+  fi
+
+  echo "==> auto-folding $CURRENT_BRANCH into windows-all-fixes for integration testing"
+  SKIP_VERIFY=1 bash "$fold_script" "$CURRENT_BRANCH"
+}
+
 print_ci_prediction_summary
+fold_into_waf_if_needed
 echo "Bounded pre-push gate passed; CI remains the full test authority."
