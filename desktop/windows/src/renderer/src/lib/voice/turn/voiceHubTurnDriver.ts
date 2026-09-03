@@ -447,7 +447,10 @@ export class VoiceHubTurnDriver {
    *  Begins a main-owned turn: barge-in, route selection, hub begin, and
    *  main-owned capture. `'hold'` is a key-up-bound press; `'locked'` is the
    *  hands-free lane a click (or double-tap) takes — there is no key-up. */
-  begin(payload: { backfillMs: number; intent?: Extract<VoiceTurnIntent, 'hold' | 'locked'> }): void {
+  begin(payload: {
+    backfillMs: number
+    intent?: Extract<VoiceTurnIntent, 'hold' | 'locked'>
+  }): void {
     if (this.disposed) return
     // Barge-in seam (Mac `PushToTalkManager.startListening` → interruptCurrentResponse):
     // a new hold cuts off a still-playing cascade/TTS reply. Safe no-op when idle.
