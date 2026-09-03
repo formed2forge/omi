@@ -48,9 +48,9 @@ for this alone.
   can't reach (live ASR, agent spawning, OAuth flows, Rewind semantics). Specs
   live under `e2e/`. Run the relevant one manually before shipping a change
   in that area; don't assume `pnpm test` alone covers it.
-- **Fork integration:** fold `desktop/windows` work into `windows-all-fixes`
-  in the same session so GUI testing (`pnpm dev`) can run. Do not leave
-  fold-in as a follow-up. Never merge those feature PRs into fork `main`.
+- **Fork landing:** fold into `windows-all-fixes` same session so GUI
+  testing (`pnpm dev`) can run. Do not leave fold-in as a follow-up.
+  Never open or merge a PR against fork `main`.
 
 ### Linux dev environment (niri / Wayland compositors)
 
