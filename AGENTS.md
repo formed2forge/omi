@@ -76,7 +76,7 @@ The unit of work is the violated contract, not only the line where the symptom a
 - Always work in a git worktree for code changes (`git worktree add`); commit to the current branch and never switch branches mid-task.
 - Make individual commits per feature or testable surface, not per file or unrelated bulk changes.
 - If push fails (remote ahead): `git pull --rebase && git push`.
-- **Fork Windows/Linux:** fold `desktop/windows` work into `windows-all-fixes` the same session (GUI test). Never merge those PRs into fork `main`.
+- **Fork Windows/Linux:** fold `desktop/windows` into `windows-all-fixes` same session. Never merge those PRs into fork `main`.
 - **PR size is reported, not bounded** (`pr-scope` manifest check — advisory annotations, never blocks): 1,500+ changed production-source lines warns; 3,000+ cites the audited history of missed regressions. Split only when the pieces are independently verifiable; otherwise give the one PR proportional review depth.
 - **RELEASE command:** branch from `main`, individual commits, push, open PR, merge without squash, switch back to `main` and pull. **RELEASEWITHBACKEND:** RELEASE + `gh workflow run gcp_backend.yml -f environment=prod -f branch=main`.
 
