@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "Added a microphone button to the Home ask bar and the floating-bar composer. Click starts locked listening; click again sends — the same one voice-turn driver the bar's hold already uses, matching macOS."
+  ]
+}

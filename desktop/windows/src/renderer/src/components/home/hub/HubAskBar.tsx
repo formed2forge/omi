@@ -9,6 +9,8 @@ import {
 } from '../../../lib/chatAttachments'
 import { filesToPickedChatFiles } from '../../../lib/chatDropFiles'
 import { usePendingAttachments } from '../../../hooks/usePendingAttachments'
+import { useVoiceTurnButton } from '../../../hooks/useVoiceTurnButton'
+import { PushToTalkMicButton } from '../../voice/PushToTalkMicButton'
 import { AttachmentChip } from './AttachmentChip'
 import type { PickedChatFile } from '../../../../../shared/types'
 
@@ -55,6 +57,7 @@ export function HubAskBar(props: {
   const [rejectNote, setRejectNote] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const attachments = usePendingAttachments()
+  const voice = useVoiceTurnButton()
   const atCap = attachments.length >= MAX_CHAT_ATTACHMENTS
   // Send is allowed with text OR at least one attachment that hasn't failed —
   // never while a reply streams, and never a failed-only set (that would post an
@@ -92,9 +95,9 @@ export function HubAskBar(props: {
   // whole HomeAskBar pill (DashboardPage.swift:2211-2214). Without this only the input's
   // own thin text line was clickable: the 58px pill's top/bottom strips and the padding
   // to either side were dead zones, so a click near the pill's edge did nothing — the
-  // reported bug. The paperclip and the trailing Connect/Send button keep their own
-  // actions (a click that lands on a button returns early), and a click already on the
-  // input keeps native caret placement.
+  // reported bug. The paperclip, the mic, and the trailing Connect/Send button keep
+  // their own actions (a click that lands on a button returns early), and a click
+  // already on the input keeps native caret placement.
   const focusFromPill = (e: React.MouseEvent): void => {
     const target = e.target as HTMLElement
     if (target === inputRef.current || target.closest('button')) return
@@ -170,6 +173,15 @@ export function HubAskBar(props: {
           <Paperclip className="h-[15px] w-[15px]" strokeWidth={2.25} />
         </button>
 
+        {/* Same trigger the floating bar click / hold already drives, so Home
+            enters the one VoiceHubTurnDriver turn instead of a second mic path. */}
+        <PushToTalkMicButton
+          state={voice.state}
+          onClick={voice.toggle}
+          level={voice.snapshot.orbLevel}
+          diameter={34}
+        />
+
         <input
           ref={inputRef}
           // Not a page-load autofocus: this fires only when the bar re-mounts inside the
@@ -241,6 +253,11 @@ export function HubAskBar(props: {
           </button>
         )}
       </div>
+      {voice.snapshot.hint ? (
+        <p className="mt-1.5 px-1 text-[11px] text-home-muted" role="status">
+          {voice.snapshot.hint}
+        </p>
+      ) : null}
       {rejectNote && (
         <p className="mt-1.5 px-1 text-[11px] text-home-muted" role="status">
           {rejectNote}

@@ -35,6 +35,7 @@ import {
   isPlaybackLevelFresh,
   pillLabel
 } from './barDisplay'
+import { buttonState, type VoiceTurnPhaseKind } from '../../lib/voice/turn/pushToTalkButtonTrigger'
 import type {
   BarMode,
   BarShowPayload,
@@ -60,12 +61,25 @@ const EMPTY_CHAT: BarChatState = { messages: [], sending: false, status: 'idle' 
 // (today's behavior). Only a main-owned turn (flag on) flips `active` true.
 const HUB_ORB_IDLE: VoiceHubBarState = {
   active: false,
+  phaseKind: null,
   isListening: false,
   isThinking: false,
   isResponseActive: false,
   seq: 0,
   orbLevel: 0,
   hint: ''
+}
+
+/** Map a local (hub-off) Space-hold onto the same phase kinds the click policy
+ *  reads, so the composer mic agrees with the orb while the cascade owns capture. */
+function localPttPhaseKind(ptt: {
+  recording: boolean
+  locked: boolean
+  transcribing: boolean
+}): VoiceTurnPhaseKind | null {
+  if (ptt.transcribing) return 'finalizing'
+  if (ptt.recording) return ptt.locked ? 'lockedRecording' : 'recording'
+  return null
 }
 
 function SignedOutContent(): React.JSX.Element {
@@ -408,6 +422,13 @@ export function BarApp(): React.JSX.Element {
   // --- surface hit-testing (interactive islands) ------------------------------
   const onSurfaceEnter = useCallback((): void => window.omiBar.setInteractive(true), [])
   const onSurfaceLeave = useCallback((): void => window.omiBar.setInteractive(false), [])
+  // Composer mic: always the main-owned driver (INV-VOICE-1), even when Space-hold
+  // still uses the local cascade. Click-to-lock, click-to-send — no hold.
+  const onPttButtonClick = useCallback((): void => window.omiBar.voiceHubToggle(), [])
+  const pttButtonState = buttonState(
+    hubOrb.active ? (hubOrb.phaseKind as VoiceTurnPhaseKind | null) : localPttPhaseKind(ptt),
+    sender.checkSync().blocked
+  )
 
   // --- Esc (only meaningful while expanded + focused) -------------------------
   // Recording/finalizing → abort the capture; in the conversation → back to the
@@ -695,6 +716,9 @@ export function BarApp(): React.JSX.Element {
                     pttKeyUp={ptt.onKeyUp}
                     recording={ptt.recording}
                     transcribing={ptt.transcribing}
+                    pttButtonState={pttButtonState}
+                    pttLevel={hubOrb.active ? hubOrb.orbLevel : 0}
+                    onPttButtonClick={onPttButtonClick}
                     maxListHeight={maxListHeight}
                   />
                 )}
