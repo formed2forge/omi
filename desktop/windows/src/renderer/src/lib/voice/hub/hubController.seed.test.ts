@@ -71,6 +71,9 @@ class FakeSession implements HubSession {
   isWarm(): boolean {
     return this.warm
   }
+  hasInFlightResponse(): boolean {
+    return false
+  }
   beginTurn(): void {
     this.begun += 1
   }

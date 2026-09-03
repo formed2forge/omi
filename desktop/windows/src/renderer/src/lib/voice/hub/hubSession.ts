@@ -83,8 +83,15 @@ export type HubSession = {
   /** Open (or reuse) the warm socket and apply session config. Idempotent. */
   ensureWarm(): Promise<void>
   isWarm(): boolean
+  /** True while a prior turn's provider response (or Gemini activity window) is
+   *  still in flight. Sequential `beginTurn(interrupting: false)` must still
+   *  cancel that leftover — local playback can drain and terminate the turn
+   *  before `response.done` / `turnComplete`, and `requestResponse` then no-ops. */
+  hasInFlightResponse(): boolean
   /** Start a PTT turn. Gemini opens a fresh speech-activity window every turn;
-   *  OpenAI, when `interrupting`, cancels the in-flight reply first. */
+   *  OpenAI, when `interrupting` or a leftover response is still active, cancels
+   *  the in-flight reply first so a sequential press cannot answer the previous
+   *  question. */
   beginTurn(opts?: {
     turnID?: VoiceTurnID
     responseID?: VoiceResponseID
@@ -160,7 +167,11 @@ export const defaultSocketFactory: HubSocketFactory = (spec) => {
   ws.onopen = () => spec.onOpen()
   ws.onmessage = (e: MessageEvent) =>
     spec.onMessage(
-      typeof e.data === 'string' ? e.data : e.data instanceof ArrayBuffer ? wsTextDecoder.decode(e.data) : ''
+      typeof e.data === 'string'
+        ? e.data
+        : e.data instanceof ArrayBuffer
+          ? wsTextDecoder.decode(e.data)
+          : ''
     )
   ws.onclose = (e: CloseEvent) => spec.onClose(e.code, e.reason)
   ws.onerror = () => spec.onError('websocket error')
@@ -326,6 +337,11 @@ export abstract class BaseHubSession implements HubSession {
 
   isWarm(): boolean {
     return this.isOpen
+  }
+
+  /** Subclasses override: OpenAI `responseActive`, Gemini `responsePending || activityOpen`. */
+  hasInFlightResponse(): boolean {
+    return false
   }
 
   private async openConnection(): Promise<void> {

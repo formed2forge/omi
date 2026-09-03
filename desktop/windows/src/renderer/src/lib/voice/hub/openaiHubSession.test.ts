@@ -244,6 +244,79 @@ describe('OpenAiHubSession — barge-in (Swift-faithful)', () => {
   })
 })
 
+describe('OpenAiHubSession — leftover in-flight sequential begin (no barge-in flag)', () => {
+  it('cancels a still-active response on sequential begin so the next commit issues a new response.create', async () => {
+    const h = harness()
+    await connect(h)
+    const tid2 = 't2' as VoiceTurnID
+    const rid2 = 'r2' as VoiceResponseID
+    // Turn A: commit + response.created, but NO response.done (playback drained
+    // locally and the driver terminated before the provider finished).
+    h.session.beginTurn({ turnID: tid, responseID: rid })
+    h.session.commitTurn()
+    h.getSocket().spec.onMessage(
+      JSON.stringify({ type: 'response.created', response: { id: 'resp_a' } })
+    )
+    expect(h.session.hasInFlightResponse()).toBe(true)
+    h.getSocket().sent = []
+    // Sequential begin with interrupting:false — the smoking-gun formed2forge/omi#60 race.
+    h.session.beginTurn({ turnID: tid2, responseID: rid2 })
+    expect(h.getSocket().types()).toEqual(['response.cancel', 'input_audio_buffer.clear'])
+    expect(h.player.clear).toHaveBeenCalled()
+    h.getSocket().sent = []
+    h.session.appendAudio(new Uint8Array([1, 2]))
+    h.session.commitTurn()
+    expect(h.getSocket().types()).toEqual([
+      'input_audio_buffer.append',
+      'input_audio_buffer.commit',
+      'response.create'
+    ])
+    h.player.enqueuePcm16.mockClear()
+    // Stale A's created/done must not hijack B (created already adopted then canceled).
+    h.getSocket().spec.onMessage(
+      JSON.stringify({
+        type: 'response.output_audio.delta',
+        response_id: 'resp_a',
+        delta: 'STALE'
+      })
+    )
+    expect(h.player.enqueuePcm16).not.toHaveBeenCalled()
+    h.getSocket().spec.onMessage(
+      JSON.stringify({ type: 'response.done', response: { id: 'resp_a', output: [] } })
+    )
+    expect(h.events.onTurnDone).not.toHaveBeenCalled()
+    h.getSocket().spec.onMessage(
+      JSON.stringify({ type: 'response.created', response: { id: 'resp_b' } })
+    )
+    h.getSocket().spec.onMessage(
+      JSON.stringify({
+        type: 'response.output_audio.delta',
+        response_id: 'resp_b',
+        delta: 'FRESH'
+      })
+    )
+    expect(h.player.enqueuePcm16).toHaveBeenCalledTimes(1)
+    h.getSocket().spec.onMessage(
+      JSON.stringify({ type: 'response.done', response: { id: 'resp_b', output: [] } })
+    )
+    expect(h.events.onTurnDone).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not emit cancel/clear on a clean first begin (one-turn wire order stays append→commit→create)', async () => {
+    const h = harness()
+    await connect(h)
+    h.session.beginTurn({ turnID: tid, responseID: rid })
+    expect(h.getSocket().types()).toEqual([])
+    h.session.appendAudio(new Uint8Array([1, 2]))
+    h.session.commitTurn()
+    expect(h.getSocket().types()).toEqual([
+      'input_audio_buffer.append',
+      'input_audio_buffer.commit',
+      'response.create'
+    ])
+  })
+})
+
 describe('OpenAiHubSession — barge-in before response.created (stale-created hijack guard)', () => {
   it('does not adopt a canceled response.created, so stale audio cannot leak into the next turn', async () => {
     const h = harness()
