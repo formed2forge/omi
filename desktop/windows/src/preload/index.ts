@@ -658,6 +658,11 @@ const omi: OmiBridgeApi = {
     ipcRenderer.on('voiceHub:cancel', listener)
     return () => ipcRenderer.removeListener('voiceHub:cancel', listener)
   },
+  onVoiceHubToggle: (cb: () => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on('voiceHub:toggle', listener)
+    return () => ipcRenderer.removeListener('voiceHub:toggle', listener)
+  },
   onVoiceHubWake: (cb: () => void) => {
     const listener = (): void => cb()
     ipcRenderer.on('voiceHub:wake', listener)
@@ -835,6 +840,7 @@ const omiBar: OmiBarApi = {
     ipcRenderer.send('bar:voiceHubBegin', payload),
   voiceHubEnd: () => ipcRenderer.send('bar:voiceHubEnd'),
   voiceHubCancel: () => ipcRenderer.send('bar:voiceHubCancel'),
+  voiceHubToggle: () => ipcRenderer.send('bar:voiceHubToggle'),
   onVoiceHubState: (cb: (state: VoiceHubBarState) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, state: VoiceHubBarState): void => cb(state)
     ipcRenderer.on('voiceHub:state', listener)

@@ -152,6 +152,8 @@ type Harness = {
     muteForCapture: ReturnType<typeof vi.fn>
     restoreSystemAudio: ReturnType<typeof vi.fn>
     trackEvent: ReturnType<typeof vi.fn>
+    onUsageLimitBlocked: ReturnType<typeof vi.fn>
+    onButtonSnapshot: ReturnType<typeof vi.fn>
   }
 }
 
@@ -160,6 +162,7 @@ function makeDriver(
     pttHubEnabled?: boolean
     transcript?: string
     executeTool?: (name: string, argumentsJSON: string) => Promise<string>
+    usageLimitBlocked?: boolean
   } = {}
 ): Harness {
   const hub = makeFakeHub()
@@ -175,7 +178,9 @@ function makeDriver(
     onRecordTurn: vi.fn(),
     muteForCapture: vi.fn(),
     restoreSystemAudio: vi.fn(),
-    trackEvent: vi.fn()
+    trackEvent: vi.fn(),
+    onUsageLimitBlocked: vi.fn(),
+    onButtonSnapshot: vi.fn()
   }
   const watchdog: Harness['watchdog'] = { armed: false, cancelled: false, fire: () => {} }
   const deps: VoiceHubTurnDriverDeps = {
@@ -199,6 +204,10 @@ function makeDriver(
     muteForCapture: spies.muteForCapture,
     restoreSystemAudio: spies.restoreSystemAudio,
     trackEvent: spies.trackEvent,
+    checkUsageLimit: () =>
+      opts.usageLimitBlocked ? { blocked: true, message: 'limit reached' } : { blocked: false },
+    onUsageLimitBlocked: spies.onUsageLimitBlocked,
+    onButtonSnapshot: spies.onButtonSnapshot,
     executeTool: opts.executeTool,
     prefs: () => ({ pttHubEnabled: opts.pttHubEnabled }),
     scheduler,
@@ -1201,5 +1210,75 @@ describe('single-audible-owner (audibleOutputArbiter)', () => {
     // No further driver events — the playing-phase playbackDrain deadline fires.
     h.scheduler.fire('playbackDrain')
     expect(isRealtimeAudible()).toBe(false) // snapshot observer released it — no leak
+  })
+})
+
+// Composer mic click — macOS PushToTalkMicButton / togglePushToTalkFromButton.
+describe('toggleFromButton (locked click lane)', () => {
+  it('first click starts locked listening; the next click finalizes the same turn', async () => {
+    const h = makeDriver({ pttHubEnabled: true })
+    h.hub.setAvailability(true)
+    expect(h.driver.phaseKind).toBeNull()
+
+    h.driver.toggleFromButton()
+    expect(h.driver.phaseKind).toBe('lockedRecording')
+    expect(h.capture.start).toHaveBeenCalledTimes(1)
+    expect(h.hub.calls.beginTurn).toHaveLength(1)
+    expect(h.hub.calls.beginTurn[0].interrupting).toBe(false)
+
+    await flush()
+    h.capture.feed(voiced1s())
+    h.driver.toggleFromButton()
+    // Warm hub: end() finalize + hubCommitDeferred in one turn, so the painted
+    // phase is awaitingResponse (the committing spinner is the cascade lane).
+    expect(h.driver.phaseKind).toBe('awaitingResponse')
+    expect(h.hub.calls.commitTurn).toHaveLength(1)
+    expect(h.capture.start).toHaveBeenCalledTimes(1)
+  })
+
+  it('a click while cascade-committing neither restarts nor re-commits', async () => {
+    const h = makeDriver({ pttHubEnabled: true })
+    h.hub.setAvailability(false)
+    h.spies.transcribe.mockImplementation(() => new Promise<string>(() => {}))
+    h.driver.toggleFromButton()
+    await flush()
+    h.capture.feed(voiced1s())
+    h.driver.toggleFromButton()
+    expect(h.driver.phaseKind).toBe('finalizing')
+    expect(h.capture.start).toHaveBeenCalledTimes(1)
+    expect(h.spies.transcribe).toHaveBeenCalledTimes(1)
+
+    h.driver.toggleFromButton()
+    expect(h.driver.phaseKind).toBe('finalizing')
+    expect(h.capture.start).toHaveBeenCalledTimes(1)
+    expect(h.spies.transcribe).toHaveBeenCalledTimes(1)
+  })
+
+  it('a click during an in-flight response barges in with a fresh locked turn', async () => {
+    const h = makeDriver({ pttHubEnabled: true })
+    h.hub.setAvailability(true)
+    h.driver.begin({ backfillMs: 0 })
+    await flush()
+    h.capture.feed(voiced1s())
+    h.driver.end()
+    expect(h.driver.phaseKind).toBe('awaitingResponse')
+    const firstTurn = h.hub.calls.beginTurn[0].turnID
+
+    h.driver.toggleFromButton()
+    expect(h.driver.phaseKind).toBe('lockedRecording')
+    expect(h.hub.calls.beginTurn).toHaveLength(2)
+    expect(h.hub.calls.beginTurn[1].turnID).not.toBe(firstTurn)
+    expect(h.hub.calls.beginTurn[1].interrupting).toBe(true)
+    expect(h.spies.interruptPlayback).toHaveBeenCalled()
+  })
+
+  it('a blocked click surfaces the usage-limit popup and opens no turn', () => {
+    const h = makeDriver({ pttHubEnabled: true, usageLimitBlocked: true })
+    h.hub.setAvailability(true)
+    h.driver.toggleFromButton()
+    expect(h.spies.onUsageLimitBlocked).toHaveBeenCalledWith('limit reached')
+    expect(h.driver.phaseKind).toBeNull()
+    expect(h.capture.start).not.toHaveBeenCalled()
+    expect(h.hub.calls.beginTurn).toHaveLength(0)
   })
 })

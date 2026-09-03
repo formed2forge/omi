@@ -28,6 +28,7 @@ const invariants = new VoicePlaneInvariants({
 
 const IDLE_HUB_BAR_STATE: VoiceHubBarState = {
   active: false,
+  phaseKind: null,
   isListening: false,
   isThinking: false,
   isResponseActive: false,

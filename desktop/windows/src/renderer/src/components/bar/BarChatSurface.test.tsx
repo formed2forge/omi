@@ -498,4 +498,30 @@ describe('BarChatSurface', () => {
     const overflow = body.match(/(?:^|[^-])overflow:\s*([a-z]+)/)?.[1]
     expect(overflow).toBe('clip')
   })
+
+  it('list: the mic button toggles voice and does not send or navigate', () => {
+    const onPttButtonClick = vi.fn()
+    const props = renderSurface({
+      view: 'list',
+      draft: 'hello there',
+      onPttButtonClick
+    })
+    fireEvent.click(screen.getByLabelText('Start voice input'))
+    expect(onPttButtonClick).toHaveBeenCalledTimes(1)
+    expect(props.onSubmit).not.toHaveBeenCalled()
+    expect(props.onOpenConversation).not.toHaveBeenCalled()
+  })
+
+  it('conversation: the mic sits next to Send and stays clickable while blocked', () => {
+    const onPttButtonClick = vi.fn()
+    renderSurface({
+      view: 'conversation',
+      pttButtonState: 'blocked',
+      onPttButtonClick
+    })
+    const mic = screen.getByTestId('push-to-talk-mic') as HTMLButtonElement
+    expect(mic.disabled).toBe(false)
+    fireEvent.click(mic)
+    expect(onPttButtonClick).toHaveBeenCalledTimes(1)
+  })
 })

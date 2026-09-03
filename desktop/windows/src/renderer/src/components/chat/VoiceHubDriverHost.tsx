@@ -10,6 +10,12 @@ import { muteSystemAudioForHubCapture } from '../../lib/ptt/systemAudioMute'
 import { HubController } from '../../lib/voice/hub/hubController'
 import { VoiceHubTurnDriver } from '../../lib/voice/turn/voiceHubTurnDriver'
 import { playbackLevel } from '../../lib/voice/playbackLevelBus'
+import {
+  bindVoiceTurnToggle,
+  publishVoiceTurnButtonSnapshot
+} from '../../lib/voice/turn/voiceTurnButtonStore'
+import { mainChatQuotaGate } from '../../hooks/useChat'
+import { showUsageLimit } from '../../lib/usageLimit'
 
 // The main-window mount for the warm-hub PTT driver (A5 PR-6b, Option A / D1).
 //
@@ -20,9 +26,10 @@ import { playbackLevel } from '../../lib/voice/playbackLevelBus'
 // channels (begin / end / cancel).
 //
 // The kill-switch is structural: the bar sends `voiceHubBegin` ONLY when
-// `pttHubEnabled` is on, so with the flag off this host constructs its (pure,
-// unconnected) objects and registers three listeners that NEVER fire — no
-// capture, no hub warm, no projection. The shipped local PTT cascade is untouched.
+// `pttHubEnabled` is on, so with the flag off a Space-hold never reaches this
+// host and the shipped local cascade is untouched. Composer mic clicks still
+// enter `toggleFromButton` (omniSTT when the hub is cold) so Home and the bar
+// composer share the locked click lane regardless of the hold flag.
 export function VoiceHubDriverHost(): null {
   const { chat } = useAppState()
   const { user, loading } = useAuth()
@@ -70,6 +77,9 @@ export function VoiceHubDriverHost(): null {
       publishState: (state) => window.omi?.publishVoiceHubState?.(state),
       startCapture: (opts) => startPttCapture(opts),
       transcribe: (pcm) => batchTranscribe(pcm, new AbortController().signal),
+      checkUsageLimit: () => mainChatQuotaGate.checkSync(),
+      onUsageLimitBlocked: () => showUsageLimit('chat'),
+      onButtonSnapshot: (snapshot) => publishVoiceTurnButtonSnapshot(snapshot),
       // CASCADE route: re-answer via the chat engine (fromVoice ⇒ spoken reply).
       // Thread the per-press turnId so the kernel user-turn record shares the key a
       // hub-native record would use (INV-CHAT-1 double-record belt-and-suspenders).
@@ -131,14 +141,18 @@ export function VoiceHubDriverHost(): null {
     const un1 = window.omi?.onVoiceHubBegin?.((p) => driver.begin(p))
     const un2 = window.omi?.onVoiceHubEnd?.(() => driver.end())
     const un3 = window.omi?.onVoiceHubCancel?.(() => driver.cancel())
+    const unToggle = window.omi?.onVoiceHubToggle?.(() => driver.toggleFromButton())
     // A7c wake: the machine resumed/unlocked — a socket warmed before suspend is likely
     // a zombie, so refresh it now (idle) rather than let the next press land on it dead.
     const un4 = window.omi?.onVoiceHubWake?.(() => driver.requestSessionRefresh('system_wake'))
+    const unbind = bindVoiceTurnToggle(() => driver.toggleFromButton())
     return () => {
       un1?.()
       un2?.()
       un3?.()
+      unToggle?.()
       un4?.()
+      unbind()
     }
   }, [driver])
 

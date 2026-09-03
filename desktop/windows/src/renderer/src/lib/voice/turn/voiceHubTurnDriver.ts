@@ -4,8 +4,8 @@
 // hub controller, and the output coordinator, but wired them to NO window. This
 // driver is the finale: it mounts them in the MAIN renderer (Option A / decision
 // D1 — `pcmPlayer` + `voiceController` are main-resident, so hub spoken audio
-// plays locally with zero audio IPC) and turns three low-rate control messages
-// from the bar (begin / end / cancel) into a fully-driven voice turn.
+// plays locally with zero audio IPC) and turns four low-rate control messages
+// from the bar (begin / end / cancel / toggle) into a fully-driven voice turn.
 //
 // The kill-switch is structural, not a runtime `if`: this driver only does work on
 // a `begin`, and the bar sends `begin` ONLY when `pttHubEnabled` is on
@@ -14,7 +14,8 @@
 // byte-for-byte unchanged.
 //
 // What it owns, per turn:
-//   * `coordinator.begin('hold')` → the reducer start; then `selectPttRoute`
+//   * `coordinator.begin(intent)` → the reducer start (`'hold'` from a bar key
+//     hold, `'locked'` from a composer mic click); then `selectPttRoute`
 //     picks hub / hubWarmWait / omniSTT and it emits `selectRoute`.
 //   * Capture ownership: it calls `startCapture` FROM THE MAIN RENDERER, so the
 //     capture window routes owned PCM (`ptt-chunk`) to main (captureBridge tags
@@ -46,6 +47,9 @@ import {
   restoreSystemAudio as defaultRestoreSystemAudio
 } from '../../ptt/systemAudioMute'
 import type { VoiceHubBarState } from '../../../../../shared/types'
+import { clickAction } from './pushToTalkButtonTrigger'
+import type { VoiceTurnPhaseKind } from './pushToTalkButtonTrigger'
+import type { VoiceTurnButtonSnapshot } from './voiceTurnButtonStore'
 import type { HubController, HubControllerEvents } from '../hub/hubController'
 import { beginRealtimeAudible, endRealtimeAudible } from '../audibleOutputArbiter'
 import { VoiceOutputCoordinator } from './voiceOutputCoordinator'
@@ -59,6 +63,7 @@ import {
   type VoiceToolCallID,
   type VoiceTurnEvent,
   type VoiceTurnID,
+  type VoiceTurnIntent,
   type VoiceTurnRoute,
   type VoiceTurnUIProjection
 } from './voiceTurnMachine'
@@ -113,6 +118,16 @@ export type VoiceHubTurnDriverDeps = {
   /** Start the mic capture OWNED BY THIS (main) renderer. Production =
    *  `startPttCapture` — issued from main so the capture window routes owned PCM here. */
   startCapture: (opts: PttCaptureOptions) => Promise<PttCapture>
+  /** Synchronous PTT pre-capture veto (macOS PushToTalkManager.isBlockedByUsageLimit).
+   *  Read once at a composer-mic click, BEFORE the mic opens. No snapshot ⇒ not
+   *  blocked (fail open). Omit to disable the veto (tests). */
+  checkUsageLimit?: () => { blocked: boolean; message?: string }
+  /** Raise the shared usage-limit popup for a click that checkUsageLimit vetoed. */
+  onUsageLimitBlocked?: (message: string) => void
+  /** Local (same-renderer) projection for the Home composer mic button. The bar
+   *  still receives `publishState`; this is the in-process sibling so HubAskBar
+   *  does not need IPC to render listening/committing. */
+  onButtonSnapshot?: (snapshot: VoiceTurnButtonSnapshot) => void
   /** Batch-transcribe retained PCM (cascade route + hub warm-wait fallback).
    *  Production wraps `transport.batchTranscribe`. */
   transcribe: (pcm: Int16Array) => Promise<string>
@@ -409,9 +424,44 @@ export class VoiceHubTurnDriver {
     this.emit(true)
   }
 
-  /** A bar hold delegated its turn to this driver (flag on). Begins a main-owned
-   *  turn: barge-in, route selection, hub begin, and main-owned capture. */
-  begin(payload: { backfillMs: number }): void {
+  /** Authoritative reducer phase for the click policy. `null` is idle (no turn,
+   *  or the last turn already terminalized). */
+  get phaseKind(): VoiceTurnPhaseKind | null {
+    return this.coordinator.activeTurn?.phase.kind ?? null
+  }
+
+  /** Composer mic click — macOS `PushToTalkManager.togglePushToTalkFromButton`.
+   *  First click starts locked listening; the next click finalizes the same turn.
+   *  A click while committing is ignored. A blocked click raises the usage popup
+   *  and opens no turn. */
+  toggleFromButton(): void {
+    if (this.disposed) return
+    switch (clickAction(this.phaseKind)) {
+      case 'finalize':
+        this.end()
+        return
+      case 'ignore':
+        this.flightRecord('button_click_ignored', { phase: this.phaseKind })
+        return
+      case 'beginHandsFree': {
+        const verdict = this.deps.checkUsageLimit?.()
+        if (verdict?.blocked) {
+          this.deps.onUsageLimitBlocked?.(verdict.message ?? '')
+          return
+        }
+        this.begin({ backfillMs: 0, intent: 'locked' })
+      }
+    }
+  }
+
+  /** A bar hold (or composer mic click) delegated its turn to this driver.
+   *  Begins a main-owned turn: barge-in, route selection, hub begin, and
+   *  main-owned capture. `'hold'` is a key-up-bound press; `'locked'` is the
+   *  hands-free lane a click (or double-tap) takes — there is no key-up. */
+  begin(payload: {
+    backfillMs: number
+    intent?: Extract<VoiceTurnIntent, 'hold' | 'locked'>
+  }): void {
     if (this.disposed) return
     // Barge-in seam (Mac `PushToTalkManager.startListening` → interruptCurrentResponse):
     // a new hold cuts off a still-playing cascade/TTS reply. Safe no-op when idle.
@@ -437,7 +487,7 @@ export class VoiceHubTurnDriver {
 
     // `begin` mints the id and sends `start` (which terminates any prior turn as
     // interruptedByBargeIn — the reducer preserves a hub socket for the successor).
-    const turnID = this.coordinator.begin('hold')
+    const turnID = this.coordinator.begin(payload.intent ?? 'hold')
     this.turnID = turnID
     this.captureID = this.mintCaptureID()
     this.output.beginTurn(turnID)
@@ -1036,6 +1086,7 @@ export class VoiceHubTurnDriver {
     const p = this.lastProjection
     this.deps.publishState({
       active: this.turnID !== null,
+      phaseKind: this.phaseKind,
       isListening: p.isListening,
       isThinking: p.isThinking,
       isResponseActive: p.isResponseActive,
@@ -1046,6 +1097,12 @@ export class VoiceHubTurnDriver {
       // drops `turnID` to null, so gating it on `active` would swallow it. Non-terminal
       // projections carry an empty hint, so this is inert during a normal turn. The
       // reducer's `hintVisibility` deadline later re-projects an empty hint to clear it.
+      hint: p.hint
+    })
+    this.deps.onButtonSnapshot?.({
+      phaseKind: this.phaseKind,
+      isListening: p.isListening,
+      orbLevel: this.turnID !== null ? this.orbLevel : 0,
       hint: p.hint
     })
   }

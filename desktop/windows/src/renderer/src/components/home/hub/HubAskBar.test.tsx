@@ -27,6 +27,15 @@ vi.mock('../../../lib/chatDropFiles', () => ({
   filesToPickedChatFiles: (...a: unknown[]) => filesToPickedChatFiles(...a)
 }))
 
+const toggleVoice = vi.fn()
+vi.mock('../../../hooks/useVoiceTurnButton', () => ({
+  useVoiceTurnButton: () => ({
+    snapshot: { phaseKind: null, isListening: false, orbLevel: 0, hint: '' },
+    state: 'idle',
+    toggle: toggleVoice
+  })
+}))
+
 import { HubAskBar } from './HubAskBar'
 
 const att = (over: Partial<PendingAttachment>): PendingAttachment => ({
@@ -61,6 +70,7 @@ beforeEach(() => {
   addAttachments.mockReturnValue({ accepted: [], rejected: [] })
   removeAttachment.mockClear()
   filesToPickedChatFiles.mockReset()
+  toggleVoice.mockReset()
   ;(window as unknown as { omi: unknown }).omi = {
     openChatFiles: vi
       .fn()
@@ -188,5 +198,21 @@ describe('HubAskBar — whole-pill hit target (Mac contentShape parity)', () => 
     fireEvent.mouseDown(screen.getByRole('button', { name: 'Connect' }))
     await flushFocusFrame()
     expect(document.activeElement).not.toBe(input)
+  })
+
+  it('does NOT hijack focus when the mic button is pressed', async () => {
+    renderBar()
+    const input = screen.getByLabelText('Ask omi anything')
+    fireEvent.mouseDown(screen.getByTestId('push-to-talk-mic'))
+    await flushFocusFrame()
+    expect(document.activeElement).not.toBe(input)
+  })
+})
+
+describe('HubAskBar — push-to-talk mic', () => {
+  it('renders the mic and a click toggles the shared voice-turn driver', () => {
+    renderBar()
+    fireEvent.click(screen.getByLabelText('Start voice input'))
+    expect(toggleVoice).toHaveBeenCalledTimes(1)
   })
 })
