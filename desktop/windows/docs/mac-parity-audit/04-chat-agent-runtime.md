@@ -39,7 +39,7 @@ with both where they overlap.
 | Kernel (sessions/runs/attempts/artifacts, SQLite) | Absent; "largest, deepest part of the runtime," "no PR" | **Shipped.** `agentKernel/store.ts` (2841 lines, 25 tables), `kernelCore.ts` (2252 lines), `kernelRuns.ts`, `kernelSessions.ts`, `kernelArtifacts.ts` — landed 2026-07-14, still receiving fixes through 2026-07-29. `resumeBinding` (flagged by PARALLEL-PLAN as "modeled but never called" on 2026-07-13) is now called for real at `kernelCore.ts:1159`. |
 | Agent control-plane tools + coordinator | Absent | **Shipped**, name-for-name identical to the Mac tool list the old audit itself cited: all 18 tools present in `controlTools.ts` (1423 lines) with the exact same names (`list_agent_sessions` … `set_desktop_attention_override`), wired live via `main/ipc/agentControl.ts` → `registerAgentControlIpc()` in `main/index.ts:1014`. |
 | Desktop tool-policy engine | Absent | **Shipped.** `desktopToolPolicy.ts` (412 lines): 12 capability bundles (not Mac's 11 — Windows added one), risk/privacy/approval tiers, deny-by-default, resolves both control tools and the ~31-entry product-tool manifest (`omiToolManifest.ts`, 1750 lines). |
-| Floating-bar AgentPill UX | Absent; "most visible, differentiated agent UX," no PR | **Shipped.** `AgentPillView.tsx` + `useAgentPills.ts` (310 lines) landed 2026-07-19 (commit tagged "B3"), 2s poll cadence matching Mac's `AgentPill.swift:1775` exactly, viewed-TTL eviction, idle-heartbeat backoff to 30s when no pills are active. |
+| Floating-bar AgentPill UX | Absent; "most visible, differentiated agent UX," no PR | **Shipped.** `AgentPillView.tsx` + `useAgentPills.ts` (310 lines) landed 2026-07-19 (commit tagged "B3"), 2s poll cadence matching Mac's `AgentPill.swift:1775` exactly, finished-TTL eviction, idle-heartbeat backoff to 30s when no pills are active. |
 | Multi-provider settings UI + Claude OAuth | Absent / no UI | **Shipped.** `AgentsTab.tsx`: PATH auto-detection, one-click Connect + real ACP handshake test per external agent (OpenClaw/Hermes/Codex), a Codex OpenAI-key lane, and Claude Code OAuth (`claudeOAuth.ts`, 490 lines, PKCE loopback writing the SDK-native `.credentials.json` — same file format Claude Code's own CLI reads, so no Keychain-equivalent is even needed). |
 | Chat attachments | Absent | **Shipped.** `chatAttachments.ts` (154 lines) + `ChatAttachmentStrip.tsx` (132 lines): drag-drop, upload, image/document cards rendered above the bubble, wired into `useChat.ts`'s send path. |
 | C4 (done-payload discard) | Listed as a live Critical in WIRING-AUDIT | **Confirmed fixed**, independently re-verified: `useChat.ts:1290-1293` stores `serverId`/`citations`/`chartData`/`askForNps` from the terminal frame. |
@@ -217,8 +217,8 @@ parity audit re-pass to date.
   each active run's `get_agent_run` on a 2000ms cadence (`LIST_POLL_MS`/`RUN_POLL_MS`,
   matching Mac's 2s poll at `AgentPill.swift:1775` cited by name in-code) — with an idle
   optimization Mac doesn't need to document (Windows drops to a 30s heartbeat when no pills are
-  active, leaning on a kernel push event to re-arm instantly). Viewed-finished pills get a TTL
-  eviction (`VIEWED_FINISHED_TTL_MS`) and there's a soft-cap trim (`trimForSoftCap`), both fail-open
+  active, leaning on a kernel push event to re-arm instantly). Terminal pills get a TTL
+  eviction (`FINISHED_TTL_MS`, keyed off `completedAtMs` whether viewed or not) and there's a soft-cap trim (`trimForSoftCap`), both fail-open
   on any door-call error so a bad poll can never crash the render.
 - **One real gap that persists from the old audit, now more precisely scoped:** Mac's
   `AgentPillsManager.spawnFromUserQuery` parses agent-count ("spawn 3 agents") and provider

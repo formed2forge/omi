@@ -185,7 +185,7 @@ export function statusOrbClasses(token: AgentPillTintToken): string {
 }
 
 /** Drop cached per-pill assistant text for pills that no longer exist (evicted by
- *  soft-cap / viewed-TTL, or dismissed) so the useAgentPills text map can't grow
+ *  soft-cap / finished-TTL, or dismissed) so the useAgentPills text map can't grow
  *  without bound. Returns the SAME reference when nothing was pruned, so it never
  *  churns a new object into state. */
 export function retainTextForPills(
