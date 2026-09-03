@@ -1671,6 +1671,10 @@ export type VoiceToolExecuteArgs = {
   name: string
   /** The raw JSON arguments string from the provider tool call (parsed host-side). */
   argumentsJSON: string
+  /** Active Home chat id (INV-CHAT-1). Voice tools inherit this as the
+   *  producing surface so spawn/completion cards land on the thread the
+   *  main panel is showing, not `main_chat/chat/default`. */
+  chatId?: string
 }
 
 export type MainChatEvent =

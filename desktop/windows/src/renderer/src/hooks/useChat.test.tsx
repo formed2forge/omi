@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
-import type { ChatMessage, CodingAgentEvent } from '../../../shared/types'
+import type { AgentThreadCardMsg, ChatMessage, CodingAgentEvent } from '../../../shared/types'
 
 // useChat is the app's single chat engine. These tests cover the two wiring
 // fixes: C4 — the terminal `done:` payload (citation-stripped text + server id +
@@ -164,6 +164,7 @@ let bodies: string[] = []
 let persisted: ChatMessage[][] = []
 // Coding-agent bridge harness (agent-task path).
 let agentEventCb: ((e: CodingAgentEvent) => void) | null = null
+let agentCardCb: ((card: AgentThreadCardMsg) => void) | null = null
 let agentRunTaskId: string | null = null
 let agentRunResolve: ((r: { ok: boolean; text?: string; error?: string }) => void) | null = null
 const codingAgentCancelSpy = vi.fn(async () => {})
@@ -181,6 +182,7 @@ beforeEach(() => {
   sessionMocks.getMessages.mockReset()
   sessionMocks.getMessages.mockResolvedValue([])
   agentEventCb = null
+  agentCardCb = null
   agentRunTaskId = null
   agentRunResolve = null
   agentMocks.detectAgentTask.mockReset()
@@ -220,7 +222,13 @@ beforeEach(() => {
     kgSearchFiles: async () => [],
     kgExecuteSql: async () => ({ columns: [], rows: [] }),
     voiceHubRecordTurn: voiceHubRecordTurnSpy,
-    voiceHubGetSeedContext: async () => ({ context: '', idempotencyKeys: [] })
+    voiceHubGetSeedContext: async () => ({ context: '', idempotencyKeys: [] }),
+    onAgentCardEvent: (cb: (card: AgentThreadCardMsg) => void) => {
+      agentCardCb = cb
+      return () => {
+        if (agentCardCb === cb) agentCardCb = null
+      }
+    }
   }
   saveDesktopMessageSpy.mockClear()
   voiceHubRecordTurnSpy.mockClear()
@@ -1166,16 +1174,49 @@ describe('useChat — chat quota gate (Mac AgentBridge.quotaExceeded parity)', (
 
   it('lets an in-quota send through and records the query optimistically', async () => {
     const { result } = renderHook(() => useChat())
-    void act(async () => {
-      await result.current.send('hello')
-    })
-    await waitForStream(0)
-    streams[0].close()
     await act(async () => {
-      await flush()
+      const pending = result.current.send('hello')
+      await waitForStream(0)
+      streams[0].close()
+      await pending
     })
     expect(global.fetch).toHaveBeenCalledTimes(1)
     expect(gateMocks.recordQuery).toHaveBeenCalledTimes(1)
     expect(showUsageLimitSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('useChat — voice spawn cards match this thread (INV-CHAT-1)', () => {
+  const spawnCard = (chatId: string): AgentThreadCardMsg => ({
+    chatId,
+    createdAtMs: 10,
+    block: {
+      type: 'agentSpawn',
+      id: 'spawn-voice-1',
+      pillId: 'pill-1',
+      sessionId: 'sess-1',
+      runId: 'run-1',
+      title: 'Write the report',
+      objective: 'write the report'
+    }
+  })
+
+  it('merges a live agent card stamped for this engine chat id', async () => {
+    const { result } = renderHook(() => useChat())
+    const mine = result.current.getActiveChatId()
+    expect(mine).not.toBe('default')
+    await act(async () => {
+      agentCardCb?.(spawnCard(mine))
+    })
+    expect(result.current.history.some((m) => m.id === 'spawn-voice-1')).toBe(true)
+  })
+
+  it('drops a card stamped default while Home is on a uuid (voice tool mismatch)', async () => {
+    const { result } = renderHook(() => useChat())
+    expect(result.current.getActiveChatId()).not.toBe('default')
+    await act(async () => {
+      agentCardCb?.(spawnCard('default'))
+    })
+    expect(result.current.history.some((m) => m.id === 'spawn-voice-1')).toBe(false)
   })
 })

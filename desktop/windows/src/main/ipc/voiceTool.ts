@@ -31,6 +31,7 @@ import {
 import { isAgentControlToolName } from '../agentKernel/controlTools'
 import { executeHostTool, WINDOWS_SERVICEABLE_PRODUCT_TOOLS } from '../agentKernel/toolRelayBridge'
 import { isToolAvailableForContext, omiToolManifest } from '../agentKernel/omiToolManifest'
+import { rendererConversationBinding } from '../jit/rendererConversationBinding'
 import type { AgentRuntimeKernel } from '../agentKernel/kernel'
 import type { SurfaceRef } from '../agentKernel/surfaceSession'
 import type { VoiceToolDeclaration, VoiceToolExecuteArgs } from '../../shared/types'
@@ -55,16 +56,36 @@ function defaultDeps(): VoiceToolDeps {
   }
 }
 
-function mainChatSurfaceRef(): SurfaceRef {
-  return { surfaceKind: 'main_chat', externalRefKind: 'chat', externalRefId: 'default' }
+function mainChatSurfaceRef(chatId?: string): SurfaceRef {
+  return {
+    surfaceKind: 'main_chat',
+    externalRefKind: 'chat',
+    externalRefId: chatId?.trim() || 'default'
+  }
+}
+
+/**
+ * Chat id the voice tool loop acts under (INV-CHAT-1). Must match Home's
+ * `chatIdRef` so a spoken `spawn_agent` stamps agentSpawn/completion cards on
+ * the conversation the main panel is projecting — not the leftover
+ * `main_chat/chat/default` session. Precedence: explicit execute arg (same
+ * door as `voiceHubRecordTurn`), then the renderer-visible selection binding,
+ * then `default`.
+ */
+export function resolveVoiceHubCallerChatId(argsChatId?: string | null): string {
+  const fromArgs = typeof argsChatId === 'string' ? argsChatId.trim() : ''
+  if (fromArgs) return fromArgs
+  const bound = rendererConversationBinding()?.deletionKey
+  if (bound) return bound
+  return 'default'
 }
 
 /** Resolve (creating if needed) the main_chat surface session id the voice thread
  *  acts under. Idempotent — the same session typed chat and the transcript use. */
-function mainChatSessionId(deps: VoiceToolDeps): string {
+function mainChatSessionId(deps: VoiceToolDeps, chatId?: string): string {
   return deps.kernel.resolveSurfaceSession({
     ownerId: deps.ownerId,
-    surfaceRef: mainChatSurfaceRef(),
+    surfaceRef: mainChatSurfaceRef(chatId),
     defaultAdapterId: MAIN_CHAT_ADAPTER_ID
   }).agentSessionId
 }
@@ -137,7 +158,7 @@ export function readVoiceHubToolCatalog(
   deps: VoiceToolDeps = defaultDeps()
 ): VoiceToolDeclaration[] {
   if (!deps.ownerReady) return []
-  const sessionId = mainChatSessionId(deps)
+  const sessionId = mainChatSessionId(deps, resolveVoiceHubCallerChatId())
   const role = deps.kernel.executionPolicyForSession(sessionId).executionRole
   return buildVoiceHubToolCatalog(role)
 }
@@ -158,7 +179,7 @@ export async function executeVoiceHubTool(
   const name = typeof args.name === 'string' ? args.name : ''
   if (!name) return 'Error: missing tool name'
   const input = parseToolArgs(args.argumentsJSON)
-  const sessionId = mainChatSessionId(deps)
+  const sessionId = mainChatSessionId(deps, resolveVoiceHubCallerChatId(args.chatId))
   return executeHostTool(name, input, {
     kernel: deps.kernel,
     sessionId,

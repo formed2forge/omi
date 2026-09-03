@@ -44,6 +44,9 @@ export function VoiceHubDriverHost(): null {
   const getSeedRef = useRef(chat.getVoiceSeedContext)
   // eslint-disable-next-line react-hooks/refs -- latest-ref for the once-built driver
   getSeedRef.current = chat.getVoiceSeedContext
+  const getChatIdRef = useRef(chat.getActiveChatId)
+  // eslint-disable-next-line react-hooks/refs -- latest-ref so spawn cards stamp THIS thread
+  getChatIdRef.current = chat.getActiveChatId
 
   // Built once. Every collaborator points at the real main-resident subsystem:
   //   * hub session (playback via its own pcmPlayer, D3) — HubController.
@@ -85,8 +88,11 @@ export function VoiceHubDriverHost(): null {
       // registry (PR-C). Authority is host-derived main-side; the model supplies
       // only the name + arguments. Never throws — main returns "Error: …" strings.
       executeTool: (name, argumentsJSON) =>
-        window.omi?.voiceToolExecute?.({ name, argumentsJSON }) ??
-        Promise.resolve('Error: tools are not available'),
+        window.omi?.voiceToolExecute?.({
+          name,
+          argumentsJSON,
+          chatId: getChatIdRef.current()
+        }) ?? Promise.resolve('Error: tools are not available'),
       muteForCapture: muteSystemAudioForHubCapture
     })
   // eslint-disable-next-line react-hooks/refs -- buildDriver only wires latest-refs into the driver's injected seams; they are read at event time, never during render

@@ -30,8 +30,14 @@ import {
   buildVoiceHubToolCatalog,
   executeVoiceHubTool,
   readVoiceHubToolCatalog,
+  resolveVoiceHubCallerChatId,
   type VoiceToolDeps
 } from './voiceTool'
+import {
+  resetRendererConversationBindingForTests,
+  setRendererConversationSelection,
+  fenceRendererConversationOwner
+} from '../jit/rendererConversationBinding'
 
 const nodeSqliteFactory = DatabaseSync as unknown as DatabaseFactory
 const createdDirs: string[] = []
@@ -39,6 +45,7 @@ const openStores: SqliteAgentStore[] = []
 const OWNER = 'owner-voicetool-1'
 
 afterEach(() => {
+  resetRendererConversationBindingForTests()
   for (const store of openStores.splice(0)) {
     try {
       store.close()
@@ -189,6 +196,48 @@ describe('executeVoiceHubTool — in-process dispatch via executeHostTool', () =
     expect(Array.isArray(parsed.sessions)).toBe(true)
   })
 
+  it('opens the Home chat surface, not leftover main_chat/chat/default', async () => {
+    const kernel = newKernel()
+    const chatId = 'chat-home-uuid'
+    expect(
+      kernel.getVoiceSeedContextForMainChat({ ownerId: OWNER, chatId }).conversationId
+    ).toBeNull()
+    await executeVoiceHubTool(
+      { name: 'list_agent_sessions', argumentsJSON: '{}', chatId },
+      ready(kernel)
+    )
+    expect(
+      kernel.getVoiceSeedContextForMainChat({ ownerId: OWNER, chatId }).conversationId
+    ).not.toBeNull()
+    // The pre-fix hardcoded 'default' session must stay untouched.
+    expect(
+      kernel.getVoiceSeedContextForMainChat({ ownerId: OWNER, chatId: 'default' }).conversationId
+    ).toBeNull()
+    const uuidSession = kernel.resolveSurfaceSession({
+      ownerId: OWNER,
+      surfaceRef: { surfaceKind: 'main_chat', externalRefKind: 'chat', externalRefId: chatId },
+      defaultAdapterId: 'pi-mono'
+    })
+    expect(kernel.getProducingCardSurface(uuidSession.agentSessionId)?.chatId).toBe(chatId)
+  })
+
+  it('falls back to the renderer conversation binding when execute omits chatId', async () => {
+    const kernel = newKernel()
+    fenceRendererConversationOwner(OWNER)
+    setRendererConversationSelection(OWNER, 'chat-from-binding')
+    await executeVoiceHubTool({ name: 'list_agent_sessions', argumentsJSON: '{}' }, ready(kernel))
+    const bound = kernel.resolveSurfaceSession({
+      ownerId: OWNER,
+      surfaceRef: {
+        surfaceKind: 'main_chat',
+        externalRefKind: 'chat',
+        externalRefId: 'chat-from-binding'
+      },
+      defaultAdapterId: 'pi-mono'
+    })
+    expect(kernel.getProducingCardSurface(bound.agentSessionId)?.chatId).toBe('chat-from-binding')
+  })
+
   it('tolerates malformed JSON arguments (parsed to {})', async () => {
     const kernel = newKernel()
     const out = await executeVoiceHubTool(
@@ -196,6 +245,17 @@ describe('executeVoiceHubTool — in-process dispatch via executeHostTool', () =
       ready(kernel)
     )
     expect(JSON.parse(out).ok).toBe(true)
+  })
+})
+
+describe('resolveVoiceHubCallerChatId — Home thread, not leftover default', () => {
+  it('prefers the explicit execute arg, then the renderer binding, then default', () => {
+    expect(resolveVoiceHubCallerChatId(undefined)).toBe('default')
+    expect(resolveVoiceHubCallerChatId('  ')).toBe('default')
+    fenceRendererConversationOwner(OWNER)
+    setRendererConversationSelection(OWNER, 'chat-bound')
+    expect(resolveVoiceHubCallerChatId(undefined)).toBe('chat-bound')
+    expect(resolveVoiceHubCallerChatId('chat-explicit')).toBe('chat-explicit')
   })
 })
 

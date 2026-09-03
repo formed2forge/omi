@@ -163,6 +163,9 @@ export type UseChat = {
    *  typed tail reads). Used by the hub to seed a realtime session with recent
    *  typed/voice turns. Empty when nothing to seed / signed out. */
   getVoiceSeedContext: () => Promise<VoiceHubSeedContext>
+  /** Kernel chat id this engine is projecting (Home `chatIdRef`). Voice tools
+   *  must pass this into `voiceToolExecute` so spawn cards match this thread. */
+  getActiveChatId: () => string
   /** Re-thread the live engine onto a chat session (multi-chat, pi_mono only).
    *  `id` = a server chat-session id → routes the kernel turn to that session's
    *  per-chatId conversation AND scopes shared-thread persistence to it; `null`
@@ -1780,6 +1783,7 @@ export function useChat(): UseChat {
     reset,
     recordVoiceTurn,
     getVoiceSeedContext,
+    getActiveChatId: () => chatIdRef.current ?? 'default',
     switchThread,
     currentThreadId,
     selectApp,

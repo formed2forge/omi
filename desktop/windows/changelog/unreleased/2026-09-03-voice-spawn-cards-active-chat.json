@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "A spoken spawn from the main-window voice hub now leaves its agent card on the same Home thread the bar pill belongs to."
+  ]
+}
