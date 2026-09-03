@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "Completed, failed, and stopped background-agent pills now leave the floating bar after ten minutes even if you never opened them. Running work stays; dismissing one still removes it immediately; opening a finished pill keeps it visible until you close it."
+  ]
+}

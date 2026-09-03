@@ -5,7 +5,7 @@
 // projection merge, status mapping, and post-completion lifecycle. Kept out of
 // React and free of any main/preload import so the load-bearing rules (no
 // resurrection of a finished pill, drop-missing-id, soft-cap eviction order,
-// viewed-TTL expiry) are unit-testable without a DOM or IPC. Later phases (B3)
+// finished-TTL expiry) are unit-testable without a DOM or IPC. Later phases (B3)
 // consume these exports to render the pills and wire the poll/subscribe door.
 //
 // Vocabulary (Mac spec §b — deliberately two granularities):
@@ -99,17 +99,18 @@ export type AgentPill = {
   errorMessage: string | null
   provider: string | null
   /** When the user last opened this (finished) pill. null = never viewed.
-   *  Local-only — never comes from a projection row; drives the viewed-TTL. */
+   *  Local-only — never comes from a projection row; drives collapsed-bar
+   *  attention glow, not expiry (expiry keys off `completedAtMs`). */
   viewedAtMs: number | null
 }
 
 /** Soft cap on retained pills before eviction kicks in (Mac `maxPills = 8`). */
 export const SOFT_CAP = 8
 
-/** How long a finished pill survives after the user has viewed it
- *  (Mac `viewedFinishedTTL = 10 * 60`). Unviewed finished pills never
- *  timer-expire — they only leave under soft-cap pressure. */
-export const VIEWED_FINISHED_TTL_MS = 10 * 60 * 1000
+/** How long a terminal pill stays on the bar after `completedAtMs`, whether
+ *  or not the user opened it. Explicit dismiss is still immediate. The
+ *  currently-open pill is exempt until closed. */
+export const FINISHED_TTL_MS = 10 * 60 * 1000
 
 // ── Status mapping (Mac spec §b, applyProjectedStatus AgentPill.swift:1580-1598)
 
@@ -223,9 +224,7 @@ export function aggregateStatusGroup(pills: readonly AgentPill[]): AgentStatusGr
 /** The pill that drives the collapsed-bar aggregate glow / header mark: same
  *  filter and priority as `aggregateStatusGroup`, but returns the contributing
  *  row (for provider logo + display status). */
-export function representativePillForAggregate(
-  pills: readonly AgentPill[]
-): AgentPill | null {
+export function representativePillForAggregate(pills: readonly AgentPill[]): AgentPill | null {
   const group = aggregateStatusGroup(pills)
   if (!group) return null
   for (const pill of pills) {
@@ -376,7 +375,7 @@ function mergePill(existing: AgentPill, row: PillProjectionRow, nowMs: number): 
  *  - A row missing `id`, `sessionId`, or `runId` is DROPPED and counted in
  *    `droppedMissingId`.
  *  - Existing pills absent from `rows` are KEPT (removal is the job of
- *    `expireViewedFinished` / `trimForSoftCap`, not the merge).
+ *    `expireFinished` / `trimForSoftCap`, not the merge).
  *  - A finished pill is never resurrected by a later non-terminal row.
  */
 export function mergeProjectedPills(
@@ -410,8 +409,8 @@ export function mergeProjectedPills(
 
 // ── Lifecycle after completion (Mac spec §d)
 
-/** Stamp `viewedAtMs` on a FINISHED pill (arms its viewed-TTL). A no-op on a
- *  non-finished pill or an unknown id. Returns a new array. */
+/** Stamp `viewedAtMs` on a FINISHED pill (clears collapsed-bar attention glow).
+ *  A no-op on a non-finished pill or an unknown id. Returns a new array. */
 export function markViewed(pills: AgentPill[], pillId: string, nowMs: number): AgentPill[] {
   return pills.map((pill) =>
     pill.id === pillId && isFinished(pill.displayStatus) ? { ...pill, viewedAtMs: nowMs } : pill
@@ -419,21 +418,23 @@ export function markViewed(pills: AgentPill[], pillId: string, nowMs: number): A
 }
 
 /**
- * Remove finished pills the user has already viewed once their TTL has elapsed.
- * NEVER removes the currently-active pill. Unviewed finished pills and any
- * non-finished pill are exempt (they never timer-expire).
+ * Remove terminal pills whose `completedAtMs` is older than `ttlMs`.
+ * NEVER removes the currently-active pill or any non-finished pill.
+ * Viewed and unviewed terminal pills follow the same clock — `viewedAtMs`
+ * is not consulted. A finished pill with no `completedAtMs` expires
+ * immediately so a kernel row without a completion timestamp cannot stick.
  */
-export function expireViewedFinished(
+export function expireFinished(
   pills: AgentPill[],
   nowMs: number,
-  ttlMs: number = VIEWED_FINISHED_TTL_MS,
+  ttlMs: number = FINISHED_TTL_MS,
   activePillId: string | null = null
 ): AgentPill[] {
   return pills.filter((pill) => {
     if (pill.id === activePillId) return true
     if (!isFinished(pill.displayStatus)) return true
-    if (pill.viewedAtMs === null) return true
-    return nowMs - pill.viewedAtMs <= ttlMs
+    if (pill.completedAtMs === null) return false
+    return nowMs - pill.completedAtMs <= ttlMs
   })
 }
 
