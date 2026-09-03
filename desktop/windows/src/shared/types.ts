@@ -437,6 +437,10 @@ export type BarChatMessage = {
   attachments?: ChatAttachment[]
   /** Optional bounded supporting evidence; unavailable refs are non-actionable. */
   evidence?: ChatEvidenceReferenceEnvelope
+  /** Shared-thread agent cards (INV-CHAT-1). Officially on the bar↔main bridge
+   *  so a spawn/completion block survives structured clone instead of riding
+   *  as an undeclared extra field. */
+  blocks?: ChatContentBlock[]
 }
 /** The bar orb's coarse activity, derived in the main window's ChatBridgeHost:
  *  'sending' while a reply streams, 'speaking' while a spoken (TTS) reply plays. */
@@ -456,6 +460,19 @@ export type BarChatState = {
  *  ack from a reveal that was cancelled/superseded (see the paint-ack handshake
  *  in main/bar/window.ts). */
 export type BarShowPayload = { mode: BarMode; reveal: BarReveal; token: number }
+
+/** Open-by-id identity for a floating agent pill (macOS AgentTimelineRef).
+ *  Hydrate prefers runId, then sessionId, then pillId. */
+export type AgentTimelineRef = {
+  pillId?: string | null
+  sessionId?: string | null
+  runId?: string | null
+}
+
+/** Main-window → bar present request. `requestId` correlates the bar's reply. */
+export type AgentPresentRequest = AgentTimelineRef & { requestId: string }
+
+export type AgentPresentResult = { requestId: string; ok: boolean }
 
 /** A bar send blocked by the chat usage limit, relayed to the main window (which
  *  owns the shared usage-limit modal and the TTS voice). `spoken` = the blocked
@@ -538,6 +555,11 @@ export type OmiBarApi = {
   /** Projected chat state pushed from the main window (history + streaming +
    *  status). Returns an unsubscribe fn. */
   onChatState: (cb: (state: BarChatState) => void) => () => void
+  /** Home (or another window) asked the bar to open a floating agent pill.
+   *  Resolve + present locally, then ack with presentAgentResult. */
+  onPresentAgent: (cb: (req: AgentPresentRequest) => void) => () => void
+  /** Reply to a presentAgent request so the Home card can show unavailable. */
+  presentAgentResult: (result: AgentPresentResult) => void
   onShow: (cb: (p: BarShowPayload) => void) => () => void
   onMode: (cb: (mode: BarMode) => void) => () => void
   onWillHide: (cb: () => void) => () => void
@@ -1443,6 +1465,10 @@ export type OmiBridgeApi = {
    *  completion at terminal). The renderer appends the card when its `chatId`
    *  matches the active thread. Returns an unsubscribe function. */
   onAgentCardEvent: (cb: (card: AgentThreadCardMsg) => void) => () => void
+  /** Open a floating agent pill from a Home chat card (macOS
+   *  openAgentChatFromTimeline). Expands the bar and resolves the pill by
+   *  run/session/pill id. Resolves false when the agent is gone. */
+  presentAgent: (ref: AgentTimelineRef) => Promise<boolean>
   // --- realtime-hub voice turns → the one kernel-owned transcript (INV-CHAT-1) ---
   /** Record a completed native realtime-hub voice turn into the SAME
    *  main_chat/chat/<chatId> conversation typed chat reads, origin

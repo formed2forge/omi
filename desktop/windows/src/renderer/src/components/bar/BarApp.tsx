@@ -115,7 +115,7 @@ export function BarApp(): React.JSX.Element {
   const [chat, setChat] = useState<BarChatState>(EMPTY_CHAT)
   const [view, setView] = useState<'list' | 'conversation' | 'agent'>('list')
   // Which floating agent pill's transcript is open (view === 'agent'). Its id
-  // protects the pill from viewed-TTL expiry / soft-cap eviction while open.
+  // protects the pill from finished-TTL expiry / soft-cap eviction while open.
   const [activePillId, setActivePillId] = useState<string | null>(null)
   // Live/recent spawned-agent pills (B3) — projected from the SAME kernel source
   // the LLM reads (list_agent_sessions, surfaceKind 'floating_bar'); each opens
@@ -125,7 +125,8 @@ export function BarApp(): React.JSX.Element {
     markViewed: markPillViewed,
     dismiss: dismissPill,
     refresh: refreshPills,
-    transcriptFor
+    transcriptFor,
+    resolveAndPresent
   } = useAgentPills(activePillId)
   const [draft, setDraft] = useState('')
   const modeRef = useRef<BarMode | null>(null)
@@ -597,8 +598,7 @@ export function BarApp(): React.JSX.Element {
     agentsActive
   })
   const agentGroup = aggregateStatusGroup(pills)
-  const showAgentGlow =
-    !expanded && agentGroup !== null && !voiceSuppressesAgentStatus(turnPhase)
+  const showAgentGlow = !expanded && agentGroup !== null && !voiceSuppressesAgentStatus(turnPhase)
   // The orb's live level, by lane: the user's mic while capturing (hub-projected
   // or local analyser), the reply's own played audio while Omi speaks (fresh
   // playback tap only — stale ⇒ null ⇒ pose-only choreography), else none.
@@ -629,11 +629,36 @@ export function BarApp(): React.JSX.Element {
   // Open a spawned-agent pill's OWN transcript (the B3 fix — routes to that run's
   // synthesized conversation keyed by pill id, never the shared Omi thread).
   // markViewed stamps a finished pill's 10-min TTL; it no-ops while still active.
-  const openPill = (id: string): void => {
-    setActivePillId(id)
-    markPillViewed(id)
-    setView('agent')
-  }
+  const openPill = useCallback(
+    (id: string): void => {
+      setActivePillId(id)
+      markPillViewed(id)
+      setView('agent')
+    },
+    [markPillViewed]
+  )
+
+  const openResolvedRef = useCallback(
+    async (ref: {
+      pillId?: string | null
+      sessionId?: string | null
+      runId?: string | null
+    }): Promise<boolean> => {
+      const pill = await resolveAndPresent(ref)
+      if (!pill) return false
+      openPill(pill.id)
+      return true
+    },
+    [resolveAndPresent, openPill]
+  )
+
+  useEffect(() => {
+    return window.omiBar.onPresentAgent?.((req) => {
+      void openResolvedRef(req).then((ok) => {
+        window.omiBar.presentAgentResult?.({ requestId: req.requestId, ok })
+      })
+    })
+  }, [openResolvedRef])
   // Back out of a pill view to the list. Re-mark viewed so a pill that FINISHED
   // while open now arms its TTL (markViewed only stamps a finished pill).
   const backFromPill = (): void => {
@@ -653,7 +678,7 @@ export function BarApp(): React.JSX.Element {
   const stopPill = (pill: AgentPill): void => {
     void window.omi.agentControlCall('cancel_agent_run', { runId: pill.runId })
   }
-  // The open pill (view === 'agent'). expireViewedFinished / trimForSoftCap both
+  // The open pill (view === 'agent'). expireFinished / trimForSoftCap both
   // skip the active id, so an open pill never vanishes underneath; if it somehow
   // resolves to null the render below coerces to the list, and Esc/dismiss reset
   // the state — no reconcile effect (and no setState-in-effect) needed.
@@ -682,9 +707,7 @@ export function BarApp(): React.JSX.Element {
             className={`bar-content ${!expanded ? 'bar-content-active' : ''}`}
             role="button"
             aria-label={
-              showAgentGlow && agentGroup
-                ? `Open Omi, subagents ${agentGroup}`
-                : 'Open Omi'
+              showAgentGlow && agentGroup ? `Open Omi, subagents ${agentGroup}` : 'Open Omi'
             }
             tabIndex={-1}
             onClick={() => window.omiBar.expand()}
@@ -734,6 +757,9 @@ export function BarApp(): React.JSX.Element {
                     onOpenPill={openPill}
                     onDismissPill={dismissPillAndExit}
                     onStopPill={stopPill}
+                    onOpenAgent={(ref, done) => {
+                      void openResolvedRef(ref).then(done)
+                    }}
                     onBack={() => setView('list')}
                     onClose={() => window.omiOverlay.hide()}
                     draft={draft}

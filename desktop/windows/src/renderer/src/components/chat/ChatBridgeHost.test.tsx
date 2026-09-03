@@ -104,6 +104,42 @@ describe('ChatBridgeHost', () => {
     })
   })
 
+  it('carries shared-thread agent card blocks on the bar chat bridge', () => {
+    chat = {
+      ...chat,
+      history: [
+        {
+          id: 'spawn-1',
+          role: 'assistant',
+          content: '',
+          blocks: [
+            {
+              type: 'agentSpawn',
+              id: 'spawn-1',
+              pillId: 'pill-1',
+              sessionId: 'sess-1',
+              runId: 'run-1',
+              title: 'Build the report',
+              objective: 'Assemble the weekly report'
+            }
+          ]
+        }
+      ]
+    }
+    render(<ChatBridgeHost />)
+    expect(published[0].messages[0].blocks).toEqual([
+      {
+        type: 'agentSpawn',
+        id: 'spawn-1',
+        pillId: 'pill-1',
+        sessionId: 'sess-1',
+        runId: 'run-1',
+        title: 'Build the report',
+        objective: 'Assemble the weekly report'
+      }
+    ])
+  })
+
   it('projects streaming → sending and TTS playback → speaking', async () => {
     const { rerender } = render(<ChatBridgeHost />)
     published.length = 0

@@ -12,6 +12,7 @@
 // Kept out of React so the mapping (row-from-run-detail, transcript shape, the
 // chip tint→className mapping) is unit-testable without a DOM or IPC.
 import type { ChatMsg } from '../../hooks/useChat'
+import type { AgentTimelineRef } from '../../lib/chat/agentTimeline'
 import {
   isFinished,
   type AgentPill,
@@ -71,6 +72,41 @@ export function runDetailToProjectionRow(
     createdAtMs: num(run.createdAtMs) ?? pill.createdAtMs,
     completedAtMs: num(run.completedAtMs),
     provider: pill.provider,
+    errorCode: str(run.errorCode),
+    errorMessage
+  }
+}
+
+/**
+ * Hydrate a pill row from get_agent_run when the in-memory list missed it
+ * (macOS inspectAgentRun open-by-id). Identity prefers the timeline ref, then
+ * the run/session payload. Returns null when run/session/id cannot be formed.
+ */
+export function runDetailToHydrateRow(
+  ref: AgentTimelineRef,
+  detail: AgentRunDetail
+): PillProjectionRow | null {
+  const run = detail.run
+  if (!run || typeof run !== 'object') return null
+  const session = detail.session ?? undefined
+  const runId = str(run.runId) ?? str(ref.runId)
+  const sessionId = str(run.sessionId) ?? str(session?.sessionId) ?? str(ref.sessionId)
+  const id = str(ref.pillId) ?? runId
+  if (!id || !runId || !sessionId) return null
+  const input = (run.input as Record<string, unknown> | undefined) ?? {}
+  const finalText = str(run.finalText)
+  const errorMessage = str(run.errorMessage)
+  return {
+    id,
+    runId,
+    sessionId,
+    title: str(session?.title) ?? str(input.prompt) ?? 'Background agent',
+    status: str(run.status) ?? 'unknown',
+    latestActivity: finalText ?? errorMessage ?? '',
+    query: str(input.prompt) ?? '',
+    createdAtMs: num(run.createdAtMs),
+    completedAtMs: num(run.completedAtMs),
+    provider: str(session?.provider) ?? null,
     errorCode: str(run.errorCode),
     errorMessage
   }

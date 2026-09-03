@@ -61,7 +61,9 @@ vi.mock('../../hooks/useAgentPills', () => ({
     markViewed: vi.fn(),
     dismiss: vi.fn(),
     refresh: vi.fn(),
-    transcriptFor: () => ({ messages: [], sending: false })
+    transcriptFor: () => ({ messages: [], sending: false }),
+    resolveAndPresent: async (ref: { pillId?: string | null; runId?: string | null }) =>
+      mockPills.find((p) => p.id === ref.pillId || p.runId === ref.runId) ?? null
   })
 }))
 
@@ -98,6 +100,8 @@ beforeEach(() => {
     onMode: capture('onMode'),
     onWillHide: capture('onWillHide'),
     onChatState: capture('onChatState'),
+    onPresentAgent: capture('onPresentAgent'),
+    presentAgentResult: vi.fn(),
     onPtt: capture('onPtt'),
     onVoiceHubState: capture('onVoiceHubState'),
     onVoicePlaybackLevel: capture('onVoicePlaybackLevel'),
@@ -302,5 +306,87 @@ describe('BarApp composer mic (locked click lane)', () => {
       (window as unknown as { omiBar: { voiceHubToggle: ReturnType<typeof vi.fn> } }).omiBar
         .voiceHubToggle
     ).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('BarApp presentAgent open-by-id', () => {
+  it('opens the matching pill transcript and acks success', async () => {
+    mockPills = [
+      {
+        id: 'p1',
+        runId: 'r1',
+        sessionId: 's1',
+        title: 'My Agent Run',
+        displayStatus: 'running',
+        latestActivity: 'working…',
+        query: 'do a thing',
+        createdAtMs: 1,
+        completedAtMs: null,
+        errorMessage: null,
+        provider: null,
+        viewedAtMs: null
+      }
+    ]
+    await mountBar()
+    await fire('onShow', { mode: 'expanded', token: 1 })
+    expect(hubInput()).toBeTruthy()
+
+    await act(async () => {
+      ipc.onPresentAgent?.({ requestId: 'req-1', runId: 'r1', pillId: 'p1' })
+      await Promise.resolve()
+    })
+    expect(hubInput()).toBeNull()
+    expect(screen.getByText('My Agent Run')).not.toBeNull()
+    expect(
+      (window as unknown as { omiBar: { presentAgentResult: ReturnType<typeof vi.fn> } }).omiBar
+        .presentAgentResult
+    ).toHaveBeenCalledWith({ requestId: 'req-1', ok: true })
+  })
+
+  it('opens the pill after an expand hub-reset (mode IPC then present)', async () => {
+    mockPills = [
+      {
+        id: 'p1',
+        runId: 'r1',
+        sessionId: 's1',
+        title: 'My Agent Run',
+        displayStatus: 'running',
+        latestActivity: 'working…',
+        query: 'do a thing',
+        createdAtMs: 1,
+        completedAtMs: null,
+        errorMessage: null,
+        provider: null,
+        viewedAtMs: null
+      }
+    ]
+    await mountBar()
+    await fire('onShow', { mode: 'peek', token: 1 })
+    await act(async () => {
+      ipc.onMode?.('expanded')
+      ipc.onPresentAgent?.({ requestId: 'req-2', runId: 'r1', pillId: 'p1' })
+      await Promise.resolve()
+    })
+    expect(hubInput()).toBeNull()
+    expect(screen.getByText('My Agent Run')).not.toBeNull()
+    expect(
+      (window as unknown as { omiBar: { presentAgentResult: ReturnType<typeof vi.fn> } }).omiBar
+        .presentAgentResult
+    ).toHaveBeenCalledWith({ requestId: 'req-2', ok: true })
+  })
+
+  it('acks failure when the pill cannot be resolved', async () => {
+    mockPills = []
+    await mountBar()
+    await fire('onShow', { mode: 'expanded', token: 1 })
+    await act(async () => {
+      ipc.onPresentAgent?.({ requestId: 'req-miss', runId: 'missing' })
+      await Promise.resolve()
+    })
+    expect(hubInput()).toBeTruthy()
+    expect(
+      (window as unknown as { omiBar: { presentAgentResult: ReturnType<typeof vi.fn> } }).omiBar
+        .presentAgentResult
+    ).toHaveBeenCalledWith({ requestId: 'req-miss', ok: false })
   })
 })
