@@ -1018,6 +1018,10 @@ export function registerBarIpc(sendToMain: (channel: string, ...args: unknown[])
     recordVoiceFlight('main', 'hub_lane', { control: 'cancel' })
     sendToMain('voiceHub:cancel')
   })
+  ipcMain.on('bar:voiceHubToggle', () => {
+    recordVoiceFlight('main', 'hub_lane', { control: 'toggle' })
+    sendToMain('voiceHub:toggle')
+  })
   // Main window → bar: projected warm-hub turn state for the orb (phase + level).
   ipcMain.on('voiceHub:publishState', (_e, state: unknown) => {
     send('voiceHub:state', state)

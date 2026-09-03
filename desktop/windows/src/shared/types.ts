@@ -475,6 +475,9 @@ export type BarUsageLimitPayload = { message: string; spoken: boolean; popup?: b
 export type VoiceHubBarState = {
   /** A main-owned warm-hub turn currently owns the bar orb. */
   active: boolean
+  /** Authoritative reducer phase kind, so a composer mic button can share the
+   *  same click policy as the main-window Home composer. `null` is idle. */
+  phaseKind: string | null
   /** The mic is capturing (the orb's listening/speaking pose). */
   isListening: boolean
   /** Awaiting the hub's response (the orb's thinking pose). */
@@ -560,6 +563,9 @@ export type OmiBarApi = {
   voiceHubEnd: () => void
   /** Hub hold aborted (Esc / focus loss) — the main driver cancels the turn. */
   voiceHubCancel: () => void
+  /** Composer mic click (Home or bar). Main runs `toggleFromButton` on the one
+   *  voice-turn driver: first click starts locked listening, next click sends. */
+  voiceHubToggle: () => void
   /** Projected warm-hub turn state pushed from the MAIN window, so the bar orb
    *  animates during a main-owned turn (no per-frame audio crosses — just the low-
    *  rate orb level + phase). `active:false` ⇒ the bar uses its local orb state. */
@@ -1187,6 +1193,8 @@ export type OmiBridgeApi = {
   onVoiceHubEnd: (cb: () => void) => () => void
   /** The delegated hold was aborted — cancel the main-owned turn. */
   onVoiceHubCancel: (cb: () => void) => () => void
+  /** A composer mic click — `toggleFromButton` on the one main-owned driver. */
+  onVoiceHubToggle: (cb: () => void) => () => void
   /** The machine resumed from sleep / unlocked — refresh the (likely-zombie) warm hub
    *  socket so the next PTT press isn't the one that discovers the dead session (A7c
    *  item E). Main-window renderer only. */
