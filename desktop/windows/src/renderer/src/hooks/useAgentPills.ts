@@ -266,13 +266,18 @@ export function useAgentPills(activePillId: string | null): AgentPillsApi {
     const unsubCards = window.omi?.onAgentCardEvent?.((card?: AgentThreadCardMsg) => {
       // Eager upsert (macOS upsertSpawnedPill): project the card into the bar
       // list immediately so a Home spawn does not wait for the next poll.
+      // Write pillsRef synchronously — the poll below is async but starts now,
+      // and merge keeps existing pills; a stale ref would let an empty
+      // snapshot land after this upsert and wipe it (the test keeps listRows
+      // empty on purpose).
       if (card) {
         const row = cardToProjectionRow(card)
         if (row && !isRowDismissed(dismissedRef.current, row)) {
-          setPills((prev) => {
-            const next = mergeProjectedPills(prev, [row], Date.now()).pills
-            return samePills(prev, next) ? prev : next
-          })
+          const next = mergeProjectedPills(pillsRef.current, [row], Date.now()).pills
+          if (!samePills(pillsRef.current, next)) {
+            pillsRef.current = next
+            setPills(next)
+          }
         }
       }
       void runListPoll()
