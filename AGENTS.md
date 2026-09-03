@@ -64,9 +64,9 @@ The unit of work is the violated contract, not only the line where the symptom a
 ## Safety Rules
 
 - Never kill, stop, or restart the production macOS apps (`/Applications/Omi.app` / `Omi Beta.app`, bundle ids `com.omi.computer-macos` and `com.omi.computer-macos.beta`). Dev commands target only dev or `omi-*` named test bundles.
-- **Nothing lands on `main` until the user explicitly says so.** Land through PRs only (regular merge, never squash); never push directly to `main`; never push or open PRs unless explicitly asked — commit locally on a feature branch by default. A prior approval never carries over to later changes.
+- **Never open or merge a PR against fork `main`.** It mirrors BasedHardware. Fold into the matching `*-all-fixes` branch same session (`desktop/windows` → `windows-all-fixes`). Upstream `main` still needs an explicit user go-ahead; a prior approval never carries over.
 - **Exception — reverts merge right away.** A user request to revert a merged PR/commit is itself the approval to open and merge the revert PR.
-- **Exception — verified + peer-approved changes may auto-merge.** If you actually exercised the real user-facing path **and** an independent agent review approved it, you may open and merge without a separate go-ahead — except for risky, wide-blast-radius, or hard-to-reverse changes (migrations, release/CI pipeline, schema, access control, data deletion), which always need explicit user sign-off.
+- **Exception — verified + peer-approved changes may auto-merge** onto an `*-all-fixes` branch, never onto fork `main`. Risky changes (migrations, release/CI, schema, access control, data deletion) still need explicit user sign-off.
 - **Prefer testing locally first.** Default to a local build + run (desktop: named bundle) to verify a change before proposing to land it.
 
 ## Git
@@ -76,7 +76,7 @@ The unit of work is the violated contract, not only the line where the symptom a
 - Always work in a git worktree for code changes (`git worktree add`); commit to the current branch and never switch branches mid-task.
 - Make individual commits per feature or testable surface, not per file or unrelated bulk changes.
 - If push fails (remote ahead): `git pull --rebase && git push`.
-- **Fork Windows/Linux:** fold `desktop/windows` into `windows-all-fixes` same session. Never merge those PRs into fork `main`.
+- **Fork:** never open or merge a PR against `main`. Fold into `*-all-fixes` same session (WAF = `windows-all-fixes`).
 - **PR size is reported, not bounded** (`pr-scope` manifest check — advisory annotations, never blocks): 1,500+ changed production-source lines warns; 3,000+ cites the audited history of missed regressions. Split only when the pieces are independently verifiable; otherwise give the one PR proportional review depth.
 - **RELEASE command:** branch from `main`, individual commits, push, open PR, merge without squash, switch back to `main` and pull. **RELEASEWITHBACKEND:** RELEASE + `gh workflow run gcp_backend.yml -f environment=prod -f branch=main`.
 
