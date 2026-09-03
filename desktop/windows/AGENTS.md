@@ -66,6 +66,9 @@ Cloud agents: push normally — do not skip the WAF fold unless the hook is bloc
   can't reach (live ASR, agent spawning, OAuth flows, Rewind semantics). Specs
   live under `e2e/`. Run the relevant one manually before shipping a change
   in that area; don't assume `pnpm test` alone covers it.
+- **Fork integration:** fold `desktop/windows` work into `windows-all-fixes`
+  in the same session so GUI testing (`pnpm dev`) can run. Do not leave
+  fold-in as a follow-up. Never merge those feature PRs into fork `main`.
 - **Linux Wayland compositors (niri/Sway/Hyprland)**: auto-detects and
   defaults to native Wayland; `OMI_OZONE` overrides. Portal identity, bar
   placement, and GPU troubleshooting: `LINUX.md` and

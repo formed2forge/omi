@@ -40,3 +40,20 @@ cd backend && source .venv/bin/activate && python -m uvicorn main:app --host 0.0
 Auth: `Authorization: Bearer local_dev_admin_key<uid>` (the `<uid>` is taken verbatim), or set `LOCAL_DEVELOPMENT=true` and use `Bearer dev-token` → uid `123`. Verified hello-world: `POST /v3/memories` then `GET /v3/memories` round-trips through the emulator.
 
 Features needing real external services (Deepgram STT, LLM chat, GCS audio, Pinecone/Typesense search) fail at **call time** with placeholders — that's expected, not an env bug. Supply real keys / `SERVICE_ACCOUNT_JSON` to exercise them.
+
+## Windows/Linux desktop (`desktop/windows`)
+
+This VM cannot launch the Electron GUI. Hermetic vitest and `pnpm typecheck` still run here (`pnpm install --frozen-lockfile --ignore-scripts` in `desktop/windows`).
+
+**Fold into `windows-all-fixes` in the same session** so the work can be GUI-tested on the maintainer machine. Do not leave fold-in as a follow-up. On this branch: `desktop/windows/scripts/fold-into-waf.sh [feature-branch]` after pushing the feature. If that script is missing (main-shaped tree):
+
+```bash
+git fetch origin windows-all-fixes <feature-branch>
+git worktree add /tmp/omi-waf origin/windows-all-fixes
+cd /tmp/omi-waf && git checkout -B windows-all-fixes
+git merge --no-ff origin/<feature-branch>
+# resolve conflicts, typecheck, focused tests
+git push origin windows-all-fixes
+```
+
+Never merge those feature PRs into fork `main` (mirror of BasedHardware). Detail: `desktop/windows/AGENTS.md`.

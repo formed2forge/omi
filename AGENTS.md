@@ -15,7 +15,7 @@ These rules apply to every AI agent working in this repository. This file is **h
 | Backend Python (`backend/`) | `backend/AGENTS.md` — setup, async/executors, WebSocket rules, service map, logging security, testing |
 | Flutter app (`app/`) | `app/AGENTS.md` — build flavors, l10n, native bridge, tests, agent-flutter UI verification |
 | Desktop macOS (`desktop/macos/`) | `desktop/macos/AGENTS.md` — build/run, named bundles, self-testing, release pipeline, changelog |
-| Desktop Windows/Linux (`desktop/windows/`) | `desktop/windows/AGENTS.md` — pnpm pin, build/test, **WAF fold (`fold-into-waf.sh`)**, CI shape, Linux/Wayland dev env, release pipeline |
+| Desktop Windows/Linux (`desktop/windows/`) | `desktop/windows/AGENTS.md` — pnpm pin, build/test, WAF fold, CI shape, Linux/Wayland, release pipeline |
 | Web app (`web/app/`) | `web/app/AGENTS.md` — setup, quality gates, tests, desktop-parity limits |
 | Firmware (`omi/firmware/`) | `omi/firmware/AGENTS.md` — release workflow |
 | Product behavior | `PRODUCT.md` + `product/invariants/` — locked invariants and guard tests |
@@ -76,6 +76,7 @@ The unit of work is the violated contract, not only the line where the symptom a
 - Always work in a git worktree for code changes (`git worktree add`); commit to the current branch and never switch branches mid-task.
 - Make individual commits per feature or testable surface, not per file or unrelated bulk changes.
 - If push fails (remote ahead): `git pull --rebase && git push`.
+- **Fork Windows/Linux:** fold `desktop/windows` into `windows-all-fixes` same session. Never merge those PRs into fork `main`.
 - **PR size is reported, not bounded** (`pr-scope` manifest check — advisory annotations, never blocks): 1,500+ changed production-source lines warns; 3,000+ cites the audited history of missed regressions. Split only when the pieces are independently verifiable; otherwise give the one PR proportional review depth.
 - **RELEASE command:** branch from `main`, individual commits, push, open PR, merge without squash, switch back to `main` and pull. **RELEASEWITHBACKEND:** RELEASE + `gh workflow run gcp_backend.yml -f environment=prod -f branch=main`.
 

@@ -33,7 +33,9 @@ BUDGETS: dict[str, tuple[int, int]] = {
     # main grew this with Codemagic release-pipeline detail after the budget was
     # first set from a stale base; recalibrated to current main + headroom.
     "desktop/macos/AGENTS.md": (560, 47_000),
-    "desktop/windows/AGENTS.md": (127, 6_950),
+    # WAF-only raise: this branch's windows guide is larger than main
+    # (fold-into-waf.sh, .NET 10). PRs against main keep (124, 6_850).
+    "desktop/windows/AGENTS.md": (134, 7_500),
     "omi/firmware/AGENTS.md": (30, 1_500),
     "web/admin/AGENTS.md": (25, 1_500),
     "web/app/AGENTS.md": (55, 2_400),
