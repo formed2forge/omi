@@ -38,6 +38,7 @@ class FakeSession implements HubSession {
   readonly bargeInStrategy: HubBargeInStrategy = 'inSessionCancel'
 
   warm = false
+  inFlight = false
   appended: Uint8Array[] = []
   committed = 0
   cancelled = 0
@@ -80,6 +81,9 @@ class FakeSession implements HubSession {
   }
   isWarm(): boolean {
     return this.warm
+  }
+  hasInFlightResponse(): boolean {
+    return this.inFlight
   }
   beginTurn(opts: { interrupting?: boolean } = {}): void {
     this.begun.push({ interrupting: opts.interrupting ?? false })
@@ -383,6 +387,33 @@ describe('HubController — turn lifecycle', () => {
     h.controller.voiceTurnDidTerminate(t1)
     h.controller.beginTurn(t2, { interrupting: true })
     expect(s.begun).toEqual([{ interrupting: false }, { interrupting: true }])
+  })
+
+  it('a sequential begin with leftover in-flight still forwards interrupting:true and records recovered fallback', async () => {
+    const h = harness()
+    await warmed(h)
+    const s = h.getSession()
+    s.inFlight = true
+    h.controller.beginTurn(t2) // no barge-in flag — leftover must still cancel
+    expect(s.begun).toEqual([{ interrupting: true }])
+    expect(trackEvent).toHaveBeenCalledExactlyOnceWith('fallback_triggered', {
+      component: 'realtime_hub',
+      from: 'stale_response',
+      to: 'new_turn',
+      reason: 'other',
+      outcome: 'recovered'
+    })
+  })
+
+  it('a sequential begin without leftover in-flight stays interrupting:false and is silent on fallback telemetry', async () => {
+    const h = harness()
+    await warmed(h)
+    const s = h.getSession()
+    h.controller.beginTurn(t1)
+    h.controller.voiceTurnDidTerminate(t1)
+    h.controller.beginTurn(t2)
+    expect(s.begun).toEqual([{ interrupting: false }, { interrupting: false }])
+    expect(trackEvent).not.toHaveBeenCalled()
   })
 })
 

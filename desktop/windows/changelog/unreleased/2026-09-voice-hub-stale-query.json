@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "Rapid consecutive voice questions now answer the latest utterance. A leftover in-flight reply is cancelled when the next press starts, so you no longer hear an answer to the previous question."
+  ]
+}

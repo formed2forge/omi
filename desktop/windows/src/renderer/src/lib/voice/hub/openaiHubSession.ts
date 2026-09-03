@@ -95,6 +95,10 @@ export class OpenAiHubSession extends BaseHubSession {
     }
   }
 
+  hasInFlightResponse(): boolean {
+    return this.responseActive
+  }
+
   protected canAcceptInput(): boolean {
     return this.isOpen
   }
@@ -104,9 +108,15 @@ export class OpenAiHubSession extends BaseHubSession {
   }
 
   protected onBeginTurn(interrupting: boolean): void {
-    // OpenAI is input_audio_buffer based, so a plain begin is a no-op. A barge-in
-    // begin cancels the in-flight reply so the new turn starts clean.
-    if (interrupting) this.cancelActiveResponse()
+    // OpenAI is input_audio_buffer based, so a clean first begin is a no-op.
+    // Cancel leftover in-flight replies too — not only explicit barge-in. Local
+    // playback can drain and terminate the turn before `response.done`, and the
+    // next sequential begin arrives with `interrupting: false` while
+    // `responseActive` is still true. `requestResponse` then no-ops, so the new
+    // commit never gets a `response.create` and the user hears leftover A.
+    // Do NOT cancel on a clean first turn (`responseActive === false`): that
+    // would extra `input_audio_buffer.clear` and break one-turn wire order.
+    if (interrupting || this.responseActive) this.cancelActiveResponse()
   }
 
   protected commitTurnNow(): void {

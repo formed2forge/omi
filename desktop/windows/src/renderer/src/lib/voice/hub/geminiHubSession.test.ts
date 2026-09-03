@@ -335,6 +335,48 @@ describe('GeminiHubSession — barge-in (fresh-session strategy, no in-session c
   })
 })
 
+describe('GeminiHubSession — leftover sequential begin (no barge-in flag)', () => {
+  it('leftover responsePending: sequential begin without interrupting opens a fresh window and ignores A turnComplete', async () => {
+    const h = harness()
+    await connect(h)
+    h.session.beginTurn({ turnID: tid, responseID: rid })
+    h.session.commitTurn() // activityEnd → responsePending=true, activityOpen=false
+    h.getSocket().spec.onMessage(sc(audioPart('a-reply')))
+    expect(h.player.enqueuePcm16).toHaveBeenCalledTimes(1)
+    h.getSocket().sent = []
+    // Local terminate-before-turnComplete: sequential begin, interrupting:false.
+    h.session.beginTurn({
+      turnID: 't2' as VoiceTurnID,
+      responseID: 'r2' as VoiceResponseID
+    })
+    expect(h.getSocket().riKinds()).toEqual(['activityStart'])
+    // A's later turnComplete must not finish B (responsePending was cleared).
+    h.getSocket().spec.onMessage(sc({ turnComplete: true }))
+    expect(h.events.onTurnDone).not.toHaveBeenCalled()
+    h.getSocket().sent = []
+    h.session.appendAudio(new Uint8Array([3, 4]))
+    h.session.commitTurn()
+    expect(h.getSocket().riKinds()).toEqual(['audio', 'activityEnd'])
+    h.getSocket().spec.onMessage(sc(audioPart('b-reply')))
+    expect(h.player.enqueuePcm16).toHaveBeenCalledTimes(2)
+    h.getSocket().spec.onMessage(sc({ turnComplete: true }))
+    expect(h.events.onTurnDone).toHaveBeenCalledTimes(1)
+  })
+
+  it('stuck activityOpen: sequential begin closes the leftover window then opens a fresh one', async () => {
+    const h = harness()
+    await connect(h)
+    h.session.beginTurn({ turnID: tid, responseID: rid })
+    expect(h.getSocket().riKinds()).toEqual(['activityStart'])
+    h.getSocket().sent = []
+    h.session.beginTurn({
+      turnID: 't2' as VoiceTurnID,
+      responseID: 'r2' as VoiceResponseID
+    })
+    expect(h.getSocket().riKinds()).toEqual(['activityEnd', 'activityStart'])
+  })
+})
+
 describe('GeminiHubSession — idle release (D4) + re-warm', () => {
   it('tears the socket down after the idle timer, then ensureWarm re-establishes', async () => {
     const h = harness()

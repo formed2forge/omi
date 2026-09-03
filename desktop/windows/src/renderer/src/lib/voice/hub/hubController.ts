@@ -603,7 +603,25 @@ export class HubController {
     this.activeTurnID = turnID
     this.handedOff = false
     this.warmCommitted = false
-    const begin = { turnID, responseID: opts.responseID, interrupting: opts.interrupting ?? false }
+    const leftover = this.session?.hasInFlightResponse() ?? false
+    const interrupting = (opts.interrupting ?? false) || leftover
+    if (leftover && !(opts.interrupting ?? false)) {
+      // Sequential begin after local terminate-before-provider-done. The next
+      // commit would otherwise no-op `response.create` (OpenAI) or leak A's
+      // turnComplete (Gemini). Labels/numbers only — never transcript.
+      trackEvent('fallback_triggered', {
+        component: 'realtime_hub',
+        from: 'stale_response',
+        to: 'new_turn',
+        reason: 'other',
+        outcome: 'recovered'
+      })
+      recordVoiceFlight('hub_stale_response_cancel', {
+        leftover: true,
+        sessionWarm: this.session?.isWarm() ?? false
+      })
+    }
+    const begin = { turnID, responseID: opts.responseID, interrupting }
 
     // Warm-wait iff the socket is not ready: withhold PCM so it can still be handed
     // to the cascade if the hub loses the race. When already warm, audio streams

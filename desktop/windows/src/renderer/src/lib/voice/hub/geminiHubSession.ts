@@ -89,6 +89,10 @@ export class GeminiHubSession extends BaseHubSession {
     }
   }
 
+  hasInFlightResponse(): boolean {
+    return this.responsePending || this.activityOpen
+  }
+
   protected canAcceptInput(): boolean {
     return this.isOpen && this.activityOpen
   }
@@ -97,13 +101,19 @@ export class GeminiHubSession extends BaseHubSession {
     this.send({ realtimeInput: { audio: { data: b64, mimeType: 'audio/pcm;rate=16000' } } })
   }
 
-  protected onBeginTurn(interrupting: boolean): void {
-    if (interrupting) {
-      // Local gate for abandoned/stale events before the fresh-session replacement.
-      this.responsePending = false
-      this.pendingToolCallIds.clear()
+  protected onBeginTurn(_interrupting: boolean): void {
+    // Always drop leftover reply-gating, not only on explicit barge-in. Local
+    // terminate can fire before `turnComplete`, leaving `responsePending` true;
+    // a sequential (non-interrupting) begin would then let A's later
+    // turnComplete / trailing audio leak into B.
+    this.responsePending = false
+    this.pendingToolCallIds.clear()
+    // A stuck open activity window (terminate before activityEnd) must close
+    // before B opens a fresh one — otherwise `if (this.activityOpen) return`
+    // would swallow B's activityStart and mix B's PCM into A's window.
+    if (this.activityOpen && this.isOpen) {
+      this.send({ realtimeInput: { activityEnd: {} } })
     }
-    if (this.activityOpen) return
     this.activityOpen = true
     if (this.isOpen) {
       this.send({ realtimeInput: { activityStart: {} } })
