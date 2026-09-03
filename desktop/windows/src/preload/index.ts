@@ -39,6 +39,9 @@ import type {
   CodingAgentId,
   CodingAgentRunArgs,
   AgentThreadCardMsg,
+  AgentTimelineRef,
+  AgentPresentRequest,
+  AgentPresentResult,
   MainChatEvent,
   MainChatSendArgs,
   VoiceHubRecordTurnArgs,
@@ -412,6 +415,7 @@ const omi: OmiBridgeApi = {
     return () => ipcRenderer.removeListener('mainChat:event', listener)
   },
   getAgentCardsForChat: (chatId: string) => ipcRenderer.invoke('agentCards:get', chatId),
+  presentAgent: (ref: AgentTimelineRef) => ipcRenderer.invoke('chat:presentAgent', ref),
   onAgentCardEvent: (cb: (card: AgentThreadCardMsg) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, card: AgentThreadCardMsg): void => cb(card)
     ipcRenderer.on('agentCards:event', listener)
@@ -794,6 +798,13 @@ const omiBar: OmiBarApi = {
     ipcRenderer.on('chat:state', listener)
     return () => ipcRenderer.removeListener('chat:state', listener)
   },
+  onPresentAgent: (cb: (req: AgentPresentRequest) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, req: AgentPresentRequest): void => cb(req)
+    ipcRenderer.on('bar:presentAgent', listener)
+    return () => ipcRenderer.removeListener('bar:presentAgent', listener)
+  },
+  presentAgentResult: (result: AgentPresentResult) =>
+    ipcRenderer.send('bar:presentAgentResult', result),
   onShow: (cb: (p: BarShowPayload) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, p: BarShowPayload): void => cb(p)
     ipcRenderer.on('bar:show', listener)

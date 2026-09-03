@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useAppState } from '../../state/appState'
 import { interruptCurrentResponse, speakText } from '../../lib/voice/voiceController'
 import { showUsageLimit } from '../../lib/usageLimit'
-import type { BarChatState, BarChatStatus } from '../../../../shared/types'
+import type { BarChatMessage, BarChatState, BarChatStatus } from '../../../../shared/types'
+import type { ChatMsg } from '../../hooks/useChat'
 import { planChatPublish } from './chatPublishSchedule'
 
 // The main-window half of the bar↔main chat bridge. The bar is a VIEWPORT over
@@ -19,6 +20,17 @@ import { planChatPublish } from './chatPublishSchedule'
 // exempted (see waitUntilEngineIdle), so this cap never truncates one.
 const ENGINE_IDLE_WAIT_CAP_MS = 60_000
 
+function toBarChatMessage(m: ChatMsg): BarChatMessage {
+  return {
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    ...(m.attachments?.length ? { attachments: m.attachments } : {}),
+    ...(m.evidence ? { evidence: m.evidence } : {}),
+    ...(m.blocks?.length ? { blocks: m.blocks } : {})
+  }
+}
+
 export function ChatBridgeHost(): null {
   const { chat } = useAppState()
   const { history, sending, speaking, agentActive } = chat
@@ -27,13 +39,18 @@ export function ChatBridgeHost(): null {
   // The projected snapshot the bar renders. Held in a ref so the pull path
   // (bar:requestChatState) and the throttled publisher always read fresh values.
   const stateRef = useRef<BarChatState>({
-    messages: history,
+    messages: history.map(toBarChatMessage),
     sending,
     status,
     agentsActive: agentActive
   })
   // eslint-disable-next-line react-hooks/refs -- latest-ref: the pull path + throttled publisher read the freshest snapshot
-  stateRef.current = { messages: history, sending, status, agentsActive: agentActive }
+  stateRef.current = {
+    messages: history.map(toBarChatMessage),
+    sending,
+    status,
+    agentsActive: agentActive
+  }
 
   const publish = useCallback((): void => {
     window.omi?.publishChatState?.(stateRef.current)

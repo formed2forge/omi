@@ -211,7 +211,7 @@ describe('ChatMessages — shared-thread agent cards (B4)', () => {
     expect(screen.queryByRole('button', { name: 'Copy message' })).toBeNull()
   })
 
-  it('renders the completion card with a status label and its output', () => {
+  it('renders the completion card with a status label and an expand control', () => {
     render(
       <ChatMessages
         messages={[completionCard('succeeded', 'All done — sent.')]}
@@ -221,7 +221,27 @@ describe('ChatMessages — shared-thread agent cards (B4)', () => {
     )
     expect(screen.getByText('Build the report')).not.toBeNull()
     expect(screen.getByText('Done')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Expand agent output' }))
     expect(screen.getByText('All done — sent.')).not.toBeNull()
+  })
+
+  it('wires onOpenAgent through to the card link-out', () => {
+    const onOpenAgent = vi.fn()
+    render(
+      <ChatMessages
+        messages={[spawnCard()]}
+        sending={false}
+        variant="overlay"
+        onOpenAgent={onOpenAgent}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Open background agent' }))
+    expect(onOpenAgent).toHaveBeenCalledTimes(1)
+    expect(onOpenAgent.mock.calls[0][0]).toEqual({
+      pillId: 'pill-1',
+      sessionId: 'sess_1',
+      runId: 'run_1'
+    })
   })
 
   it('maps stopped + failed statuses to their labels', () => {

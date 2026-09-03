@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAgentPills } from './useAgentPills'
 import type { PillProjectionRow } from '../components/bar/agentPills'
+import type { AgentThreadCardMsg } from '../../../shared/types'
 
 type OverrideCall = { subjectKind: string; subjectId: string; dismissed: boolean }
 
@@ -213,5 +214,86 @@ describe('useAgentPills — idle cadence + card-push re-arm', () => {
     const before = listCount()
     await flush(2000)
     expect(listCount()).toBeGreaterThan(before)
+  })
+
+  it('eagerly upserts a spawn card so the bar does not wait for the next poll', async () => {
+    const { result } = renderHook(() => useAgentPills(null))
+    await flush(0)
+    expect(result.current.pills).toHaveLength(0)
+    const card: AgentThreadCardMsg = {
+      chatId: 'default',
+      createdAtMs: 10,
+      block: {
+        type: 'agentSpawn',
+        id: 'spawn-2',
+        pillId: 'pill-2',
+        sessionId: 'session-2',
+        runId: 'run_2',
+        title: 'Refactor the parser',
+        objective: 'refactor the parser'
+      }
+    }
+    await act(async () => {
+      ;(cardCb as ((c: AgentThreadCardMsg) => void) | null)?.(card)
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(result.current.pills.some((p) => p.id === 'pill-2')).toBe(true)
+  })
+})
+
+describe('useAgentPills — resolveAndPresent', () => {
+  it('returns the in-memory pill on a runId hit', async () => {
+    const { result } = renderHook(() => useAgentPills(null))
+    await flush(1)
+    await act(async () => {
+      const found = await result.current.resolveAndPresent({ runId: 'run_1' })
+      expect(found?.id).toBe('pill-1')
+    })
+  })
+
+  it('hydrates from get_agent_run when the list miss needs a row', async () => {
+    listRows = []
+    agentControlCall.mockImplementation(async (name: string, input: Record<string, unknown>) => {
+      if (name === 'list_agent_sessions') {
+        return JSON.stringify({ floating_agent_pills: listRows })
+      }
+      if (name === 'get_agent_run' && input.runId === 'run_hydrated') {
+        return JSON.stringify({
+          ok: true,
+          run: {
+            runId: 'run_hydrated',
+            sessionId: 'sess_hydrated',
+            status: 'running',
+            input: { prompt: 'do the work' },
+            createdAtMs: 5
+          },
+          session: { sessionId: 'sess_hydrated', title: 'Hydrated' }
+        })
+      }
+      return JSON.stringify({ ok: false })
+    })
+    const { result } = renderHook(() => useAgentPills(null))
+    await flush(1)
+    await act(async () => {
+      const found = await result.current.resolveAndPresent({
+        pillId: 'pill-hydrated',
+        runId: 'run_hydrated'
+      })
+      expect(found?.id).toBe('pill-hydrated')
+      expect(found?.title).toBe('Hydrated')
+    })
+  })
+
+  it('does not resurrect a dismissed pill', async () => {
+    const { result } = renderHook(() => useAgentPills(null))
+    await flush(1)
+    act(() => {
+      result.current.dismiss('pill-1')
+    })
+    let found: unknown = 'sentinel'
+    await act(async () => {
+      found = await result.current.resolveAndPresent({ runId: 'run_1', sessionId: 'session-1' })
+    })
+    expect(found).toBeNull()
   })
 })
