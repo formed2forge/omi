@@ -4,6 +4,7 @@ import {
   pillChipClasses,
   retainTextForPills,
   runDetailFinalText,
+  runDetailToHydrateRow,
   runDetailToProjectionRow,
   synthesizePillTranscript,
   type AgentRunDetail
@@ -166,6 +167,37 @@ describe('pillChipClasses', () => {
     for (const cls of [running, done, failed, stopped, queued]) {
       expect(cls).not.toMatch(/purple|violet|fuchsia|indigo/)
     }
+  })
+})
+
+describe('runDetailToHydrateRow', () => {
+  it('builds a new pill row from get_agent_run + the timeline ref', () => {
+    const row = runDetailToHydrateRow(
+      { pillId: 'pill-new', runId: 'run_new' },
+      {
+        run: {
+          runId: 'run_new',
+          sessionId: 'sess-new',
+          status: 'running',
+          input: { prompt: 'do the work' },
+          createdAtMs: 9
+        },
+        session: { title: 'Hydrated' }
+      }
+    )
+    expect(row).toMatchObject({
+      id: 'pill-new',
+      runId: 'run_new',
+      sessionId: 'sess-new',
+      title: 'Hydrated',
+      status: 'running',
+      query: 'do the work'
+    })
+  })
+
+  it('returns null when the run payload cannot form an identity', () => {
+    expect(runDetailToHydrateRow({ pillId: 'p' }, { run: { status: 'running' } })).toBeNull()
+    expect(runDetailToHydrateRow({ runId: 'r' }, { run: null })).toBeNull()
   })
 })
 

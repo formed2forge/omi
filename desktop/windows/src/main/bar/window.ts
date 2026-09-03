@@ -35,6 +35,7 @@
 //   ptt (dead — E2E only)     → same as peek
 //   expanded (click on pill)  → focusable:true + focused — the ONLY mode that
 //                               takes focus, because the user asked to type
+import { randomUUID } from 'node:crypto'
 import { BrowserWindow, ipcMain, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
@@ -63,7 +64,13 @@ import {
 import { makeKeySampler, makePrimaryMouseButtonSampler } from './keyState'
 import { installBarContextMenu } from './barContextMenu'
 import { getAppSettings, setAppSettings } from '../appSettings'
-import type { BarUsageLimitPayload } from '../../shared/types'
+import type {
+  AgentPresentRequest,
+  AgentPresentResult,
+  AgentTimelineRef,
+  BarUsageLimitPayload
+} from '../../shared/types'
+import { planPresentFlush } from './presentAgent'
 
 export type BarMode = 'peek' | 'expanded' | 'ptt'
 export type BarReveal = 'summon' | 'ptt'
@@ -72,6 +79,12 @@ let barWindow: BrowserWindow | null = null
 let barReady = false
 let barEnabled = false
 let currentMode: BarMode | null = null
+/** Present flushed in commitReveal so onShow's hub-reset runs first. */
+let pendingPresent: AgentPresentRequest | null = null
+const presentWaiters = new Map<
+  string,
+  { resolve: (ok: boolean) => void; timer: ReturnType<typeof setTimeout> }
+>()
 /** True from the moment a graceful hide begins (slide-out sent) until the window
  *  is actually parked. During this window barOnScreen is still TRUE and
  *  currentMode is still set, but the bar is on its way OUT — the summon gesture
@@ -499,6 +512,52 @@ function commitReveal(token: number): void {
   else stopPeekWatch()
   send('overlay:shown')
   broadcastVisibility()
+  flushPendingPresent()
+}
+
+function flushPendingPresent(): void {
+  if (!pendingPresent) return
+  const req = pendingPresent
+  pendingPresent = null
+  send('bar:presentAgent', req)
+}
+
+function settlePresent(requestId: string, ok: boolean): void {
+  const waiter = presentWaiters.get(requestId)
+  if (!waiter) return
+  clearTimeout(waiter.timer)
+  presentWaiters.delete(requestId)
+  waiter.resolve(ok)
+}
+
+function presentAgentFromChat(ref: AgentTimelineRef): Promise<boolean> {
+  const requestId = randomUUID()
+  const req: AgentPresentRequest = {
+    requestId,
+    pillId: typeof ref.pillId === 'string' ? ref.pillId : null,
+    sessionId: typeof ref.sessionId === 'string' ? ref.sessionId : null,
+    runId: typeof ref.runId === 'string' ? ref.runId : null
+  }
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => settlePresent(requestId, false), 8000)
+    presentWaiters.set(requestId, { resolve, timer })
+    const action = planPresentFlush({
+      visible: isBarVisible(),
+      hiding: barHiding,
+      mode: currentMode
+    })
+    if (action === 'send-now') {
+      send('bar:presentAgent', req)
+      return
+    }
+    if (action === 'expand-then-send') {
+      setBarMode('expanded')
+      send('bar:presentAgent', req)
+      return
+    }
+    pendingPresent = req
+    showBar('expanded', 'summon')
+  })
 }
 
 // --- Peek retract watchdog ----------------------------------------------------
@@ -1001,6 +1060,15 @@ export function registerBarIpc(sendToMain: (channel: string, ...args: unknown[])
   // Main window → bar: projected chat state (history + streaming + status).
   ipcMain.on('chat:publishState', (_e, state: unknown) => {
     send('chat:state', state)
+  })
+  // Home chat card → expand the bar onto that floating pill (INV-CHAT-1).
+  ipcMain.removeHandler('chat:presentAgent')
+  ipcMain.handle('chat:presentAgent', (_e, ref: AgentTimelineRef) =>
+    presentAgentFromChat(ref ?? {})
+  )
+  ipcMain.on('bar:presentAgentResult', (_e, result: AgentPresentResult) => {
+    if (!result || typeof result.requestId !== 'string') return
+    settlePresent(result.requestId, !!result.ok)
   })
   // Warm-hub PTT (A5 PR-6b, gated on pttHubEnabled): a bar hold delegates its turn
   // to the MAIN window's warm-hub driver (coordinator + hub live in main, D1), the

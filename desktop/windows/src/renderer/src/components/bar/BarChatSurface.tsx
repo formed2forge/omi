@@ -7,6 +7,7 @@
 // window.omiBar.sendChat). This component owns NO chat engine.
 import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { ChatMessages } from '../chat/ChatMessages'
+import type { AgentThreadCardOpen } from '../chat/AgentThreadCard'
 import { useLiveEdgeFollow } from '../../hooks/useLiveEdgeFollow'
 import { displayLabel, displayTintToken, isFinished, type AgentPill } from './agentPills'
 import { pillChipClasses } from './agentPillTranscript'
@@ -272,6 +273,8 @@ export type BarChatSurfaceProps = {
    *  list, so a long reply scrolls internally instead of overflowing the fixed
    *  bar window (C4). */
   maxListHeight: number
+  /** Open a shared-thread agent card onto its floating pill (local resolve). */
+  onOpenAgent?: AgentThreadCardOpen
 }
 
 export function BarChatSurface(props: BarChatSurfaceProps): React.JSX.Element {
@@ -491,7 +494,12 @@ export function BarChatSurface(props: BarChatSurfaceProps): React.JSX.Element {
           className="min-h-0 overflow-y-auto px-3 pb-1 pr-1.5"
         >
           <div ref={messagesRef} className="space-y-2 py-1">
-            <ChatMessages messages={chat.messages} sending={chat.sending} variant="overlay" />
+            <ChatMessages
+              messages={chat.messages}
+              sending={chat.sending}
+              variant="overlay"
+              onOpenAgent={props.onOpenAgent}
+            />
           </div>
         </div>
       ) : (
