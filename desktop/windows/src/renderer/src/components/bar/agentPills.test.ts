@@ -13,10 +13,10 @@ import {
   mergeProjectedPills,
   spawnCardToProjectionRow,
   markViewed,
-  expireViewedFinished,
+  expireFinished,
   trimForSoftCap,
   SOFT_CAP,
-  VIEWED_FINISHED_TTL_MS,
+  FINISHED_TTL_MS,
   type AgentPill,
   type AgentPillWireStatus,
   type AgentPillDisplayStatus,
@@ -393,31 +393,58 @@ describe('markViewed', () => {
   })
 })
 
-describe('expireViewedFinished', () => {
-  const ttl = VIEWED_FINISHED_TTL_MS
-  it('removes a viewed finished pill past its TTL', () => {
-    const pills = [pill({ id: 'old', displayStatus: 'done', viewedAtMs: 0 })]
-    expect(expireViewedFinished(pills, ttl + 1)).toHaveLength(0)
+describe('expireFinished', () => {
+  const ttl = FINISHED_TTL_MS
+  it('expires an unviewed terminal pill once completedAtMs is older than the TTL', () => {
+    const pills = [
+      pill({ id: 'unviewed', displayStatus: 'done', viewedAtMs: null, completedAtMs: 0 })
+    ]
+    expect(expireFinished(pills, ttl + 1)).toHaveLength(0)
   })
-  it('keeps a viewed finished pill still within its TTL', () => {
-    const pills = [pill({ id: 'recent', displayStatus: 'done', viewedAtMs: 0 })]
-    expect(expireViewedFinished(pills, ttl - 1)).toHaveLength(1)
+  it('expires a viewed terminal pill on completedAtMs, not viewedAtMs', () => {
+    // Viewed 1ms ago, but completed well past the TTL — still expires.
+    const pills = [pill({ id: 'viewed', displayStatus: 'done', viewedAtMs: ttl, completedAtMs: 0 })]
+    expect(expireFinished(pills, ttl + 1)).toHaveLength(0)
   })
-  it('never expires an unviewed finished pill', () => {
-    const pills = [pill({ id: 'unviewed', displayStatus: 'failed', viewedAtMs: null })]
-    expect(expireViewedFinished(pills, Number.MAX_SAFE_INTEGER)).toHaveLength(1)
+  it('keeps a finished pill whose completedAtMs is still within the TTL', () => {
+    const pills = [
+      pill({ id: 'recent', displayStatus: 'done', viewedAtMs: null, completedAtMs: 0 })
+    ]
+    expect(expireFinished(pills, ttl - 1)).toHaveLength(1)
   })
+  it('keys off completedAtMs even when viewedAtMs is already old', () => {
+    const pills = [pill({ id: 'kept', displayStatus: 'done', viewedAtMs: 0, completedAtMs: ttl })]
+    expect(expireFinished(pills, ttl + 1)).toHaveLength(1)
+  })
+  it.each(['done', 'stopped', 'failed'] as const)(
+    'applies the same TTL to display status %s',
+    (displayStatus) => {
+      const pills = [pill({ id: displayStatus, displayStatus, viewedAtMs: null, completedAtMs: 0 })]
+      expect(expireFinished(pills, ttl + 1)).toHaveLength(0)
+      expect(expireFinished(pills, ttl)).toHaveLength(1)
+    }
+  )
   it('never expires a non-finished pill', () => {
-    const pills = [pill({ id: 'running', displayStatus: 'running', viewedAtMs: 0 })]
-    expect(expireViewedFinished(pills, Number.MAX_SAFE_INTEGER)).toHaveLength(1)
+    const pills = [
+      pill({ id: 'running', displayStatus: 'running', viewedAtMs: 0, completedAtMs: 0 })
+    ]
+    expect(expireFinished(pills, Number.MAX_SAFE_INTEGER)).toHaveLength(1)
   })
-  it('never expires the active pill even when its viewed TTL has elapsed', () => {
-    const pills = [pill({ id: 'active', displayStatus: 'done', viewedAtMs: 0 })]
-    expect(expireViewedFinished(pills, ttl + 10000, ttl, 'active')).toHaveLength(1)
+  it('never expires the active pill even when its completion TTL has elapsed', () => {
+    const pills = [
+      pill({ id: 'active', displayStatus: 'done', viewedAtMs: null, completedAtMs: 0 })
+    ]
+    expect(expireFinished(pills, ttl + 10000, ttl, 'active')).toHaveLength(1)
+  })
+  it('expires a finished pill with no completedAtMs immediately', () => {
+    const pills = [
+      pill({ id: 'no-ts', displayStatus: 'failed', viewedAtMs: null, completedAtMs: null })
+    ]
+    expect(expireFinished(pills, 1)).toHaveLength(0)
   })
   it('uses the default TTL when none is passed', () => {
-    const pills = [pill({ id: 'x', displayStatus: 'done', viewedAtMs: 0 })]
-    expect(expireViewedFinished(pills, VIEWED_FINISHED_TTL_MS + 1)).toHaveLength(0)
+    const pills = [pill({ id: 'x', displayStatus: 'done', viewedAtMs: null, completedAtMs: 0 })]
+    expect(expireFinished(pills, FINISHED_TTL_MS + 1)).toHaveLength(0)
   })
 })
 
@@ -547,9 +574,9 @@ describe('statusGroupFromDisplay / aggregateStatusGroup (Mac NotchAgentStatusGro
     expect(
       aggregateStatusGroup([pill({ id: 'f', displayStatus: 'failed', viewedAtMs: 9_000 })])
     ).toBeNull()
-    expect(
-      aggregateStatusGroup([pill({ id: 'd', displayStatus: 'done', viewedAtMs: null })])
-    ).toBe('done')
+    expect(aggregateStatusGroup([pill({ id: 'd', displayStatus: 'done', viewedAtMs: null })])).toBe(
+      'done'
+    )
     expect(
       aggregateStatusGroup([
         pill({ id: 'd', displayStatus: 'done', viewedAtMs: 9_000 }),
