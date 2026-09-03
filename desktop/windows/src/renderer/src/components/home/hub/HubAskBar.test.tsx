@@ -216,4 +216,3 @@ describe('HubAskBar — push-to-talk mic', () => {
     expect(toggleVoice).toHaveBeenCalledTimes(1)
   })
 })
-
