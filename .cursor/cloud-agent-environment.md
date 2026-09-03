@@ -56,4 +56,4 @@ git merge --no-ff origin/<feature-branch>
 git push origin windows-all-fixes
 ```
 
-Never merge those feature PRs into fork `main` (mirror of BasedHardware). Detail: `desktop/windows/AGENTS.md`.
+Never open or merge a PR against fork `main` (mirror of BasedHardware). Folding into `windows-all-fixes` is the landing step. Detail: `desktop/windows/AGENTS.md`.

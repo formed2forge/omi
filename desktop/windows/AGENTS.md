@@ -70,9 +70,9 @@ Cloud agents: push normally — do not skip the WAF fold unless the hook is bloc
   defaults to native Wayland; `OMI_OZONE` overrides. Portal identity, bar
   placement, and GPU troubleshooting: `LINUX.md` and
   `docs/multi-worktree-dev.md`.
-- **Fork integration:** fold `desktop/windows` work into `windows-all-fixes`
-  in the same session so GUI testing (`pnpm dev`) can run. Do not leave
-  fold-in as a follow-up. Never merge those feature PRs into fork `main`.
+- **Fork landing:** fold into `windows-all-fixes` same session so GUI
+  testing (`pnpm dev`) can run. Do not leave fold-in as a follow-up.
+  Never open or merge a PR against fork `main`.
 
 ## CI
 
