@@ -46,9 +46,7 @@ export function toggleVoiceTurnFromButton(): void {
   toggleImpl?.()
 }
 
-export function onVoiceTurnButtonSnapshot(
-  cb: (s: VoiceTurnButtonSnapshot) => void
-): () => void {
+export function onVoiceTurnButtonSnapshot(cb: (s: VoiceTurnButtonSnapshot) => void): () => void {
   listeners.add(cb)
   cb(snapshot)
   return () => {

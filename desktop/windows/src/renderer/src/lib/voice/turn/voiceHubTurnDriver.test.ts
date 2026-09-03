@@ -1229,25 +1229,29 @@ describe('toggleFromButton (locked click lane)', () => {
     await flush()
     h.capture.feed(voiced1s())
     h.driver.toggleFromButton()
-    expect(h.driver.phaseKind).toBe('finalizing')
+    // Warm hub: end() finalize + hubCommitDeferred in one turn, so the painted
+    // phase is awaitingResponse (the committing spinner is the cascade lane).
+    expect(h.driver.phaseKind).toBe('awaitingResponse')
     expect(h.hub.calls.commitTurn).toHaveLength(1)
     expect(h.capture.start).toHaveBeenCalledTimes(1)
   })
 
-  it('a click while committing neither restarts nor re-commits', async () => {
+  it('a click while cascade-committing neither restarts nor re-commits', async () => {
     const h = makeDriver({ pttHubEnabled: true })
-    h.hub.setAvailability(true)
+    h.hub.setAvailability(false)
+    h.spies.transcribe.mockImplementation(() => new Promise<string>(() => {}))
     h.driver.toggleFromButton()
     await flush()
     h.capture.feed(voiced1s())
     h.driver.toggleFromButton()
-    expect(h.hub.calls.commitTurn).toHaveLength(1)
     expect(h.driver.phaseKind).toBe('finalizing')
+    expect(h.capture.start).toHaveBeenCalledTimes(1)
+    expect(h.spies.transcribe).toHaveBeenCalledTimes(1)
 
     h.driver.toggleFromButton()
-    expect(h.hub.calls.beginTurn).toHaveLength(1)
-    expect(h.hub.calls.commitTurn).toHaveLength(1)
+    expect(h.driver.phaseKind).toBe('finalizing')
     expect(h.capture.start).toHaveBeenCalledTimes(1)
+    expect(h.spies.transcribe).toHaveBeenCalledTimes(1)
   })
 
   it('a click during an in-flight response barges in with a fresh locked turn', async () => {
@@ -1278,4 +1282,3 @@ describe('toggleFromButton (locked click lane)', () => {
     expect(h.hub.calls.beginTurn).toHaveLength(0)
   })
 })
-
