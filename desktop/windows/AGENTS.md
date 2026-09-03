@@ -40,7 +40,7 @@ opened as a PR. This is **automatic** on `git push`: `scripts/pre-push` calls
 desktop/windows/scripts/fold-into-waf.sh [your-branch]
 ```
 
-Cloud agents: push normally — do not skip the WAF fold unless the hook is blocked.
+Cloud agents: fold into WAF; never open a PR against fork `main`.
 `origin/main` stays a clean upstream mirror; WAF is the test tip.
 
 - **Install**: `pnpm install --frozen-lockfile` (postinstall rebuilds
@@ -66,9 +66,9 @@ Cloud agents: push normally — do not skip the WAF fold unless the hook is bloc
   can't reach (live ASR, agent spawning, OAuth flows, Rewind semantics). Specs
   live under `e2e/`. Run the relevant one manually before shipping a change
   in that area; don't assume `pnpm test` alone covers it.
-- **Fork integration:** fold `desktop/windows` work into `windows-all-fixes`
-  in the same session so GUI testing (`pnpm dev`) can run. Do not leave
-  fold-in as a follow-up. Never merge those feature PRs into fork `main`.
+- **Fork landing:** fold into `windows-all-fixes` same session so GUI
+  testing (`pnpm dev`) can run. Do not leave fold-in as a follow-up.
+  Never open or merge a PR against fork `main`.
 - **Linux Wayland compositors (niri/Sway/Hyprland)**: auto-detects and
   defaults to native Wayland; `OMI_OZONE` overrides. Portal identity, bar
   placement, and GPU troubleshooting: `LINUX.md` and
