@@ -40,6 +40,14 @@ vi.mock('../QuickGoalsWidget', () => ({
   QuickGoalsWidget: () => <div data-testid="quick-goals" />
 }))
 
+vi.mock('../../../hooks/useVoiceTurnButton', () => ({
+  useVoiceTurnButton: () => ({
+    snapshot: { phaseKind: null, isListening: false, orbLevel: 0, hint: '' },
+    state: 'idle',
+    toggle: vi.fn()
+  })
+}))
+
 import { publishConversationsCache, invalidateConversationsCache } from '../../../lib/pageCache'
 import type { ConversationRow } from '../../../lib/pageCache'
 import { setPreferences } from '../../../lib/preferences'

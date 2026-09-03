@@ -7,9 +7,11 @@
 // window.omiBar.sendChat). This component owns NO chat engine.
 import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { ChatMessages } from '../chat/ChatMessages'
+import { PushToTalkMicButton } from '../voice/PushToTalkMicButton'
 import { useLiveEdgeFollow } from '../../hooks/useLiveEdgeFollow'
 import { displayLabel, displayTintToken, isFinished, type AgentPill } from './agentPills'
 import { pillChipClasses } from './agentPillTranscript'
+import type { PushToTalkButtonState } from '../../lib/voice/turn/pushToTalkButtonTrigger'
 import type { BarChatState } from '../../../../shared/types'
 
 function ChevronLeft(): React.JSX.Element {
@@ -175,6 +177,9 @@ type ChatComposerProps = {
   /** Wrapper padding differs by surface (tight in the hub, roomier in the
    *  conversation); the textarea + Send button are identical. */
   className: string
+  pttButtonState: PushToTalkButtonState
+  pttLevel: number
+  onPttButtonClick: () => void
 }
 
 /** The shared textarea + Send composer used by BOTH the hub and the conversation
@@ -192,7 +197,10 @@ const ChatComposer = memo(function ChatComposer({
   onSubmit,
   sendDisabled,
   placeholder,
-  className
+  className,
+  pttButtonState,
+  pttLevel,
+  onPttButtonClick
 }: ChatComposerProps): React.JSX.Element {
   return (
     <div className={className}>
@@ -205,6 +213,13 @@ const ChatComposer = memo(function ChatComposer({
         onKeyUp={onKeyUp}
         placeholder={placeholder}
         className="max-h-32 flex-1 resize-none rounded-xl bg-neutral-800/70 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-500 outline-none focus:ring-1 focus:ring-neutral-500"
+      />
+      <PushToTalkMicButton
+        state={pttButtonState}
+        level={pttLevel}
+        onClick={onPttButtonClick}
+        tone="bar"
+        diameter={32}
       />
       <button
         type="button"
@@ -268,6 +283,11 @@ export type BarChatSurfaceProps = {
   pttKeyUp: (e: React.KeyboardEvent) => boolean
   recording: boolean
   transcribing: boolean
+  /** Projection of the one voice-turn driver (INV-VOICE-1). Defaults keep
+   *  existing tests hermetic; BarApp always passes the live snapshot. */
+  pttButtonState?: PushToTalkButtonState
+  pttLevel?: number
+  onPttButtonClick?: () => void
   /** Max height (px, in this surface's own units) for the scrolling message
    *  list, so a long reply scrolls internally instead of overflowing the fixed
    *  bar window (C4). */
@@ -394,6 +414,9 @@ export function BarChatSurface(props: BarChatSurfaceProps): React.JSX.Element {
   const onComposerKeyUp = useCallback((e: React.KeyboardEvent): void => {
     propsRef.current.pttKeyUp(e)
   }, [])
+  const onPttButtonClick = useCallback((): void => {
+    propsRef.current.onPttButtonClick?.()
+  }, [])
 
   // send-state for the Send button + Enter (mirrors macOS: no send while a turn is
   // in flight or the draft is blank). Passed to the memoized composer as a plain
@@ -422,6 +445,9 @@ export function BarChatSurface(props: BarChatSurfaceProps): React.JSX.Element {
           sendDisabled={sendDisabled}
           placeholder="Ask Omi anything…  ·  hold Space to talk"
           className="flex items-end gap-2 px-1 pb-1 pt-1"
+          pttButtonState={props.pttButtonState ?? 'idle'}
+          pttLevel={props.pttLevel ?? 0}
+          onPttButtonClick={onPttButtonClick}
         />
 
         {/* A failed push-to-talk hold while the hub is focused surfaces its hint
@@ -522,6 +548,9 @@ export function BarChatSurface(props: BarChatSurfaceProps): React.JSX.Element {
         sendDisabled={sendDisabled}
         placeholder="Ask Omi…  ·  hold Space to talk"
         className="flex items-end gap-2 px-3 pb-3 pt-2"
+        pttButtonState={props.pttButtonState ?? 'idle'}
+        pttLevel={props.pttLevel ?? 0}
+        onPttButtonClick={onPttButtonClick}
       />
     </div>
   )

@@ -43,7 +43,7 @@ vi.mock('./barSend', () => ({
   createBarSender: () => ({
     send: vi.fn(async () => null),
     sync: vi.fn(async () => {}),
-    checkSync: vi.fn(() => null)
+    checkSync: vi.fn(() => ({ blocked: false }))
   })
 }))
 // The message list is markdown-heavy and tested elsewhere.
@@ -110,7 +110,8 @@ beforeEach(() => {
     interruptTts: vi.fn(),
     voiceHubBegin: vi.fn(),
     voiceHubEnd: vi.fn(),
-    voiceHubCancel: vi.fn()
+    voiceHubCancel: vi.fn(),
+    voiceHubToggle: vi.fn()
   }
   ;(window as unknown as { omiOverlay: unknown }).omiOverlay = {
     focusMain: vi.fn(),
@@ -227,5 +228,18 @@ describe('BarApp reveal/expand view reset (peek-landing bug)', () => {
     await fire('onMode', 'expanded')
     expect(hubInput()).toBeTruthy()
     expect(conversationInput()).toBeNull()
+  })
+})
+
+describe('BarApp composer mic (locked click lane)', () => {
+  it('expanded hub mic click delegates to the main voice-turn driver', async () => {
+    await mountBar()
+    await fire('onShow', { mode: 'expanded', token: 1 })
+    expect(screen.getByLabelText('Start voice input')).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Start voice input'))
+    expect(
+      (window as unknown as { omiBar: { voiceHubToggle: ReturnType<typeof vi.fn> } }).omiBar
+        .voiceHubToggle
+    ).toHaveBeenCalledTimes(1)
   })
 })
