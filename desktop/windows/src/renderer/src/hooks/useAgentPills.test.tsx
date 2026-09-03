@@ -11,7 +11,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAgentPills } from './useAgentPills'
 import type { PillProjectionRow } from '../components/bar/agentPills'
-import type { AgentThreadCardMsg } from '../../../shared/types'
 
 type OverrideCall = { subjectKind: string; subjectId: string; dismissed: boolean }
 
