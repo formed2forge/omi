@@ -27,10 +27,12 @@ import {
 import {
   retainTextForPills,
   runDetailFinalText,
+  runDetailToHydrateRow,
   runDetailToProjectionRow,
   synthesizePillTranscript,
   type AgentRunDetail
 } from '../components/bar/agentPillTranscript'
+import { findPill, type AgentTimelineRef } from '../lib/chat/agentTimeline'
 import type { AgentThreadCardMsg } from '../../../shared/types'
 import type { ChatMsg } from './useChat'
 
@@ -60,6 +62,9 @@ export type AgentPillsApi = {
   /** The client-synthesized transcript for a pill — its OWN messages, never the
    *  shared Omi thread (INV-CHAT-1). Empty when the pill is unknown. */
   transcriptFor: (id: string) => { messages: ChatMsg[]; sending: boolean }
+  /** Open-by-id: in-memory match → list refresh → get_agent_run hydrate.
+   *  Returns the pill or null when it cannot be resolved (dismissed / gone). */
+  resolveAndPresent: (ref: AgentTimelineRef) => Promise<AgentPill | null>
 }
 
 /** A cheap structural signature of the render-affecting pill fields, so a poll
@@ -158,7 +163,10 @@ function rememberDismissed(set: Set<string>, id: string): void {
 /** True when a freshly projected row was dismissed this session (by run or
  *  session id) before the kernel override took effect — used to drop it from an
  *  in-flight poll snapshot so a stale fetch can't re-create a just-dismissed pill. */
-function isRowDismissed(dismissed: Set<string>, row: PillProjectionRow): boolean {
+function isRowDismissed(
+  dismissed: Set<string>,
+  row: { runId?: string | null; sessionId?: string | null }
+): boolean {
   return (
     (typeof row.runId === 'string' && dismissed.has(row.runId)) ||
     (typeof row.sessionId === 'string' && dismissed.has(row.sessionId))
@@ -308,9 +316,6 @@ export function useAgentPills(activePillId: string | null): AgentPillsApi {
     )
     const runTimer = hasPills ? setInterval(() => void pollRuns(), RUN_POLL_MS) : null
     // Kernel push: a background run reaching queued/terminal broadcasts an agent
-    // card to every window. Seed the pill from the spawn card immediately, then
-    // poll (with short retries) so list projection reconciles without waiting for
-    // the idle heartbeat.
     const unsubCards = window.omi?.onAgentCardEvent?.((card) => {
       if (card?.block) onSpawnCard(card)
       void pollList()
@@ -365,5 +370,57 @@ export function useAgentPills(activePillId: string | null): AgentPillsApi {
     [pills, finalTextByPillId]
   )
 
-  return { pills, markViewed, dismiss, refresh, transcriptFor }
+  const resolveAndPresent = useCallback(
+    async (ref: AgentTimelineRef): Promise<AgentPill | null> => {
+      const liveFind = (list: AgentPill[]): AgentPill | null => {
+        const found = findPill(list, ref)
+        if (!found) return null
+        if (
+          isRowDismissed(dismissedRef.current, { runId: found.runId, sessionId: found.sessionId })
+        ) {
+          return null
+        }
+        return found
+      }
+
+      const existing = liveFind(pillsRef.current)
+      if (existing) return existing
+
+      const rows = await callList()
+      if (rows) {
+        const visibleRows = rows.filter((row) => !isRowDismissed(dismissedRef.current, row))
+        const now = Date.now()
+        const merged = mergeProjectedPills(pillsRef.current, visibleRows, now).pills
+        const candidate = liveFind(merged)
+        const protectId = candidate?.id ?? activePillIdRef.current
+        const expired = expireViewedFinished(merged, now, VIEWED_FINISHED_TTL_MS, protectId)
+        const trimmed = trimForSoftCap(expired, protectId)
+        setPills((prev) => (samePills(prev, trimmed) ? prev : trimmed))
+        const found = liveFind(trimmed)
+        if (found) return found
+      }
+
+      const runId = typeof ref.runId === 'string' && ref.runId.trim() ? ref.runId.trim() : null
+      if (runId && !dismissedRef.current.has(runId)) {
+        const detail = await callRun(runId)
+        if (detail) {
+          const row = runDetailToHydrateRow(ref, detail)
+          if (row && !isRowDismissed(dismissedRef.current, row)) {
+            const now = Date.now()
+            const merged = mergeProjectedPills(pillsRef.current, [row], now).pills
+            const protectId = row.id
+            const expired = expireViewedFinished(merged, now, VIEWED_FINISHED_TTL_MS, protectId)
+            const trimmed = trimForSoftCap(expired, protectId)
+            setPills((prev) => (samePills(prev, trimmed) ? prev : trimmed))
+            const found = liveFind(trimmed)
+            if (found) return found
+          }
+        }
+      }
+      return null
+    },
+    []
+  )
+
+  return { pills, markViewed, dismiss, refresh, transcriptFor, resolveAndPresent }
 }

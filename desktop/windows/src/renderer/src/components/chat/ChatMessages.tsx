@@ -4,7 +4,7 @@ import type { ChatMsg } from '../../hooks/useChat'
 import { RevealMarkdown } from './RevealMarkdown'
 import { ChatAttachmentStrip } from './ChatAttachmentStrip'
 import { OmiThinkingSpinner } from './OmiThinkingSpinner'
-import { AgentThreadCard } from './AgentThreadCard'
+import { AgentThreadCard, type AgentThreadCardOpen } from './AgentThreadCard'
 import { ChatEvidenceReferenceList } from './ChatEvidenceCard'
 import type { AgentThreadCardBlock } from '../../../../shared/types'
 
@@ -92,12 +92,14 @@ const MessageRow = memo(function MessageRow({
   m,
   isLast,
   sending,
-  variant
+  variant,
+  onOpenAgent
 }: {
   m: ChatMsg
   isLast: boolean
   sending: boolean
   variant: 'main' | 'overlay'
+  onOpenAgent?: AgentThreadCardOpen
 }): React.JSX.Element | null {
   const cls = BUBBLE[variant]
   const compact = variant === 'overlay'
@@ -113,7 +115,7 @@ const MessageRow = memo(function MessageRow({
       return (
         <div className="flex flex-col gap-1.5">
           {cards.map((block) => (
-            <AgentThreadCard key={block.id} block={block} compact={compact} />
+            <AgentThreadCard key={block.id} block={block} compact={compact} onOpen={onOpenAgent} />
           ))}
         </div>
       )
@@ -183,11 +185,13 @@ const MessageRow = memo(function MessageRow({
 export function ChatMessages({
   messages,
   sending,
-  variant
+  variant,
+  onOpenAgent
 }: {
   messages: ChatMsg[]
   sending: boolean
   variant: 'main' | 'overlay'
+  onOpenAgent?: AgentThreadCardOpen
 }): React.JSX.Element {
   return (
     <>
@@ -198,6 +202,7 @@ export function ChatMessages({
           isLast={i === messages.length - 1}
           sending={sending}
           variant={variant}
+          onOpenAgent={onOpenAgent}
         />
       ))}
     </>

@@ -1,8 +1,9 @@
-import { useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import { X } from 'lucide-react'
 import { ChatMessages } from '../../chat/ChatMessages'
 import { useLiveEdgeFollow } from '../../../hooks/useLiveEdgeFollow'
 import type { ChatMsg } from '../../../hooks/useChat'
+import type { AgentTimelineRef } from '../../../lib/chat/agentTimeline'
 
 // The chat stage. It renders the app's ONE chat engine (useAppState().chat) through
 // the SAME shared ChatMessages the legacy Home and the bar use — no second thread
@@ -27,6 +28,15 @@ export function HubChatPanel(props: {
   const { messages, sending, header, onDismiss, children } = props
   const scrollRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+
+  const onOpenAgent = useCallback((ref: AgentTimelineRef, done: (ok: boolean) => void): void => {
+    const present = window.omi?.presentAgent
+    if (typeof present !== 'function') {
+      done(false)
+      return
+    }
+    void present(ref).then(done, () => done(false))
+  }, [])
 
   // Pin the live edge while the reply streams, releasing as soon as the reader
   // scrolls up to read earlier messages (shared with the bar surfaces).
@@ -73,7 +83,12 @@ export function HubChatPanel(props: {
               </p>
             </div>
           ) : (
-            <ChatMessages messages={messages} sending={sending} variant="main" />
+            <ChatMessages
+              messages={messages}
+              sending={sending}
+              variant="main"
+              onOpenAgent={onOpenAgent}
+            />
           )}
         </div>
       </div>
