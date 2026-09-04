@@ -39,16 +39,24 @@ def _compare_versions(a, b):
 
 
 def _circular_import_fakes():
-    """Stubs for the circular-import deps of utils.subscription."""
+    """Stubs for the circular-import deps of utils.subscription.
+
+    ``database._client`` must be stubbed: the real module imports google.cloud.firestore
+    at load time, and re-exec'ing ``utils.subscription`` then poisons the protobuf
+    descriptor pool (``duplicate file name .../document.proto``).
+    """
     announcements = ModuleType("database.announcements")
     announcements._compare_versions = _compare_versions
-    # subscription.py imports the public name `compare_versions`; expose it on the
-    # stub so the fresh exec resolves without the real database.announcements.
     announcements.compare_versions = _compare_versions
+    client = ModuleType("database._client")
+    client.get_customer_firestore_client = lambda: None
+    redis_mod = ModuleType("database.redis_db")
     return {
         "database.users": SimpleNamespace(),
         "database.user_usage": SimpleNamespace(),
         "database.announcements": announcements,
+        "database._client": client,
+        "database.redis_db": redis_mod,
     }
 
 
