@@ -92,9 +92,12 @@ def test_plan_identity_and_paid_membership_are_complete():
         'architect',
         'operator',
         'plus',
+        'pro_v2',
         'unlimited_v2',
     }
     assert PAID_PLAN_IDS == PLAN_TYPE_VALUES - {'basic'}
+    # The 'pro' wire alias is untouched: it still resolves to the sunsetting
+    # Architect, not reassigned to Pro (`pro_v2`).
     assert PlanType('pro') is PlanType.architect
 
 
@@ -175,8 +178,10 @@ def test_typed_allocations_resolve_owner_policy_without_zero_unlimited_conventio
     assert not plan_uses_overage(PlanType.basic)
     assert not plan_uses_overage(PlanType.plus)
     assert not plan_uses_overage(PlanType.unlimited_v2)
+    assert not plan_uses_overage(PlanType.pro_v2)
     assert get_plan_allocation(PlanType.plus, 'chat')['exhaustion'] == {'kind': 'hard_cap'}
     assert get_plan_allocation(PlanType.unlimited_v2, 'chat')['exhaustion'] == {'kind': 'hard_cap'}
+    assert get_plan_allocation(PlanType.pro_v2, 'chat')['exhaustion'] == {'kind': 'hard_cap'}
 
 
 def test_measurement_contract_makes_cost_visibility_explicit():
