@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from urllib.parse import urlencode, urlparse
 
+from config.plan_catalog import PAID_PLAN_IDS
 from models.users import PlanType
 
 REFERRAL_COOKIE_NAME = 'omi_desktop_referral'
@@ -20,14 +21,10 @@ REFERRAL_PROGRAM = 'desktop_operator_month_v1'
 
 _CODE_PREFIX = 'ref1'
 _UID_PATTERN = re.compile(r'^[A-Za-z0-9:_-]{1,128}$')
-_PAID_PLAN_VALUES = {
-    PlanType.unlimited.value,
-    PlanType.architect.value,
-    PlanType.operator.value,
-    PlanType.plus.value,
-    PlanType.unlimited_v2.value,
-    'pro',
-}
+# Generated from the catalog rather than hand-listed so a new paid plan (e.g.
+# Pro) is automatically covered here; 'pro' is a wire alias, not a plan ID, so
+# it is not in PAID_PLAN_IDS and is added back explicitly.
+_PAID_PLAN_VALUES = set(PAID_PLAN_IDS) | {'pro'}
 
 
 class ReferralCodeError(ValueError):

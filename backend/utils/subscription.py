@@ -18,6 +18,7 @@ from config.plan_catalog import (
     MOBILE_PLAN_TYPES,
     PAID_PLAN_TYPES,
     PLAN_DISPLAY_NAMES,
+    PLAN_STOREFRONTS,
     PRIMARY_BILLING_ENV_VARS,
     RECOGNIZED_STRIPE_PRICE_INTERVALS,
     allocation_limit,
@@ -79,9 +80,19 @@ def effective_desktop_access_tier(plan: PlanType, subscription: Optional[Subscri
     Free is the minimum Desktop tier. A Neo (``unlimited``) subscriber who is
     not in the full-Desktop grandfather period therefore receives
     ``desktop_free`` rather than no Desktop access. Operator and grandfathered
-    Neo receive ``desktop_full``; Architect receives its separate premium tier.
+    Neo receive ``desktop_full``; Architect and Pro (`pro_v2`) receive the
+    separate premium tier (matches their shared ``desktop_architect`` catalog
+    profile).
+
+    This pair is intentionally still hardcoded rather than read generically off
+    each plan's ``desktop_profile`` field: Neo's grandfather is a *conditional*
+    override declared in the catalog (`conditional_desktop_profiles`), not its
+    static profile, so a naive "just read desktop_profile" rewrite would lose
+    that special case. Generalizing this into one catalog-driven capability
+    evaluator (including the conditional-profile grandfather) is tracked as W1
+    in .github/agent-docs/plan-source-of-truth.md, not done here.
     """
-    if plan == PlanType.architect:
+    if plan in (PlanType.architect, PlanType.pro_v2):
         return DESKTOP_ACCESS_TIER_ARCHITECT
     if plan_grants_desktop(plan, subscription):
         return DESKTOP_ACCESS_TIER_FULL
@@ -557,6 +568,18 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "legacy": False,
         },
         {
+            "plan_type": PlanType.pro_v2,
+            "plan_id": "pro_v2",
+            "title": "Pro",
+            "subtitle": f"{_chat_allowance_text(PlanType.pro_v2)}",
+            "description": f"{_chat_allowance_text(PlanType.pro_v2)}. Full desktop, mobile, and web access.",
+            "eyebrow": "For power users",
+            "monthly_price_id": _configured_plan_price_id(PlanType.pro_v2, 'month'),
+            "annual_price_id": _configured_plan_price_id(PlanType.pro_v2, 'year'),
+            "annual_description": "Save with annual billing.",
+            "legacy": False,
+        },
+        {
             "plan_type": PlanType.unlimited_v2,
             "plan_id": "unlimited_v2",
             "title": "Unlimited",
@@ -575,38 +598,55 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
 _MOBILE_PLATFORM_TOKENS = {'ios', 'android'}
 
 # The web storefront (X-App-Platform: web). It's an always-latest client that
-# renders the full new catalog (Plus + Unlimited + Operator + Architect) and is
-# the primary Stripe checkout surface; only deprecated Neo is hidden there.
+# renders the full new catalog and is the primary Stripe checkout surface.
 WEB_PLATFORMS = {'web'}
+
+
+def _storefront_token(platform: Optional[str]) -> Optional[str]:
+    """Map an X-App-Platform header value onto the catalog's storefront vocabulary.
+
+    Mobile/desktop/web platform tokens already match the catalog's own
+    storefront names (`android`, `ios`, `macos`, `windows`, `web`) one-for-one;
+    this indirection is the single seam to fix if that ever stops being true.
+    An unrecognized/missing platform has no storefront (returns None).
+    """
+    p = (platform or '').lower()
+    if p in _MOBILE_PLATFORM_TOKENS or p in DESKTOP_PLATFORMS or p in WEB_PLATFORMS:
+        return p
+    return None
 
 
 def _platform_hidden_plans(platform: Optional[str]) -> Set[PlanType]:
     """Plans hidden from the purchase catalog per platform.
 
-    Mobile sells Plus + Unlimited; desktop sells Operator + Architect; web sells
-    all four. Neo is deprecated everywhere and hidden on every platform. A
-    subscriber on a hidden plan still sees it via `filter_plans_for_user`'s
-    current-plan escape (Neo) or the mobile manage-only fast path (Operator /
-    Architect). See .github/agent-docs/plan-catalog.md.
+    Derived directly from each plan's catalog-declared `storefronts`
+    (`PLAN_STOREFRONTS`) rather than a hand-maintained per-platform set: a plan
+    is hidden on a platform iff that platform's storefront token is absent from
+    its `storefronts` list. This is the storefront-audience rewrite for Free /
+    Plus / Pro unification — Plus and Pro (`pro_v2`) now sell on every
+    storefront (mobile, desktop, web); Operator, Architect, Neo, and
+    Unlimited-v2 sunset to an empty storefront list (no longer sold to new
+    users anywhere). An unrecognized/missing platform hides nothing
+    (fail-open, matching prior behavior). A subscriber on a hidden plan still
+    sees it via `filter_plans_for_user`'s current-plan escape or the mobile
+    manage-only fast path (Operator / Architect — the only plans left that are
+    desktop-entitled but not mobile-sold). See .github/agent-docs/plan-catalog.md.
     """
-    p = (platform or '').lower()
-    if p in _MOBILE_PLATFORM_TOKENS:
-        return {PlanType.unlimited, PlanType.operator, PlanType.architect}
-    if p in DESKTOP_PLATFORMS:
-        return {PlanType.unlimited, PlanType.plus, PlanType.unlimited_v2}
-    if p in WEB_PLATFORMS:
-        return {PlanType.unlimited}
-    return set()
+    storefront = _storefront_token(platform)
+    if storefront is None:
+        return set()
+    return {plan for plan in PlanType if storefront not in PLAN_STOREFRONTS.get(plan, ())}
 
 
 def desktop_to_consumer_plan_change_error(current_plan: PlanType, target_plan: PlanType) -> Optional[str]:
-    """Error text if a desktop-entitled plan would be swapped onto a consumer tier.
+    """Error text if a desktop-entitled plan would be swapped onto a non-desktop-entitled tier.
 
-    Operator and Architect are manage-only from mobile: cancel or wait out the
-    period. Immediate proration onto Plus / Unlimited / Neo strips desktop.
-    Same-family desktop changes (Operator ↔ Architect) stay allowed for the
-    desktop and web storefronts. Do not add a "user confirmed in the app"
-    exception — confirmation is not this boundary. See .github/agent-docs/plan-catalog.md.
+    Any desktop-entitled plan (Operator, Architect, Plus, Pro) switching onto a
+    plan without desktop entitlement is blocked: immediate proration would
+    strip desktop access. Switches between two desktop-entitled plans (Operator
+    <-> Architect, Plus <-> Pro, etc.) stay allowed for every storefront that
+    sells the target. Do not add a "user confirmed in the app" exception —
+    confirmation is not this boundary. See .github/agent-docs/plan-catalog.md.
     """
     if current_plan in DESKTOP_ENTITLED_PLAN_TYPES and target_plan not in DESKTOP_ENTITLED_PLAN_TYPES:
         return (
@@ -627,17 +667,31 @@ def filter_plans_for_user(
 
     1. Neo (`unlimited`) is shown only when `current_plan` is already Neo
        (active or cancel-at-period-end). Never gate it on "has ever paid".
-    2. On mobile, Operator / Architect are manage-only: return *only* the
-       current desktop plan so cheaper mobile tiers cannot be purchased
-       from the phone. Desktop and web keep selling both.
-    3. Fully churned ex-Neo users are `basic` and receive Plus + Unlimited,
-       the replacement catalog, not the deprecated Neo SKU.
+    2. On mobile, a desktop-entitled plan that is not itself sold on mobile
+       (Operator / Architect — the two sunset desktop-only plans) is
+       manage-only: return *only* the current plan so a cheaper mobile tier
+       cannot be purchased from the phone, which would immediately strip
+       desktop entitlement via proration. Plus and Pro are desktop-entitled
+       *and* mobile-sold, so this does not apply to them: a Plus/Pro
+       subscriber on mobile sees the normal purchase catalog. Desktop and web
+       keep selling every plan sold there.
+    3. Fully churned ex-Neo users are `basic` and receive the current catalog
+       (Plus, Pro), not the deprecated Neo or Unlimited-v2 SKUs.
+    4. Operator, Architect, and Unlimited-v2 are sunset: no longer offered to
+       new users on any storefront, and no longer cross-shown to each other's
+       existing subscribers — each is now visible only to its own current
+       subscriber, the same "deprecated, current-subscriber-only" shape Neo
+       already had.
 
-    The current-plan escape still applies on desktop/web so a Neo subscriber
-    opening those surfaces can manage/cancel.
+    The current-plan escape still applies on desktop/web so a subscriber on
+    any deprecated legacy plan can open those surfaces to manage/cancel.
     """
     is_mobile = (platform or '').lower() in _MOBILE_PLATFORM_TOKENS
-    if is_mobile and current_plan in DESKTOP_ENTITLED_PLAN_TYPES:
+    if (
+        is_mobile
+        and current_plan in DESKTOP_ENTITLED_PLAN_TYPES
+        and not _MOBILE_PLATFORM_TOKENS & set(PLAN_STOREFRONTS.get(current_plan, ()))
+    ):
         return [d for d in definitions if d.get('plan_type') == current_plan]
 
     hidden = _platform_hidden_plans(platform)
@@ -714,9 +768,9 @@ def should_show_new_plans(platform: Optional[str], app_version: Optional[str]) -
     return False
 
 
-# Minimum client build whose plan enum includes `plus`/`max`. Defaulted ahead of
-# any shipped build so every current client is remapped today (see
-# wire_plan_for_client); lower once a plus/unlimited_v2-aware client ships.
+# Minimum client build whose plan enum includes `plus`/`pro_v2`. Defaulted ahead
+# of any shipped build so every current client is remapped today (see
+# wire_plan_for_client); lower once a plus/pro_v2-aware client ships.
 PLUS_UNLIMITED_V2_MIN_MOBILE_VERSION = os.getenv('PLUS_UNLIMITED_V2_MIN_MOBILE_VERSION', '99.0.0')
 PLUS_UNLIMITED_V2_MIN_DESKTOP_VERSION = os.getenv('PLUS_UNLIMITED_V2_MIN_DESKTOP_VERSION', '99.0.0')
 
@@ -738,7 +792,7 @@ def client_understands_plus_unlimited_v2(platform: Optional[str], app_version: O
 
 
 def wire_plan_for_client(plan: PlanType, platform: Optional[str], app_version: Optional[str]) -> PlanType:
-    """Serialize `plus`/`max` as `unlimited` for clients whose enum predates them.
+    """Serialize `plus`/`pro_v2` as `unlimited` for clients whose enum predates them.
 
     Only the label is remapped — real entitlement/limits are computed from the
     true plan before this is called. Mirrors the `operator`→`unlimited` remap.
@@ -753,13 +807,15 @@ def adapt_plans_for_legacy_client(definitions: List[Dict[str, Any]]) -> List[Dic
     so older clients (mobile, stable desktop) keep showing the old plan titles
     and don't see desktop-only plans.
 
-    Hides Operator and Architect (pro) entirely — both are desktop-only.
+    Hides Operator, Architect (pro), and Pro (`pro_v2`) entirely —
+    Operator/Architect are desktop-only (now sunset), and Pro postdates this
+    pre-0.11.324 client shape entirely, same reasoning as excluding Operator.
     Drops the legacy suffix + flag from Unlimited so pre-rollout clients
     still see it as "Omi Unlimited".
     """
     out: List[Dict[str, Any]] = []
     for d in definitions:
-        if d['plan_id'] in ('operator', 'pro'):
+        if d['plan_id'] in ('operator', 'pro', 'pro_v2'):
             continue
         adapted = dict(d)
         if d['plan_id'] == 'architect':
