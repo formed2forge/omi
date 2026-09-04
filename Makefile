@@ -38,7 +38,7 @@ CHAT_FIRST_E2E_ACTION ?= prepare
 CHAT_FIRST_E2E_CASE ?= enabled
 CHAT_FIRST_E2E_SECONDS ?= 86400
 
-.PHONY: setup setup-main setup-hooks setup-backend preflight runtime-image-source-closure runtime-image-smoke dev-check dev-up dev-status dev-summary dev-reset dev-down dev-logs dev dev-desktop dev-init dev-verify list-memory-scenarios seed-memory-scenario reset-memory-scenario desktop-run-local chat-first-e2e-fixture run-canonical-maintenance
+.PHONY: setup setup-main setup-hooks setup-backend preflight runtime-image-source-closure runtime-image-smoke dev-check dev-up dev-status dev-summary dev-reset dev-down dev-logs dev dev-desktop dev-init dev-verify list-memory-scenarios seed-memory-scenario reset-memory-scenario list-pricing-scenarios seed-pricing-scenario reset-pricing-scenario desktop-run-local chat-first-e2e-fixture run-canonical-maintenance
 
 # Baseline setup is deliberately limited to prerequisites that the default
 # pre-push gate may require; app and desktop runtime environments stay opt-in.
@@ -106,6 +106,15 @@ seed-memory-scenario:
 
 reset-memory-scenario:
 	$(PYTHON_RUNNER) scripts/dev-harness/reset-memory-scenario.py $(SCENARIO)
+
+list-pricing-scenarios:
+	$(PYTHON_RUNNER) scripts/dev-harness/list-pricing-scenarios.py
+
+seed-pricing-scenario:
+	$(PYTHON_RUNNER) scripts/dev-harness/seed-pricing-scenario.py $(SCENARIO)
+
+reset-pricing-scenario:
+	$(PYTHON_RUNNER) scripts/dev-harness/reset-pricing-scenario.py $(SCENARIO)
 
 desktop-run-local:
 	@if [ -n "$(DESKTOP_APP_NAME)" ]; then \

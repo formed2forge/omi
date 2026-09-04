@@ -27,6 +27,8 @@ Before `make desktop-run-local` signs into the Auth emulator, it resets only the
 
 If local Firestore/Auth emulators are not reachable, seed/reset commands still validate fixtures and emit a dry-run manifest under the sentinel-owned local harness state root. They do not fake live emulator writes.
 
+Pricing / subscription Settings QA uses a separate fixture set. See [PRICING_SCENARIOS.md](PRICING_SCENARIOS.md).
+
 ## Chat-first E2E fixture
 
 The named Chat-first bundle is exercised through real Firebase Auth emulator

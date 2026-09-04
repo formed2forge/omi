@@ -35,6 +35,20 @@ Non-secret keys in `backend/.env.local-dev` are **ignored** — see `make dev-st
 | `bob` | `bob@local.omi.invalid` | `bob-local-password-030` |
 | `local_default_user` | `local_default_user@local.omi.invalid` | `local_default_user-local-password-030` |
 
+Pricing / subscription fixtures are a separate kind (`make list-pricing-scenarios`). Those users use `{uid}-local-password-pricing`. See [PRICING_SCENARIOS.md](../../../scripts/dev-harness/PRICING_SCENARIOS.md).
+
+### Pricing / Settings QA
+
+```bash
+PROVIDER_MODE=offline make dev-up
+make seed-pricing-scenario SCENARIO=plan_catalog_matrix
+make desktop-run-local DESKTOP_APP_NAME=omi-pricing DESKTOP_USER=pricing_plus
+```
+
+The harness stubs `price_local_*` Stripe catalog rows so Settings can recover Plus / Pro from `current_price_id` even though the wire still says `plan=unlimited`. Do not treat an empty `available_plans` list as a fixture bug — that is live Stripe being unreachable; the stub is the local fix.
+
+Other pricing scenario names: `make list-pricing-scenarios`
+
 ### Useful commands
 
 ```bash
