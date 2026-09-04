@@ -86,7 +86,12 @@ def _lapsed_period_end() -> int:
 
 def price_id_for(plan: str, interval: str = "month") -> str:
     env_var = PRIMARY_BILLING_ENV_VARS[PlanType(plan)][interval]
-    return os.getenv(env_var) or config.LOCAL_STRIPE_PRICE_ID_ENV[env_var]
+    override = os.getenv(env_var, "").strip()
+    # Ambient production Stripe ids must not leak into local fixtures. The
+    # harness child env injects price_local_* values; only those overrides win.
+    if override.startswith("price_local_"):
+        return override
+    return config.LOCAL_STRIPE_PRICE_ID_ENV[env_var]
 
 
 def paid_price_ids() -> dict[str, str]:

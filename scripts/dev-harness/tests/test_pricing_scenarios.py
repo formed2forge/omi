@@ -7,6 +7,8 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dev_harness import config, emulator_seeding, pricing_scenarios, safety
@@ -67,6 +69,13 @@ def test_local_price_ids_cover_every_primary_billing_env_var() -> None:
     assert set(config.LOCAL_STRIPE_PRICE_ID_ENV.values()) == set(config.LOCAL_STRIPE_PRICE_AMOUNTS)
 
 
+def test_price_id_for_ignores_ambient_live_stripe_ids(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STRIPE_PLUS_MONTHLY_PRICE_ID", "price_1NotALocalPrice")
+    monkeypatch.setenv("STRIPE_PRO_V2_MONTHLY_PRICE_ID", "price_local_pro_v2_month_override")
+    assert pricing_scenarios.price_id_for("plus") == "price_local_plus_month"
+    assert pricing_scenarios.price_id_for("pro_v2") == "price_local_pro_v2_month_override"
+
+
 def test_harness_stripe_amount_catalog_stays_in_lockstep() -> None:
     stripe_source = (REPO_ROOT / "backend" / "utils" / "stripe.py").read_text(encoding="utf-8")
     for price_id, (amount, interval) in config.LOCAL_STRIPE_PRICE_AMOUNTS.items():
@@ -86,6 +95,9 @@ def test_paid_fixtures_use_far_future_period_end_and_pricing_passwords() -> None
                 continue
             assert "stripe_subscription_id" not in sub
             plan = sub.get("plan")
+            price_id = sub.get("current_price_id")
+            if isinstance(price_id, str) and plan != "future_plan_123":
+                assert price_id.startswith("price_local_"), seed.path
             period_end = sub.get("current_period_end")
             if plan not in {None, "basic", "future_plan_123"} and isinstance(period_end, int) and period_end > now:
                 assert period_end - now >= pricing_scenarios.MIN_ACTIVE_PERIOD_MARGIN_SECONDS
