@@ -124,11 +124,13 @@ def test_auth_live_seed_prefers_the_admin_api_for_deterministic_uids(
         calls.append((method, url, dict(payload) if payload is not None else None))
         return 200, '{}'
 
-    monkeypatch.setattr(memory_scenarios, '_request_json', fake_request)
+    from dev_harness import emulator_seeding
+
+    monkeypatch.setattr(emulator_seeding, 'request_json', fake_request)
     admin_calls = []
     monkeypatch.setattr(
-        memory_scenarios,
-        '_apply_auth_admin_sdk',
+        emulator_seeding,
+        'apply_auth_admin_sdk',
         lambda received_cfg, op: admin_calls.append((received_cfg, op)) or True,
     )
     op = memory_scenarios.SeedOperation(

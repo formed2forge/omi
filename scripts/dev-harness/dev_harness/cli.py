@@ -453,33 +453,15 @@ def _git_metadata(repo_root: Path) -> dict[str, object]:
 
 
 def _current_scenario_manifest(cfg: config.HarnessConfig) -> dict[str, object] | None:
-    current = cfg.layout.state_root / "manifests" / "memory-scenario-current.json"
-    if current.is_file():
-        data = _load_json(current, {})
-        if data:
-            return data
-    manifests = sorted((cfg.layout.state_root / "manifests").glob("memory-scenario-*-seed.json"))
-    if not manifests:
-        return None
-    latest = max(manifests, key=lambda path: path.stat().st_mtime)
-    return _load_json(latest, {})
+    from .emulator_seeding import current_scenario_manifest
+
+    return current_scenario_manifest(cfg)
 
 
 def _scenario_users_from_seed_manifest(cfg: config.HarnessConfig) -> list[str]:
-    manifests = sorted((cfg.layout.state_root / "manifests").glob("memory-scenario-*-seed.json"))
-    if not manifests:
-        return []
-    latest = max(manifests, key=lambda path: path.stat().st_mtime)
-    data = _load_json(latest, {})
-    operations = data.get("operations", [])
-    if not isinstance(operations, list):
-        return []
-    users = [
-        str(op.get("target"))
-        for op in operations
-        if isinstance(op, dict) and op.get("kind") == "auth" and op.get("action") == "upsert"
-    ]
-    return sorted(set(users))
+    from .emulator_seeding import merged_auth_users_from_seed_manifests
+
+    return sorted(merged_auth_users_from_seed_manifests(cfg))
 
 
 def _summary_path(cfg: config.HarnessConfig) -> Path:
@@ -1024,7 +1006,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         safety.read_and_validate_sentinel(cfg.layout.state_root, repo_root=cfg.repo_root, instance=cfg.instance)
         print("sentinel: ok")
     scenario = _current_scenario_manifest(cfg)
-    print("\nMemory manual-QA state:")
+    print("\nManual-QA scenario state:")
     if scenario:
         print(f"  scenario_id: {scenario.get('scenario_id')}")
         print(f"  scenario_digest: {scenario.get('scenario_digest')}")
@@ -1033,7 +1015,9 @@ def cmd_status(args: argparse.Namespace) -> int:
         print(f"  seeded_users: {', '.join(users) if users else 'unknown'}")
     else:
         print(
-            "  scenario_id: none (run make dev-up to auto-seed happy_path, or make seed-memory-scenario SCENARIO=happy_path)"
+            "  scenario_id: none (run make dev-up to auto-seed happy_path, "
+            "make seed-memory-scenario SCENARIO=happy_path, "
+            "or make seed-pricing-scenario SCENARIO=plan_catalog_matrix)"
         )
         print("  seeded_users: none")
     print(f"  session_summary_path: {_summary_path(cfg)}")

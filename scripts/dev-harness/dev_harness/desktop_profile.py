@@ -141,17 +141,11 @@ def _is_loopback_url(raw: str) -> bool:
 
 
 def _user_payload_from_seed_manifest(cfg: config.HarnessConfig, user: str) -> dict[str, str]:
-    manifests = sorted((cfg.layout.state_root / "manifests").glob("memory-scenario-*-seed.json"))
-    if not manifests:
-        return {}
-    data = json.loads(max(manifests, key=lambda path: path.stat().st_mtime).read_text(encoding="utf-8"))
-    for op in data.get("operations", []):
-        if not isinstance(op, dict) or op.get("kind") != "auth" or op.get("action") != "upsert":
-            continue
-        payload = op.get("payload")
-        if isinstance(payload, dict) and payload.get("localId") == user:
-            return {str(k): str(v) for k, v in payload.items() if v is not None}
-    return {}
+    from .emulator_seeding import merged_auth_users_from_seed_manifests
+
+    users = merged_auth_users_from_seed_manifests(cfg)
+    payload = users.get(user)
+    return dict(payload) if payload else {}
 
 
 def resolve_profile(
