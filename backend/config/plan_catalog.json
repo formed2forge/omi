@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "catalog_revision": 2,
+  "catalog_revision": 3,
   "authority": {
     "plan_identity": "catalog",
     "price_identity": "repository_ledger",
@@ -257,13 +257,9 @@
         "pro"
       ],
       "wire_fallback_plan": null,
-      "lifecycle": "current",
+      "lifecycle": "deprecated",
       "is_paid": true,
-      "storefronts": [
-        "macos",
-        "web",
-        "windows"
-      ],
+      "storefronts": [],
       "desktop_profile": "desktop_architect",
       "conditional_desktop_profiles": [],
       "fair_use_profile": "unlimited_transcription",
@@ -337,13 +333,9 @@
       "display_name": "Operator",
       "wire_aliases": [],
       "wire_fallback_plan": null,
-      "lifecycle": "current",
+      "lifecycle": "deprecated",
       "is_paid": true,
-      "storefronts": [
-        "macos",
-        "web",
-        "windows"
-      ],
+      "storefronts": [],
       "desktop_profile": "desktop_full",
       "conditional_desktop_profiles": [],
       "fair_use_profile": "unlimited_transcription",
@@ -420,9 +412,11 @@
       "storefronts": [
         "android",
         "ios",
-        "web"
+        "macos",
+        "web",
+        "windows"
       ],
-      "desktop_profile": "desktop_free",
+      "desktop_profile": "desktop_full",
       "conditional_desktop_profiles": [],
       "fair_use_profile": "metered_transcription",
       "phone_calls_profile": "paid",
@@ -490,8 +484,8 @@
       }
     },
     {
-      "id": "unlimited_v2",
-      "display_name": "Unlimited",
+      "id": "pro_v2",
+      "display_name": "Pro",
       "wire_aliases": [],
       "wire_fallback_plan": "unlimited",
       "lifecycle": "current",
@@ -499,8 +493,84 @@
       "storefronts": [
         "android",
         "ios",
-        "web"
+        "macos",
+        "web",
+        "windows"
       ],
+      "desktop_profile": "desktop_architect",
+      "conditional_desktop_profiles": [],
+      "fair_use_profile": "unlimited_transcription",
+      "phone_calls_profile": "paid",
+      "allocations": {
+        "transcription": {
+          "period": "month",
+          "unit": "second",
+          "limit": {
+            "kind": "unlimited"
+          }
+        },
+        "words_transcribed": {
+          "period": "month",
+          "unit": "word",
+          "limit": {
+            "kind": "unlimited"
+          }
+        },
+        "insights_gained": {
+          "period": "month",
+          "unit": "insight",
+          "limit": {
+            "kind": "unlimited"
+          }
+        },
+        "memories_created": {
+          "period": "month",
+          "unit": "memory",
+          "limit": {
+            "kind": "unlimited"
+          }
+        },
+        "chat": {
+          "period": "month",
+          "unit": "question",
+          "limit": {
+            "kind": "finite",
+            "value": 1000
+          },
+          "exhaustion": {
+            "kind": "hard_cap"
+          }
+        }
+      },
+      "billing": {
+        "prices": [
+          {
+            "interval": "month",
+            "currency": "usd",
+            "primary_env_var": "STRIPE_PRO_V2_MONTHLY_PRICE_ID",
+            "accepted_env_vars": [
+              "STRIPE_PRO_V2_MONTHLY_PRICE_ID"
+            ]
+          },
+          {
+            "interval": "year",
+            "currency": "usd",
+            "primary_env_var": "STRIPE_PRO_V2_ANNUAL_PRICE_ID",
+            "accepted_env_vars": [
+              "STRIPE_PRO_V2_ANNUAL_PRICE_ID"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "unlimited_v2",
+      "display_name": "Unlimited",
+      "wire_aliases": [],
+      "wire_fallback_plan": "unlimited",
+      "lifecycle": "deprecated",
+      "is_paid": true,
+      "storefronts": [],
       "desktop_profile": "desktop_free",
       "conditional_desktop_profiles": [],
       "fair_use_profile": "unlimited_transcription",

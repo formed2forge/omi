@@ -14,6 +14,7 @@ class PlanType(str, Enum):
     architect = 'architect'
     operator = 'operator'
     plus = 'plus'
+    pro_v2 = 'pro_v2'
     unlimited_v2 = 'unlimited_v2'
 
     @classmethod
@@ -25,8 +26,8 @@ WIRE_PLAN_ALIASES: Final[dict[str, PlanType]] = {
     'pro': PlanType.architect,
 }
 
-CATALOG_SHA256: Final = '67f5024782f1e55742395b4e32644a4a8e478282d37593dd8225e5fb00bda22d'
-CATALOG_REVISION: Final = 2
+CATALOG_SHA256: Final = '67fa1b685e594e991e9a84a944b6145fba267d32b2149cbff43a78f6f6f2c070'
+CATALOG_REVISION: Final = 3
 CATALOG_AUTHORITY: Final = {'plan_identity': 'catalog',
  'price_identity': 'repository_ledger',
  'price_amount': 'stripe_live',
@@ -125,9 +126,9 @@ PLAN_CATALOG_DATA: Final[dict[str, dict[str, Any]]] = {'basic': {'id': 'basic',
                'display_name': 'Architect',
                'wire_aliases': ['pro'],
                'wire_fallback_plan': None,
-               'lifecycle': 'current',
+               'lifecycle': 'deprecated',
                'is_paid': True,
-               'storefronts': ['macos', 'web', 'windows'],
+               'storefronts': [],
                'desktop_profile': 'desktop_architect',
                'conditional_desktop_profiles': [],
                'fair_use_profile': 'unlimited_transcription',
@@ -158,9 +159,9 @@ PLAN_CATALOG_DATA: Final[dict[str, dict[str, Any]]] = {'basic': {'id': 'basic',
               'display_name': 'Operator',
               'wire_aliases': [],
               'wire_fallback_plan': None,
-              'lifecycle': 'current',
+              'lifecycle': 'deprecated',
               'is_paid': True,
-              'storefronts': ['macos', 'web', 'windows'],
+              'storefronts': [],
               'desktop_profile': 'desktop_full',
               'conditional_desktop_profiles': [],
               'fair_use_profile': 'unlimited_transcription',
@@ -187,8 +188,8 @@ PLAN_CATALOG_DATA: Final[dict[str, dict[str, Any]]] = {'basic': {'id': 'basic',
           'wire_fallback_plan': 'unlimited',
           'lifecycle': 'current',
           'is_paid': True,
-          'storefronts': ['android', 'ios', 'web'],
-          'desktop_profile': 'desktop_free',
+          'storefronts': ['android', 'ios', 'macos', 'web', 'windows'],
+          'desktop_profile': 'desktop_full',
           'conditional_desktop_profiles': [],
           'fair_use_profile': 'metered_transcription',
           'phone_calls_profile': 'paid',
@@ -210,13 +211,40 @@ PLAN_CATALOG_DATA: Final[dict[str, dict[str, Any]]] = {'basic': {'id': 'basic',
                                   'currency': 'usd',
                                   'primary_env_var': 'STRIPE_PLUS_ANNUAL_PRICE_ID',
                                   'accepted_env_vars': ['STRIPE_PLUS_ANNUAL_PRICE_ID']}]}},
+ 'pro_v2': {'id': 'pro_v2',
+            'display_name': 'Pro',
+            'wire_aliases': [],
+            'wire_fallback_plan': 'unlimited',
+            'lifecycle': 'current',
+            'is_paid': True,
+            'storefronts': ['android', 'ios', 'macos', 'web', 'windows'],
+            'desktop_profile': 'desktop_architect',
+            'conditional_desktop_profiles': [],
+            'fair_use_profile': 'unlimited_transcription',
+            'phone_calls_profile': 'paid',
+            'allocations': {'transcription': {'period': 'month', 'unit': 'second', 'limit': {'kind': 'unlimited'}},
+                            'words_transcribed': {'period': 'month', 'unit': 'word', 'limit': {'kind': 'unlimited'}},
+                            'insights_gained': {'period': 'month', 'unit': 'insight', 'limit': {'kind': 'unlimited'}},
+                            'memories_created': {'period': 'month', 'unit': 'memory', 'limit': {'kind': 'unlimited'}},
+                            'chat': {'period': 'month',
+                                     'unit': 'question',
+                                     'limit': {'kind': 'finite', 'value': 1000},
+                                     'exhaustion': {'kind': 'hard_cap'}}},
+            'billing': {'prices': [{'interval': 'month',
+                                    'currency': 'usd',
+                                    'primary_env_var': 'STRIPE_PRO_V2_MONTHLY_PRICE_ID',
+                                    'accepted_env_vars': ['STRIPE_PRO_V2_MONTHLY_PRICE_ID']},
+                                   {'interval': 'year',
+                                    'currency': 'usd',
+                                    'primary_env_var': 'STRIPE_PRO_V2_ANNUAL_PRICE_ID',
+                                    'accepted_env_vars': ['STRIPE_PRO_V2_ANNUAL_PRICE_ID']}]}},
  'unlimited_v2': {'id': 'unlimited_v2',
                   'display_name': 'Unlimited',
                   'wire_aliases': [],
                   'wire_fallback_plan': 'unlimited',
-                  'lifecycle': 'current',
+                  'lifecycle': 'deprecated',
                   'is_paid': True,
-                  'storefronts': ['android', 'ios', 'web'],
+                  'storefronts': [],
                   'desktop_profile': 'desktop_free',
                   'conditional_desktop_profiles': [],
                   'fair_use_profile': 'unlimited_transcription',
@@ -245,14 +273,15 @@ PLAN_CATALOG_DATA: Final[dict[str, dict[str, Any]]] = {'basic': {'id': 'basic',
                                           'currency': 'usd',
                                           'primary_env_var': 'STRIPE_UNLIMITED_V2_ANNUAL_PRICE_ID',
                                           'accepted_env_vars': ['STRIPE_UNLIMITED_V2_ANNUAL_PRICE_ID']}]}}}
-PLAN_TYPE_VALUES: Final[frozenset[str]] = frozenset(['basic', 'unlimited', 'architect', 'operator', 'plus', 'unlimited_v2'])
-PAID_PLAN_TYPES: Final[frozenset[PlanType]] = frozenset({PlanType.unlimited, PlanType.architect, PlanType.operator, PlanType.plus, PlanType.unlimited_v2})
+PLAN_TYPE_VALUES: Final[frozenset[str]] = frozenset(['basic', 'unlimited', 'architect', 'operator', 'plus', 'pro_v2', 'unlimited_v2'])
+PAID_PLAN_TYPES: Final[frozenset[PlanType]] = frozenset({PlanType.unlimited, PlanType.architect, PlanType.operator, PlanType.plus, PlanType.pro_v2, PlanType.unlimited_v2})
 PAID_PLAN_IDS: Final[frozenset[str]] = frozenset(plan.value for plan in PAID_PLAN_TYPES)
-MOBILE_PLAN_TYPES: Final[frozenset[PlanType]] = frozenset({PlanType.plus, PlanType.unlimited_v2})
-DESKTOP_ENTITLED_PLAN_TYPES: Final[frozenset[PlanType]] = frozenset({PlanType.architect, PlanType.operator})
-UNLIMITED_TRANSCRIPTION_PLAN_TYPES: Final[frozenset[PlanType]] = frozenset({PlanType.unlimited, PlanType.architect, PlanType.operator, PlanType.unlimited_v2})
+MOBILE_PLAN_TYPES: Final[frozenset[PlanType]] = frozenset({PlanType.plus, PlanType.pro_v2})
+DESKTOP_ENTITLED_PLAN_TYPES: Final[frozenset[PlanType]] = frozenset({PlanType.architect, PlanType.operator, PlanType.plus, PlanType.pro_v2})
+UNLIMITED_TRANSCRIPTION_PLAN_TYPES: Final[frozenset[PlanType]] = frozenset({PlanType.unlimited, PlanType.architect, PlanType.operator, PlanType.pro_v2, PlanType.unlimited_v2})
 WIRE_FALLBACK_PLAN_TYPES: Final[dict[PlanType, PlanType]] = {
     PlanType.plus: PlanType.unlimited,
+    PlanType.pro_v2: PlanType.unlimited,
     PlanType.unlimited_v2: PlanType.unlimited,
 }
 LEGACY_WIRE_PLAN_VALUES: Final[tuple[str, ...]] = tuple(['basic', 'unlimited', 'architect', 'operator'])
@@ -262,15 +291,17 @@ PLAN_DISPLAY_NAMES: Final[dict[PlanType, str]] = {
     PlanType.architect: 'Architect',
     PlanType.operator: 'Operator',
     PlanType.plus: 'Plus',
+    PlanType.pro_v2: 'Pro',
     PlanType.unlimited_v2: 'Unlimited',
 }
 PLAN_STOREFRONTS: Final[dict[PlanType, tuple[str, ...]]] = {
     PlanType.basic: (),
     PlanType.unlimited: (),
-    PlanType.architect: ('macos', 'web', 'windows'),
-    PlanType.operator: ('macos', 'web', 'windows'),
-    PlanType.plus: ('android', 'ios', 'web'),
-    PlanType.unlimited_v2: ('android', 'ios', 'web'),
+    PlanType.architect: (),
+    PlanType.operator: (),
+    PlanType.plus: ('android', 'ios', 'macos', 'web', 'windows'),
+    PlanType.pro_v2: ('android', 'ios', 'macos', 'web', 'windows'),
+    PlanType.unlimited_v2: (),
 }
 RECOGNIZED_STRIPE_PRICE_PLAN_TYPES: Final[dict[str, PlanType]] = {
     'price_1RrxXL1F8wnoWYvwIddzR902': PlanType.unlimited,
@@ -333,6 +364,8 @@ BILLING_ENV_VAR_PLAN_TYPES: Final[dict[str, PlanType]] = {
     'STRIPE_OPERATOR_ANNUAL_PRICE_ID': PlanType.operator,
     'STRIPE_PLUS_MONTHLY_PRICE_ID': PlanType.plus,
     'STRIPE_PLUS_ANNUAL_PRICE_ID': PlanType.plus,
+    'STRIPE_PRO_V2_MONTHLY_PRICE_ID': PlanType.pro_v2,
+    'STRIPE_PRO_V2_ANNUAL_PRICE_ID': PlanType.pro_v2,
     'STRIPE_UNLIMITED_V2_MONTHLY_PRICE_ID': PlanType.unlimited_v2,
     'STRIPE_UNLIMITED_V2_ANNUAL_PRICE_ID': PlanType.unlimited_v2
 }
@@ -341,6 +374,7 @@ PRIMARY_BILLING_ENV_VARS: Final[dict[PlanType, dict[str, str]]] = {
     PlanType.architect: {'month': 'STRIPE_ARCHITECT_MONTHLY_PRICE_ID', 'year': 'STRIPE_ARCHITECT_ANNUAL_PRICE_ID'},
     PlanType.operator: {'month': 'STRIPE_OPERATOR_MONTHLY_PRICE_ID', 'year': 'STRIPE_OPERATOR_ANNUAL_PRICE_ID'},
     PlanType.plus: {'month': 'STRIPE_PLUS_MONTHLY_PRICE_ID', 'year': 'STRIPE_PLUS_ANNUAL_PRICE_ID'},
+    PlanType.pro_v2: {'month': 'STRIPE_PRO_V2_MONTHLY_PRICE_ID', 'year': 'STRIPE_PRO_V2_ANNUAL_PRICE_ID'},
     PlanType.unlimited_v2: {'month': 'STRIPE_UNLIMITED_V2_MONTHLY_PRICE_ID', 'year': 'STRIPE_UNLIMITED_V2_ANNUAL_PRICE_ID'}
 }
 DESKTOP_PROFILE_DEFAULTS: Final[dict[str, dict[str, Any]]] = {'desktop_free': {'full_desktop': False,
