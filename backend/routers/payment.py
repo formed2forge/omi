@@ -479,7 +479,7 @@ def get_available_plans_endpoint(
             annual_price_id = definition["annual_price_id"]
             if monthly_price_id:
                 try:
-                    monthly_price = stripe.Price.retrieve(monthly_price_id)
+                    monthly_price = stripe_utils.retrieve_price(monthly_price_id)
                     pricing_options.append(
                         PricingOption(
                             id=monthly_price.id,
@@ -501,7 +501,7 @@ def get_available_plans_endpoint(
                     )
             if annual_price_id:
                 try:
-                    annual_price = stripe.Price.retrieve(annual_price_id)
+                    annual_price = stripe_utils.retrieve_price(annual_price_id)
                     pricing_options.append(
                         PricingOption(
                             id=annual_price.id,
@@ -708,7 +708,7 @@ def upgrade_subscription_endpoint(request: UpgradeSubscriptionRequest, uid: str 
             )
 
         target_plan = get_plan_type_from_price_id(request.price_id)
-        target_price = stripe.Price.retrieve(request.price_id)
+        target_price = stripe_utils.retrieve_price(request.price_id)
         target_interval = target_price.recurring.interval  # "month" or "year"
         current_plan = get_plan_type_from_price_id(current_price_id)
 

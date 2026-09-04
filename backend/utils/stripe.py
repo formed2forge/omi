@@ -7,6 +7,9 @@ import stripe
 
 from database import redis_db
 import logging
+from types import SimpleNamespace
+
+from utils.observability.fallback import record_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +19,71 @@ connect_secret = os.getenv('STRIPE_CONNECT_WEBHOOK_SECRET')
 base_url = os.getenv('BASE_API_URL')
 if base_url and not base_url.startswith(('http://', 'https://')):
     base_url = 'https://' + base_url
+
+# Display-only catalog for local-dev-harness Settings QA. Ids must stay in lockstep
+# with scripts/dev-harness/dev_harness/config.py LOCAL_STRIPE_PRICE_ID_ENV.
+_HARNESS_PRICE_CATALOG: Dict[str, tuple[int, str]] = {
+    'price_local_plus_month': (1900, 'month'),
+    'price_local_plus_year': (19000, 'year'),
+    'price_local_pro_v2_month': (4900, 'month'),
+    'price_local_pro_v2_year': (49000, 'year'),
+    'price_local_operator_month': (2000, 'month'),
+    'price_local_operator_year': (20000, 'year'),
+    'price_local_architect_month': (19900, 'month'),
+    'price_local_architect_year': (199000, 'year'),
+    'price_local_unlimited_month': (2499, 'month'),
+    'price_local_unlimited_year': (24990, 'year'),
+    'price_local_unlimited_v2_month': (1900, 'month'),
+    'price_local_unlimited_v2_year': (19000, 'year'),
+}
+
+
+def _harness_stripe_stub_enabled() -> bool:
+    if os.getenv('OMI_HARNESS_STRIPE_STUB', '').strip() == '1':
+        return True
+    return os.getenv('ENVIRONMENT', '').strip() == 'local-dev-harness'
+
+
+def _harness_price(price_id: str) -> SimpleNamespace | None:
+    entry = _HARNESS_PRICE_CATALOG.get(price_id)
+    if not entry:
+        return None
+    unit_amount, interval = entry
+    price = SimpleNamespace(
+        id=price_id,
+        unit_amount=unit_amount,
+        recurring=SimpleNamespace(interval=interval),
+    )
+
+    def to_dict_recursive() -> dict[str, Any]:
+        return {
+            'id': price_id,
+            'unit_amount': unit_amount,
+            'recurring': {'interval': interval},
+        }
+
+    price.to_dict_recursive = to_dict_recursive  # type: ignore[method-assign]
+    return price
+
+
+def retrieve_price(price_id: str):
+    """Return a harness catalog stub for local price ids; otherwise live Stripe.
+
+    Production never stubs: local ids are gated on the harness environment flag.
+    """
+    if _harness_stripe_stub_enabled() and price_id.startswith('price_local_'):
+        stub = _harness_price(price_id)
+        if stub is not None:
+            record_fallback(
+                component='other',
+                from_mode='stripe_live',
+                to_mode='harness_catalog',
+                reason='config_incomplete',
+                outcome='degraded',
+                log=logger,
+            )
+            return stub
+    return stripe.Price.retrieve(price_id)
 
 
 def create_product(name: str, description: str, image: str):

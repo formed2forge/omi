@@ -1387,7 +1387,7 @@ def _user_subscription_response(
             try:
                 price_data = get_generic_cache(f'stripe_price:{monthly_price_id}')
                 if not price_data:
-                    price = stripe_utils.stripe.Price.retrieve(monthly_price_id)
+                    price = stripe_utils.retrieve_price(monthly_price_id)
                     price_data = price.to_dict_recursive()
                     set_generic_cache(f'stripe_price:{monthly_price_id}', price_data, ttl=3600 * 24)
 
@@ -1409,7 +1409,7 @@ def _user_subscription_response(
             try:
                 price_data = get_generic_cache(f'stripe_price:{annual_price_id}')
                 if not price_data:
-                    price = stripe_utils.stripe.Price.retrieve(annual_price_id)
+                    price = stripe_utils.retrieve_price(annual_price_id)
                     price_data = price.to_dict_recursive()
                     set_generic_cache(f'stripe_price:{annual_price_id}', price_data, ttl=3600 * 24)
 
