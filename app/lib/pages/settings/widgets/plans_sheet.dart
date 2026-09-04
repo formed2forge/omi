@@ -47,7 +47,7 @@ class PlansSheet extends StatefulWidget {
 
 class _PlansSheetState extends State<PlansSheet> {
   String selectedPlan = 'yearly'; // 'yearly' or 'monthly'  (billing period)
-  String? selectedTierId; // 'unlimited', 'operator', 'architect'
+  String? selectedTierId; // 'plus', 'pro_v2', or a keep-until-cancel plan id
   bool _isUpgrading = false;
   bool _showTrainingDataOptIn = false; // Control visibility of training data opt-in
   bool _isSwitchingToFree = false;
@@ -1193,7 +1193,7 @@ class _PlansSheetState extends State<PlansSheet> {
                               plansLoaded: !usageProvider.isLoadingPlans && usageProvider.availablePlans != null,
                               selectedTierId: selectedTierId,
                               currentTierId: currentSub?.plan.wireName,
-                              currentGrantsDesktop: currentSub?.plan.grantsDesktop ?? false,
+                              currentPlanIsMobileManageOnly: currentSub?.plan.isMobileManageOnly ?? false,
                             );
 
                             if (!shouldShowContinueButton) {
@@ -1574,7 +1574,7 @@ class _PlansSheetState extends State<PlansSheet> {
     }
 
     // Tier ordering
-    const tierOrder = ['plus', 'unlimited_v2', 'unlimited', 'operator', 'architect'];
+    const tierOrder = ['plus', 'pro_v2', 'unlimited_v2', 'unlimited', 'operator', 'architect'];
     final sortedTierIds = grouped.keys.toList()
       ..sort((a, b) {
         final ai = tierOrder.indexOf(a);
@@ -2086,16 +2086,19 @@ class _PlansSheetState extends State<PlansSheet> {
     );
   }
 
-  /// Whether a plan tier includes the desktop (macOS) app. Neo (unlimited) is
-  /// mobile/web only; Operator and Architect include desktop. Keep in sync with
-  /// backend `DESKTOP_ENTITLED_PLAN_TYPES`. Returns null for unknown tiers.
+  /// Whether a plan tier includes the desktop (macOS) app. Plus and Pro
+  /// (`pro_v2`) include desktop; Neo and Unlimited-v2 do not. Operator and
+  /// Architect remain desktop-entitled for keep-until-cancel subscribers.
+  /// Keep in sync with backend `DESKTOP_ENTITLED_PLAN_TYPES`. Returns null
+  /// for unknown tiers.
   bool? _tierGrantsDesktop(String tierId) {
     switch (tierId) {
       case 'operator':
       case 'architect':
+      case 'plus':
+      case 'pro_v2':
         return true;
       case 'unlimited':
-      case 'plus':
       case 'unlimited_v2':
         return false;
       default:

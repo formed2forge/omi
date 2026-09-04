@@ -15,12 +15,21 @@ class PlanType {
   static const PlanType architect = PlanType._('architect', 'architect', 'architect');
   static const PlanType operator = PlanType._('operator', 'operator', 'operator');
   static const PlanType plus = PlanType._('plus', 'plus', 'plus');
+  static const PlanType proV2 = PlanType._('proV2', 'pro_v2', 'pro_v2');
   static const PlanType unlimitedV2 = PlanType._('unlimitedV2', 'unlimited_v2', 'unlimited_v2');
 
   /// The canonical catalog identities known by this client.
   ///
   /// Legacy aliases and future identities are deliberately not included.
-  static const List<PlanType> values = <PlanType>[basic, unlimited, architect, operator, plus, unlimitedV2];
+  static const List<PlanType> values = <PlanType>[
+    basic,
+    unlimited,
+    architect,
+    operator,
+    plus,
+    proV2,
+    unlimitedV2,
+  ];
 
   /// Dart-style identifier used by existing analytics and UI call sites.
   final String name;
@@ -56,6 +65,8 @@ class PlanType {
         return PlanType.operator;
       case 'plus':
         return PlanType.plus;
+      case 'pro_v2':
+        return PlanType.proV2;
       case 'unlimited_v2':
         return PlanType.unlimitedV2;
       case 'pro':
@@ -81,11 +92,28 @@ class PlanType {
       _canonicalWireName == PlanType.unlimited.wireName ||
       _canonicalWireName == PlanType.operator.wireName ||
       _canonicalWireName == PlanType.architect.wireName ||
+      _canonicalWireName == PlanType.proV2.wireName ||
       _canonicalWireName == PlanType.unlimitedV2.wireName;
 
   /// Mirrors backend DESKTOP_ENTITLED_PLAN_TYPES.
   bool get grantsDesktop =>
-      _canonicalWireName == PlanType.operator.wireName || _canonicalWireName == PlanType.architect.wireName;
+      _canonicalWireName == PlanType.operator.wireName ||
+      _canonicalWireName == PlanType.architect.wireName ||
+      _canonicalWireName == PlanType.plus.wireName ||
+      _canonicalWireName == PlanType.proV2.wireName;
+
+  /// Mirrors catalog storefront eligibility for the mobile purchase sheet.
+  ///
+  /// Free is an always-available floor rather than a purchasable SKU. Neo and
+  /// Unlimited-v2 are current-subscriber-only, so they are not mobile purchase
+  /// targets either.
+  bool get isSoldOnMobile =>
+      _canonicalWireName == PlanType.plus.wireName || _canonicalWireName == PlanType.proV2.wireName;
+
+  /// A desktop-only legacy subscriber can manage, but cannot switch plans, on
+  /// mobile because immediate proration would remove desktop entitlement.
+  /// Unknown identities fail closed until this client learns their storefront.
+  bool get isMobileManageOnly => isUnknown || (grantsDesktop && !isSoldOnMobile);
 
   @override
   bool operator ==(Object other) {

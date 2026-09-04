@@ -5,6 +5,12 @@ import UniformTypeIdentifiers
 import WebKit
 
 enum SubscriptionPlanPresentation {
+  static let purchaseOrder = ["plus": 0, "pro_v2": 1]
+
+  static func isPurchasablePlan(id: String) -> Bool {
+    purchaseOrder[id] != nil
+  }
+
   static func selectionLabel(planTitle: String, startingPrice: String?) -> String {
     guard let startingPrice, !startingPrice.isEmpty else {
       return "Select \(planTitle)"
@@ -25,16 +31,15 @@ extension SettingsContentView {
   }
 
   var subscriptionPlansForDisplay: [SubscriptionPlanOption] {
-    // Operator (mass-market, green) on the left, Architect (premium, white accent)
-    // on the right. Hide the user's current plan — they already see it above.
-    // Neo ($20) | Operator ($49) | Architect ($200) — cheapest to premium
-    let order = ["unlimited": 0, "operator": 1, "architect": 2]
+    // The server-provided catalog owns plan availability and copy. The client only
+    // supplies the stable Plus/Pro display order for cards that are purchasable
+    // on this surface; legacy current plans remain visible through the current-plan card.
     return
       mergedPlanCatalog
-      .filter { !isCurrentSubscriptionPlan($0) }
+      .filter { SubscriptionPlanPresentation.isPurchasablePlan(id: $0.id) && !isCurrentSubscriptionPlan($0) }
       .sorted { lhs, rhs in
-        let lhsOrder = order[lhs.id, default: Int.max]
-        let rhsOrder = order[rhs.id, default: Int.max]
+        let lhsOrder = SubscriptionPlanPresentation.purchaseOrder[lhs.id, default: Int.max]
+        let rhsOrder = SubscriptionPlanPresentation.purchaseOrder[rhs.id, default: Int.max]
         if lhsOrder != rhsOrder {
           return lhsOrder < rhsOrder
         }
@@ -57,6 +62,8 @@ extension SettingsContentView {
       return "Free"
     case .plus:
       return "Plus"
+    case .proV2:
+      return "Pro"
     case .unlimited:
       // Backend serializes Operator subscribers as plan="unlimited" for
       // backward compat with old mobile builds that don't know the
@@ -136,6 +143,10 @@ extension SettingsContentView {
 
   func planSubtitle(for planId: String) -> String? {
     switch planId {
+    case "plus":
+      return "200 questions per month"
+    case "pro_v2":
+      return "1,000 questions per month"
     case "unlimited":
       return "200 questions per month"
     case "operator":
@@ -150,7 +161,7 @@ extension SettingsContentView {
   func planAccentColor(for planId: String) -> Color {
     // Architect is the premium white-accent tier; Operator + legacy Unlimited
     // are the mass-market green tier.
-    planId == "architect" ? Ink.accent : Ink.listeningGreen
+    planId == "pro_v2" || planId == "architect" ? Ink.accent : Ink.listeningGreen
   }
 
   func planSummaryText(for plan: SubscriptionPlanOption) -> String {
@@ -177,6 +188,10 @@ extension SettingsContentView {
 
   func planEyebrow(for planId: String) -> String {
     switch planId {
+    case "plus":
+      return "For everyday use"
+    case "pro_v2":
+      return "For power users"
     case "unlimited":
       return "Starter"
     case "operator":
@@ -190,6 +205,10 @@ extension SettingsContentView {
 
   func planDescription(for planId: String) -> String {
     switch planId {
+    case "plus":
+      return "200 chat questions per month. Full desktop, mobile, and web access."
+    case "pro_v2":
+      return "1,000 chat questions per month. Full desktop, mobile, and web access."
     case "unlimited":
       return "100 chat questions per month. Shared with mobile and web."
     case "operator":
@@ -238,6 +257,20 @@ extension SettingsContentView {
 
   func fallbackFeatures(for planId: String) -> [String] {
     switch planId {
+    case "plus":
+      return [
+        "200 chat questions per month",
+        "1,500 minutes of cloud transcription, then on-device",
+        "Unlimited memories and insights",
+        "Shared with mobile and web",
+      ]
+    case "pro_v2":
+      return [
+        "1,000 chat questions per month",
+        "Unlimited cloud transcription",
+        "Unlimited memories and insights",
+        "Priority desktop AI features",
+      ]
     case "architect":
       return [
         "Automations and vibe coding",
@@ -266,17 +299,29 @@ extension SettingsContentView {
 
   func normalizedPlanId(from title: String) -> String? {
     let normalized = title.lowercased()
-    // Match the three plan families by title keyword. Neo is the post-rename
-    // display name for the legacy "unlimited" plan and still maps to that id
-    // because Stripe/backend PlanType enum is unchanged.
+    // Degraded price-fallback identity only. Descriptive copy comes from
+    // /v1/users/me/subscription's available_plans. Keep `pro` (Architect's
+    // wire alias) distinct from the new Pro SKU (`pro_v2`, display "Pro").
+    if normalized.contains("pro_v2") {
+      return "pro_v2"
+    }
+    if normalized.contains("plus") {
+      return "plus"
+    }
+    if normalized.contains("free") || normalized.contains("basic") {
+      return "basic"
+    }
     if normalized.contains("unlimited") || normalized.contains("neo") {
       return "unlimited"
     }
     if normalized.contains("operator") {
       return "operator"
     }
-    if normalized.contains("architect") || normalized.contains("pro") {
+    if normalized.contains("architect") || normalized.contains("omi pro") {
       return "architect"
+    }
+    if normalized == "pro" || normalized.hasPrefix("pro ") {
+      return "pro_v2"
     }
     return nil
   }
@@ -291,6 +336,12 @@ extension SettingsContentView {
 
       let title: String
       switch planId {
+      case "basic":
+        title = "Free"
+      case "plus":
+        title = "Plus"
+      case "pro_v2":
+        title = "Pro"
       case "unlimited":
         title = "Neo"
       case "operator":

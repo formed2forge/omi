@@ -69,6 +69,19 @@ const CATALOG: SubscriptionPlan[] = [
   }
 ]
 
+const NEW_LADDER_CATALOG: SubscriptionPlan[] = [
+  {
+    id: 'plus',
+    title: 'Plus',
+    prices: [{ id: 'price_plus_m', title: 'Monthly', price_string: '$19/mo' }]
+  },
+  {
+    id: 'pro_v2',
+    title: 'Pro',
+    prices: [{ id: 'price_pro_v2_m', title: 'Monthly', price_string: '$49/mo' }]
+  }
+]
+
 function sub(partial: Partial<TestSubscription>): TestSubscription {
   return { plan: 'basic', status: 'active', cancel_at_period_end: false, ...partial }
 }
@@ -102,6 +115,7 @@ describe('resolvePlanTitle', () => {
   it.each([
     ['plus', 'Plus'],
     ['unlimited_v2', 'Unlimited'],
+    ['pro_v2', 'Pro'],
     ['pro', 'Architect']
   ] as const)('handles the known wire plan %s', (wirePlan, title) => {
     expect(resolvePlanTitle(sub({ plan: wirePlan }), undefined)).toBe(title)
@@ -128,6 +142,7 @@ describe('lossless plan decoding', () => {
     'unlimited_v2',
     'operator',
     'architect',
+    'pro_v2',
     'pro',
     'future_plan_123'
   ] as const
@@ -540,7 +555,7 @@ const LEGACY_CATALOG: SubscriptionPlan[] = [
 
 describe('detectLegacyCatalog', () => {
   it('flags the correct new-shape catalog as NOT legacy', () => {
-    expect(detectLegacyCatalog(CATALOG)).toEqual({ legacy: false, reasons: [] })
+    expect(detectLegacyCatalog(NEW_LADDER_CATALOG)).toEqual({ legacy: false, reasons: [] })
   })
 
   it('treats an empty / absent catalog as NOT legacy (nothing served yet)', () => {
@@ -551,12 +566,15 @@ describe('detectLegacyCatalog', () => {
   it('flags the legacy-adapted catalog with both mechanical signals', () => {
     const { legacy, reasons } = detectLegacyCatalog(LEGACY_CATALOG)
     expect(legacy).toBe(true)
-    expect(reasons.some((r) => r.includes('operator'))).toBe(true)
+    expect(reasons.some((r) => r.includes('plus') && r.includes('pro_v2'))).toBe(true)
     expect(reasons.some((r) => r.includes('Omi Pro') && r.includes('Unlimited Plan'))).toBe(true)
   })
 
-  it('flags a legacy title even if an operator plan is somehow present', () => {
-    const mixed: SubscriptionPlan[] = [{ id: 'operator', title: 'Omi Pro', prices: [] }]
+  it('flags a legacy title even if Plus and Pro are somehow present', () => {
+    const mixed: SubscriptionPlan[] = [
+      { id: 'plus', title: 'Plus', prices: [] },
+      { id: 'pro_v2', title: 'Omi Pro', prices: [] }
+    ]
     expect(detectLegacyCatalog(mixed).legacy).toBe(true)
   })
 })
@@ -567,7 +585,7 @@ describe('reportLegacyCatalog', () => {
 
   it('does not fire the canary for the correct catalog', () => {
     const err = vi.spyOn(console, 'error').mockImplementation(() => {})
-    expect(reportLegacyCatalog(CATALOG)).toBe(false)
+    expect(reportLegacyCatalog(NEW_LADDER_CATALOG)).toBe(false)
     expect(err).not.toHaveBeenCalled()
   })
 

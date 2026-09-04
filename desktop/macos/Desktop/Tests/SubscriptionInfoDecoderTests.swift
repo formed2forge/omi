@@ -161,6 +161,22 @@ final class SubscriptionInfoDecoderTests: XCTestCase {
     XCTAssertTrue(plan.hasPaidCapability)
   }
 
+  func testDecodeProV2Plan() throws {
+    let plan = try JSONDecoder().decode(SubscriptionPlanType.self, from: Data(#""pro_v2""#.utf8))
+    XCTAssertEqual(plan, .proV2)
+    XCTAssertEqual(plan.rawValue, "pro_v2")
+    XCTAssertEqual(plan.displayName, "Pro")
+    XCTAssertTrue(plan.hasPaidCapability)
+  }
+
+  func testDecodeProAliasStillResolvesToArchitectWireValue() throws {
+    let plan = try JSONDecoder().decode(SubscriptionPlanType.self, from: Data(#""pro""#.utf8))
+    XCTAssertEqual(plan, .pro)
+    XCTAssertEqual(plan.rawValue, "pro")
+    XCTAssertEqual(plan.displayName, "Architect")
+    XCTAssertTrue(plan.hasPaidCapability)
+  }
+
   func testDecodeUnlimitedV2Plan() throws {
     let plan = try JSONDecoder().decode(SubscriptionPlanType.self, from: Data(#""unlimited_v2""#.utf8))
     XCTAssertEqual(plan, .unlimitedV2)

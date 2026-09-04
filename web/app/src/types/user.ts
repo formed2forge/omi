@@ -69,6 +69,7 @@ export const CATALOG_PLAN_IDS = [
   'unlimited_v2',
   'operator',
   'architect',
+  'pro_v2',
 ] as const;
 
 export type CatalogPlanId = (typeof CATALOG_PLAN_IDS)[number];
@@ -99,6 +100,7 @@ const PAID_CATALOG_PLAN_IDS: ReadonlySet<CatalogPlanId> = new Set([
   'unlimited_v2',
   'operator',
   'architect',
+  'pro_v2',
 ]);
 
 /** Decode a plan without throwing or replacing an unrecognized value. */
@@ -141,6 +143,8 @@ export function planDisplayName(plan: PlanIdentity): string {
       return 'Neo';
     case 'unlimited_v2':
       return 'Unlimited';
+    case 'pro_v2':
+      return 'Pro';
     default:
       return plan.id.charAt(0).toUpperCase() + plan.id.slice(1);
   }

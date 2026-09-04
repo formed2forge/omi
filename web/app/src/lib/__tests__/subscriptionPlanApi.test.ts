@@ -23,6 +23,7 @@ describe('getUserSubscription plan decoding', () => {
     ['unlimited_v2', true],
     ['operator', true],
     ['architect', true],
+    ['pro_v2', true],
     ['pro', true],
     ['future_plan_123', false],
   ])('decodes %s without capability inference', async (raw, expectedPaid) => {

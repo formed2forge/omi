@@ -154,12 +154,11 @@ export function PlanUsageTab(): React.JSX.Element {
     }
   }
 
-  // Deprecation "Try Operator" + trial "View Plans": select the Operator card
+  // Deprecation "Try Plus" + trial "View Plans": select the Plus card
   // (or first available) and scroll the grid into view.
-  const jumpToOperator = (): void => {
-    const operator =
-      catalog.find((p) => p.id === 'operator' || p.title === 'Operator') ?? catalog[0]
-    if (operator) setSelectedPlanId(operator.id)
+  const jumpToPlus = (): void => {
+    const plus = catalog.find((p) => p.id === 'plus' || p.title === 'Plus') ?? catalog[0]
+    if (plus) setSelectedPlanId(plus.id)
     plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -229,8 +228,8 @@ export function PlanUsageTab(): React.JSX.Element {
           }
           trailing={
             showCatalog ? (
-              <button onClick={jumpToOperator} className="btn-ghost">
-                Try Operator
+              <button onClick={jumpToPlus} className="btn-ghost">
+                Try Plus
               </button>
             ) : undefined
           }
@@ -242,7 +241,7 @@ export function PlanUsageTab(): React.JSX.Element {
       {overage?.is_overage_plan ? <OverageCard overage={overage} /> : null}
 
       {trial && (isTrialActive(trial) || trial.trial_expired) ? (
-        <TrialCard trial={trial} onViewPlans={jumpToOperator} />
+        <TrialCard trial={trial} onViewPlans={jumpToPlus} />
       ) : null}
 
       {showCatalog ? (

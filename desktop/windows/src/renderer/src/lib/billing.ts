@@ -55,11 +55,11 @@ export function fetchOverageInfo(): Promise<OverageInfoResponse> {
 
 // ── Legacy-catalog canary ────────────────────────────────────────────────────
 // The backend version-gates the plan catalog on X-App-Platform/X-App-Version. If
-// it doesn't recognize this client's platform it serves the pre-Operator/Architect
+// it doesn't recognize this client's platform it serves the pre-Plus/Pro
 // LEGACY catalog (adapt_plans_for_legacy_client in backend/utils/subscription.py):
-// it DROPS the operator + pro plans entirely and RENAMES titles to "Unlimited
-// Plan"/"Omi Pro". A desktop client must always get the new catalog (Neo /
-// Operator / Architect); the legacy shape means our platform identity wasn't
+// it DROPS operator / architect-as-pro / pro_v2 and RENAMES titles to
+// "Unlimited Plan"/"Omi Pro". A desktop client must always get the new-buyer
+// ladder (Plus + Pro); the legacy shape means our platform identity wasn't
 // recognized — the exact class of defect that once rendered as "real live data".
 // We do NOT block rendering (fail-open UX — the catalog still renders), the canary
 // just makes the divergence impossible to miss in logs/verification.
@@ -69,9 +69,10 @@ const LEGACY_PLAN_TITLES = new Set(['Omi Pro', 'Unlimited Plan'])
 
 /**
  * Mechanical legacy-shape detection, derived from adapt_plans_for_legacy_client.
- * A correct desktop catalog always contains an 'operator' plan and never uses the
- * legacy titles; the adapter guarantees the inverse. An empty catalog is NOT
- * legacy (nothing served yet) — only a populated, legacy-shaped one trips it.
+ * A correct desktop catalog always contains Plus and Pro (`pro_v2`) and never
+ * uses the legacy titles; the adapter guarantees the inverse. An empty catalog
+ * is NOT legacy (nothing served yet) — only a populated, legacy-shaped one
+ * trips it. Keep-until-cancel catalogs may also include Operator/Architect.
  */
 export function detectLegacyCatalog(plans: SubscriptionPlan[] | undefined): {
   legacy: boolean
@@ -80,7 +81,10 @@ export function detectLegacyCatalog(plans: SubscriptionPlan[] | undefined): {
   const list = plans ?? []
   if (list.length === 0) return { legacy: false, reasons: [] }
   const reasons: string[] = []
-  if (!list.some((p) => p.id === 'operator')) reasons.push("no 'operator' plan in catalog")
+  const ids = new Set(list.map((p) => p.id))
+  if (!ids.has('plus') || !ids.has('pro_v2')) {
+    reasons.push("missing Plus/Pro (`plus`/`pro_v2`) in catalog")
+  }
   const legacyTitles = list.map((p) => p.title).filter((t) => LEGACY_PLAN_TITLES.has(t))
   if (legacyTitles.length > 0)
     reasons.push(`legacy plan titles present: ${legacyTitles.join(', ')}`)
@@ -107,8 +111,8 @@ export function reportLegacyCatalog(plans: SubscriptionPlan[] | undefined): bool
   if (!legacy) return false
   console.error(
     '[billing:legacy-catalog] Legacy plan catalog served to the Windows desktop client — ' +
-      'backend did not recognize this platform/version, so it returned the pre-Operator/' +
-      'Architect catalog instead of Operator/Architect. The plan grid is rendering the wrong ' +
+      'backend did not recognize this platform/version, so it returned the pre-Plus/Pro ' +
+      'catalog instead of Plus + Pro (`pro_v2`). The plan grid is rendering the wrong ' +
       `catalog. Signals: ${reasons.join('; ')}.`,
     { plan_ids: plans?.map((p) => p.id), plan_titles: plans?.map((p) => p.title) }
   )
@@ -308,15 +312,15 @@ export function quotaResetText(resetAtSeconds: number | null, now: Date = new Da
 
 // ── Plan catalog (AccountBilling plan grid) ─────────────────────────────────
 
-// Mac ordering: Neo(unlimited) → Operator → Architect. Unknown ids sort last.
-// Plus/Unlimited-v2 are included for lossless catalog fixtures even though
-// Windows' current storefront normally serves the desktop plans only.
+// New-buyer order: Plus → Pro. Keep-until-cancel identities sort after.
+// Unknown ids sort last.
 const PLAN_ORDER: Record<string, number> = {
-  unlimited: 0,
-  operator: 1,
-  architect: 2,
-  plus: 3,
-  unlimited_v2: 4
+  plus: 0,
+  pro_v2: 1,
+  unlimited: 2,
+  operator: 3,
+  architect: 4,
+  unlimited_v2: 5
 }
 
 /** True if this catalog plan is the one the user is currently on (operator↔
@@ -359,6 +363,28 @@ const PLAN_FALLBACKS: Record<
   string,
   { eyebrow: string; subtitle: string; description: string; features: string[] }
 > = {
+  plus: {
+    eyebrow: 'For everyday use',
+    subtitle: '200 questions per month',
+    description: '200 chat questions per month. Full desktop, mobile, and web access.',
+    features: [
+      '200 chat questions per month',
+      '1,500 minutes of cloud transcription, then on-device',
+      'Unlimited memories and insights',
+      'Shared with mobile and web'
+    ]
+  },
+  pro_v2: {
+    eyebrow: 'For power users',
+    subtitle: '1,000 questions per month',
+    description: '1,000 chat questions per month. Full desktop, mobile, and web access.',
+    features: [
+      '1,000 chat questions per month',
+      'Unlimited cloud transcription',
+      'Unlimited memories and insights',
+      'Priority desktop AI features'
+    ]
+  },
   unlimited: {
     eyebrow: 'Starter',
     subtitle: '200 questions per month',
@@ -439,7 +465,7 @@ export function canPurchasePlan(
 
 /** Architect stays neutral (Mac purple → white per INV-UI-1); others green. */
 export function planAccent(plan: SubscriptionPlan): 'neutral' | 'green' {
-  return plan.id === 'architect' ? 'neutral' : 'green'
+  return plan.id === 'architect' || plan.id === 'pro_v2' ? 'neutral' : 'green'
 }
 
 // ── Trial (AccountBilling trial card) ────────────────────────────────────────
