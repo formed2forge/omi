@@ -8,10 +8,18 @@ Omi for Windows — an Electron + React + TypeScript port of the Omi desktop app
 
 ## Run from source
 
+On a **fresh Windows machine**, follow
+[docs/windows-dev-setup.md](docs/windows-dev-setup.md) first (Git, MSVC,
+.NET 10 SDK, Node 22.19, pnpm 10, OS permissions). This section assumes that
+toolchain is already installed. Do not develop this app inside WSL — the
+Windows OCR / audio / UI-automation helpers will not run there.
+
 Requires Node 22.19+ (CI pins Node 22, matching `package.json`'s `engines.node`
 range; Node 24+ breaks the jsdom test suites — see `scripts/check-node-version.mjs`).
-With [nvm](https://github.com/nvm-sh/nvm) installed, `nvm use` in this directory
-picks up the pinned version from `.nvmrc` automatically.
+With [fnm](https://github.com/Schniz/fnm) or [nvm](https://github.com/nvm-sh/nvm)
+installed, `fnm use` / `nvm use` in this directory picks up the pinned version
+from `.nvmrc` automatically. On Windows, fnm reads `.nvmrc`; nvm-windows needs
+an explicit `nvm use 22.19.0`.
 
 This directory is pnpm-managed — running `npm install` instead will corrupt
 `package.json`/`pnpm-lock.yaml`/`pnpm-workspace.yaml` (npm doesn't understand
@@ -28,7 +36,7 @@ instead of downgrading a system-managed pnpm install.
 
 ```bash
 # 1. Install dependencies
-nvm use   # or: nvm install (first time)
+fnm use   # or: nvm use / nvm install 22.19.0 (first time)
 pnpm install --frozen-lockfile
 
 # 2. Create your local env file (required — the app won't start without it)
@@ -70,8 +78,9 @@ port/profile isolation.
 
 Everything below is blank in `.env.example` and safe to leave unset:
 
-- `VITE_OMI_API_KEY` — cloud-sync recorded conversations (generate in Omi → Settings →
-  Developer). Blank = recordings save locally only.
+- `VITE_OMI_API_KEY` — unused by the running app (kept for a couple of live
+  probe scripts). Conversation, task, and memory sync use the signed-in
+  Firebase session against `VITE_OMI_API_BASE`.
 - `MAIN_VITE_GOOGLE_CLIENT_ID` / `MAIN_VITE_GOOGLE_CLIENT_SECRET` /
   `VITE_ENABLE_GOOGLE_INTEGRATION` — the Google integration above.
 

@@ -67,6 +67,7 @@ from utils.observability.transcription import TranscriptionAttempt
 from utils.llm.goals import extract_and_update_goal_progress
 from database.redis_db import try_acquire_goal_extraction_lock, check_rate_limit, store_chat_share, get_chat_share
 from database.users import set_chat_message_rating_score
+from utils.chat_rating_triage import extract_rating_triage_fields
 from utils.feedback import record_chat_message_feedback
 from utils.rate_limit_config import get_effective_limit, RATE_LIMIT_SHADOW
 from utils.llm.gateway_client import CHAT_AGENT_ROUTE_DIRECT, get_chat_agent_route
@@ -91,6 +92,7 @@ from utils.observability.fallback import record_fallback
 from utils.journey_metrics_contract import resolve_client_kind, resolve_client_kind_from_headers
 from utils.observability.journeys import ClientJourneyAttempt, JourneyAttempt
 from utils.voice_duration_limiter import (
+    MAX_SESSION_DURATION_S,
     compute_pcm_duration_ms,
     read_wav_duration_ms,
     try_consume_budget,
@@ -874,12 +876,14 @@ def create_voice_message_stream(
         # Daily budget check (first file only — matches actual DG usage).
         # A quota rejection is not an STT attempt and therefore is not an
         # invalid-input or provider-outcome metric.
+        # An unreadable duration must not skip the budget check (STT still
+        # runs on it) — charge the worst case instead of charging nothing.
         first_wav = wav_paths[0]
         duration_ms = read_wav_duration_ms(first_wav)
-        if duration_ms is not None:
-            allowed, used_ms, remaining_ms = try_consume_budget(uid, duration_ms)
-            if not allowed:
-                raise HTTPException(status_code=429, detail='Daily transcription budget exhausted')
+        budget_duration_ms = duration_ms if duration_ms is not None else MAX_SESSION_DURATION_S * 1000
+        allowed, used_ms, remaining_ms = try_consume_budget(uid, budget_duration_ms)
+        if not allowed:
+            raise HTTPException(status_code=429, detail='Daily transcription budget exhausted')
     except TranscriptionFailure as failure:
         _record_preparation_failure(failure)
         _cleanup_temp_voice_wavs(paths + wav_paths, uid)
@@ -1177,15 +1181,15 @@ async def transcribe_voice_message(
 
         # Daily budget check (sum all files). This is not a provider outcome,
         # so do it before recording an accepted transcription attempt.
+        # An unreadable duration must not skip the budget check (STT still
+        # runs on it) — charge the worst case instead of charging nothing.
         total_duration_ms = 0
         for wav_path in wav_paths:
             duration_ms = await run_blocking(storage_executor, read_wav_duration_ms, wav_path)
-            if duration_ms is not None:
-                total_duration_ms += duration_ms
-        if total_duration_ms > 0:
-            allowed, used_ms, remaining_ms = try_consume_budget(uid, total_duration_ms)
-            if not allowed:
-                raise HTTPException(status_code=429, detail='Daily transcription budget exhausted')
+            total_duration_ms += duration_ms if duration_ms is not None else MAX_SESSION_DURATION_S * 1000
+        allowed, used_ms, remaining_ms = try_consume_budget(uid, total_duration_ms)
+        if not allowed:
+            raise HTTPException(status_code=429, detail='Daily transcription budget exhausted')
 
         is_multi = resolved_language == 'multi'
         attempt = TranscriptionAttempt(
@@ -2015,18 +2019,28 @@ def create_initial_message_v1(
 def rate_message(
     message_id: str,
     data: RateMessageRequest,
+    x_app_platform: str | None = Header(None, alias='X-App-Platform'),
     uid: str = Depends(auth.get_current_user_uid),
 ):
     """Rate a chat message (thumbs up/down). Used by desktop client."""
     rating = data.rating
 
-    # Update rating on the message document
-    chat_db.update_message_rating(uid, message_id, rating)
-
-    # Also store in analytics collection
+    snapshot = chat_db.update_message_rating(uid, message_id, rating) or {}
     value = rating if rating is not None else 0
+    platform = (x_app_platform or '').strip().lower()
+    if platform not in ('desktop', 'mobile'):
+        platform = 'desktop'
+    triage = extract_rating_triage_fields(snapshot)
     reason = data.reason.value if data.reason else None
-    set_chat_message_rating_score(uid, message_id, value, reason=reason, platform='mobile')
+    set_chat_message_rating_score(
+        uid,
+        message_id,
+        value,
+        reason=reason,
+        platform=platform,
+        notification_kind=triage.get('notification_kind'),
+        app_id=triage.get('app_id'),
+    )
 
     # Unified feedback ledger — the daily thumbs-down report reads from here.
     record_chat_message_feedback(
@@ -2035,7 +2049,7 @@ def rate_message(
         value,
         reason=reason,
         comment=data.comment,
-        platform='mobile',
+        platform=platform,
     )
 
     # Try to submit feedback to LangSmith
