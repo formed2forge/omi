@@ -17,6 +17,67 @@ enum SubscriptionPlanPresentation {
     }
     return "Select \(planTitle) · \(startingPrice)"
   }
+
+  /// Catalog row that owns `currentPriceId`. The backend serializes Plus, Pro,
+  /// and Operator as `plan=unlimited` for old-mobile compatibility; matching by
+  /// price id is how Settings recovers the title the user actually bought.
+  static func owningCatalogPlan(
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> SubscriptionPlanOption? {
+    guard let currentPriceId, !currentPriceId.isEmpty else { return nil }
+    return catalog.first { plan in
+      plan.prices.contains { $0.id == currentPriceId }
+    }
+  }
+
+  static func currentPlanTitle(
+    plan: SubscriptionPlanType,
+    features: [String],
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> String {
+    if features.contains("byok") {
+      return "Free (BYOK)"
+    }
+    if let catalogTitle = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog)?.title
+    {
+      return catalogTitle
+    }
+    switch plan {
+    case .basic:
+      return "Free"
+    case .plus:
+      return "Plus"
+    case .proV2:
+      return "Pro"
+    case .unlimited:
+      return "Neo"
+    case .unlimitedV2:
+      return "Unlimited"
+    case .architect, .pro:
+      return "Architect"
+    case .operator:
+      return "Operator"
+    case .unknown:
+      return plan.displayName
+    }
+  }
+
+  static func isCurrentSubscriptionPlan(
+    _ plan: SubscriptionPlanOption,
+    currentPlan: SubscriptionPlanType,
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> Bool {
+    if let owning = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog) {
+      return owning.id == plan.id
+    }
+    if currentPlan == .operator && plan.id == "unlimited" {
+      return true
+    }
+    return currentPlan.rawValue == plan.id
+  }
 }
 
 extension SettingsContentView {
@@ -51,53 +112,22 @@ extension SettingsContentView {
     guard let subscription = userSubscription?.subscription else {
       return isLoadingSubscription ? "Loading plan..." : "Free"
     }
-    // BYOK users: the backend returns plan=unlimited to turn off metering
-    // but that's an implementation detail — to the user, they're on the
-    // free plan because they pay the providers directly, not Omi.
-    if subscription.features.contains("byok") {
-      return "Free (BYOK)"
-    }
-    switch subscription.plan {
-    case .basic:
-      return "Free"
-    case .plus:
-      return "Plus"
-    case .proV2:
-      return "Pro"
-    case .unlimited:
-      // Backend serializes Operator subscribers as plan="unlimited" for
-      // backward compat with old mobile builds that don't know the
-      // `operator` enum. Distinguish by matching current_price_id against
-      // an Operator-titled plan in the catalog.
-      if isCurrentSubscriptionOperator() {
-        return "Operator"
-      }
-      return "Neo"
-    case .unlimitedV2:
-      return "Unlimited"
-    case .architect, .pro:
-      return "Architect"
-    case .operator:
-      return "Operator"
-    case .unknown:
-      return subscription.plan.displayName
-    }
+    return SubscriptionPlanPresentation.currentPlanTitle(
+      plan: subscription.plan,
+      features: subscription.features,
+      currentPriceId: subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )
   }
 
   /// Returns true when the user's current Stripe price maps to a plan the
   /// backend is calling "Operator". Protects against the wire-level
   /// Operator→Unlimited remapping in `/v1/users/me/subscription`.
   func isCurrentSubscriptionOperator() -> Bool {
-    guard let subscription = userSubscription?.subscription,
-      let currentPriceId = subscription.currentPriceId
-    else { return false }
-    for plan in mergedPlanCatalog {
-      guard plan.title == "Operator" else { continue }
-      if plan.prices.contains(where: { $0.id == currentPriceId }) {
-        return true
-      }
-    }
-    return false
+    SubscriptionPlanPresentation.owningCatalogPlan(
+      currentPriceId: userSubscription?.subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )?.title == "Operator"
   }
 
   var currentPlanSubtitle: String {
@@ -235,13 +265,12 @@ extension SettingsContentView {
     guard hasPaidSubscription, let currentPlan = userSubscription?.subscription.plan else {
       return false
     }
-    if currentPlan == .operator && plan.id == "unlimited" {
-      return true
-    }
-    if currentPlan == .unlimited && plan.id == "operator" && isCurrentSubscriptionOperator() {
-      return true
-    }
-    return currentPlan.rawValue == plan.id
+    return SubscriptionPlanPresentation.isCurrentSubscriptionPlan(
+      plan,
+      currentPlan: currentPlan,
+      currentPriceId: userSubscription?.subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )
   }
 
   var mergedPlanCatalog: [SubscriptionPlanOption] {
