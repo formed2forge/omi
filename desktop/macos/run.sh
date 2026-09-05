@@ -662,6 +662,7 @@ fast_bundle_fingerprint() {
     if [ "$LOCAL_PROFILE" = true ]; then
         desktop_api_fingerprint="local-profile-refreshed"
         python_api_fingerprint="local-profile-refreshed"
+        auth_api_fingerprint="local-profile-refreshed"
     fi
     omi_fast_bundle_fingerprint \
         "$SCRIPT_DIR" \

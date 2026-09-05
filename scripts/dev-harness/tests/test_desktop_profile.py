@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -37,6 +38,21 @@ def test_validate_profile_allows_omi_memory_named_bundle() -> None:
 
     errors = desktop_profile.validate_profile(profile)
     assert not errors
+
+
+def test_local_profile_points_auth_api_at_python_backend() -> None:
+    profile = _resolve({"OMI_APP_NAME": "omi-memory"})
+    assert profile.env["OMI_AUTH_API_URL"] == profile.python_api_url
+    assert profile.env["OMI_AUTH_API_URL"] == profile.env["OMI_PYTHON_API_URL"]
+
+
+def test_validate_profile_rejects_missing_auth_api_url() -> None:
+    profile = _resolve({"OMI_APP_NAME": "omi-memory"})
+    env = dict(profile.env)
+    env.pop("OMI_AUTH_API_URL")
+    broken = replace(profile, env=env)
+    errors = desktop_profile.validate_profile(broken)
+    assert any("OMI_AUTH_API_URL" in error for error in errors)
 
 
 def test_named_bundle_automation_uses_supplied_environment(monkeypatch: pytest.MonkeyPatch) -> None:

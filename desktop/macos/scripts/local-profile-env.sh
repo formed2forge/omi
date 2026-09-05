@@ -12,6 +12,10 @@ omi_write_local_profile_env() {
         printf '%s\n' "OMI_DESKTOP_LOCAL_PROFILE=1"
         printf '%s\n' "OMI_DESKTOP_API_URL=${OMI_DESKTOP_API_URL:-}"
         printf '%s\n' "OMI_PYTHON_API_URL=${OMI_PYTHON_API_URL:-}"
+        # `open` does not inherit the launcher shell. Auth HTTP falls back to
+        # production when this key is missing, so default it to the local
+        # Python API rather than leaving the bundle .env silent.
+        printf '%s\n' "OMI_AUTH_API_URL=${OMI_AUTH_API_URL:-${OMI_PYTHON_API_URL:-}}"
         printf '%s\n' "OMI_LOCAL_PROFILE_STORAGE_NAME=${OMI_LOCAL_PROFILE_STORAGE_NAME:-Omi}"
         printf '%s\n' "OMI_LOCAL_AUTH_USER=${OMI_LOCAL_AUTH_USER:-}"
         printf '%s\n' "OMI_LOCAL_AUTH_EMAIL=${OMI_LOCAL_AUTH_EMAIL:-}"

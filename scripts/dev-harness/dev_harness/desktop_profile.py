@@ -175,6 +175,11 @@ def resolve_profile(
         "OMI_SKIP_TUNNEL": "1",
         "OMI_DESKTOP_API_URL": desktop_api_url,
         "OMI_PYTHON_API_URL": python_api_url,
+        # Auth HTTP (referrals, desktop prompts, export, AuthService) reads
+        # OMI_AUTH_API_URL and falls back to production api.omi.me when unset.
+        # Local emulator tokens must never hit that host or RequestAuthPolicy
+        # signs the session out on 401.
+        "OMI_AUTH_API_URL": python_api_url,
         "OMI_LOCAL_PROFILE_STORAGE_NAME": storage_name,
         "OMI_LOCAL_AUTH_USER": user,
         "OMI_LOCAL_AUTH_EMAIL": email,
@@ -251,6 +256,11 @@ def validate_profile(profile: DesktopLocalProfile) -> list[str]:
     for label, raw in (("python_api_url", profile.python_api_url), ("desktop_api_url", profile.desktop_api_url)):
         if not _is_loopback_url(raw):
             errors.append(f"{label} must be loopback http/ws, got {raw!r}")
+    auth_api_url = str(profile.env.get("OMI_AUTH_API_URL") or "")
+    if auth_api_url != profile.python_api_url:
+        errors.append("OMI_AUTH_API_URL must match the local python API URL")
+    elif not _is_loopback_url(auth_api_url):
+        errors.append(f"OMI_AUTH_API_URL must be loopback http/ws, got {auth_api_url!r}")
     if not safety.is_loopback_host(profile.firebase_auth_emulator_host):
         errors.append("Firebase Auth emulator host must be loopback")
     text = profile.to_json()

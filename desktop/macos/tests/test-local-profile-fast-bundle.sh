@@ -30,6 +30,8 @@ omi_write_local_profile_env "$env_file"
 
 grep -qx 'OMI_DESKTOP_LOCAL_PROFILE=1' "$env_file"
 grep -qx 'OMI_DESKTOP_API_URL=http://127.0.0.1:10201' "$env_file"
+grep -qx 'OMI_PYTHON_API_URL=http://127.0.0.1:8080' "$env_file"
+grep -qx 'OMI_AUTH_API_URL=http://127.0.0.1:8080' "$env_file"
 grep -qx 'OMI_LOCAL_AUTH_PASSWORD=local-profile-password-only-in-bundle' "$env_file"
 grep -qx 'FIRESTORE_DATABASE_ID=(default)' "$env_file"
 ! grep -q '^stale=' "$env_file"
@@ -70,7 +72,8 @@ fi
 # profile bundle during a patch, so they must not force a complete repackaging.
 fingerprint_function="$(sed -n '/^fast_bundle_fingerprint()/,/^}/p' "$MACOS_DIR/run.sh")"
 if ! grep -q 'desktop_api_fingerprint="local-profile-refreshed"' <<<"$fingerprint_function" \
-  || ! grep -q 'python_api_fingerprint="local-profile-refreshed"' <<<"$fingerprint_function"; then
+  || ! grep -q 'python_api_fingerprint="local-profile-refreshed"' <<<"$fingerprint_function" \
+  || ! grep -q 'auth_api_fingerprint="local-profile-refreshed"' <<<"$fingerprint_function"; then
   echo "local-profile endpoint settings must remain eligible for fast patching" >&2
   exit 1
 fi
