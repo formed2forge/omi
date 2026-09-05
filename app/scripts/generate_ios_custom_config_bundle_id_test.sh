@@ -39,10 +39,12 @@ before_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' "$fixture_dir/
 config_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' "$fixture_dir/ios/Config/Dev/GoogleService-Info.plist")"
 runner_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' "$fixture_dir/ios/Runner/GoogleService-Info.plist")"
 xcconfig_bundle_id="$(grep '^APP_BUNDLE_IDENTIFIER=' "$fixture_dir/ios/Flutter/Custom.xcconfig" | cut -d= -f2)"
+excluded_products="$(grep '^EXCLUDED_SOURCE_FILE_NAMES=' "$fixture_dir/ios/Flutter/Custom.xcconfig" | cut -d= -f2-)"
 
 [[ "$config_bundle_id" == "$xcconfig_bundle_id" ]]
 [[ "$runner_bundle_id" == "$xcconfig_bundle_id" ]]
 [[ "$config_bundle_id" != "$before_bundle_id" ]]
-[[ "$config_bundle_id" == "com.friend-app-with-wearable.ios12-testhost" ]]
+[[ "$config_bundle_id" == "com.friend-app-with-wearable.ios12-testteam01-testhost" ]]
+[[ "$excluded_products" == '\$(inherited) omiWatchApp.app' ]]
 
-echo "generate_ios_custom_config patches GoogleService-Info.plist BUNDLE_ID to match the suffixed bundle id"
+echo "generate_ios_custom_config patches personal-team IDs and excludes the Omi-provisioned watch app"

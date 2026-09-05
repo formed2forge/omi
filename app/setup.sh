@@ -55,6 +55,7 @@ LOCAL_API_BASE_URL="${OMI_LOCAL_API_BASE_URL:-http://${LOCAL_DEV_HOST}:8000/}"
 ANDROID_DEV_HOST="${OMI_ANDROID_DEV_HOST:-${OMI_DEV_HOST:-10.0.2.2}}"
 ANDROID_LOCAL_API_BASE_URL="${OMI_LOCAL_API_BASE_URL:-http://${ANDROID_DEV_HOST}:8000/}"
 BETA_API_BASE_URL="${OMI_BETA_API_BASE_URL:-https://api.omiapi.com/}"
+OMI_APPLE_DEVELOPMENT_TEAM="9536L8KLMP"
 
 ######################################
 # Generate device suffix from hostname
@@ -65,6 +66,199 @@ function generate_device_suffix() {
   echo "${HOSTNAME}"
 }
 
+function personal_ios_identifier_suffix() {
+  local development_team="$1"
+  echo "$(echo "$development_team" | tr '[:upper:]' '[:lower:]')-$(generate_device_suffix)"
+}
+
+function ios_dev_bundle_id_for_team() {
+  local development_team="$1"
+  if [[ "$development_team" == "$OMI_APPLE_DEVELOPMENT_TEAM" ]]; then
+    echo "com.friend-app-with-wearable.ios12.development"
+  else
+    echo "com.friend-app-with-wearable.ios12-$(personal_ios_identifier_suffix "$development_team")"
+  fi
+}
+
+function ios_dev_app_group_for_team() {
+  local development_team="$1"
+  if [[ "$development_team" == "$OMI_APPLE_DEVELOPMENT_TEAM" ]]; then
+    echo "group.com.friend-app-with-wearable.ios12"
+  else
+    echo "group.com.friend-app-with-wearable.ios12-$(personal_ios_identifier_suffix "$development_team")"
+  fi
+}
+
+function ios_dev_widget_bundle_id_for_team() {
+  local development_team="$1"
+  if [[ "$development_team" == "$OMI_APPLE_DEVELOPMENT_TEAM" ]]; then
+    echo "com.friend-app-with-wearable.ios12.development.widget"
+  else
+    echo "com.friend-app-with-wearable.ios12-$(personal_ios_identifier_suffix "$development_team").development.widget"
+  fi
+}
+
+function held_apple_development_team_ids() {
+  local held_fingerprints="$1"
+  local certificate_dump
+  certificate_dump=$(security find-certificate -a -Z -p 2>/dev/null) || return 0
+
+  local fingerprint pem team_id
+  while IFS= read -r fingerprint; do
+    [[ -n "$fingerprint" ]] || continue
+    pem=$(printf '%s\n' "$certificate_dump" | awk -v wanted="$fingerprint" '
+      /^SHA-1 hash:/ { selected = (toupper($3) == wanted); capture = 0 }
+      selected && /-----BEGIN CERTIFICATE-----/ { capture = 1 }
+      capture { print }
+      capture && /-----END CERTIFICATE-----/ { exit }
+    ')
+    [[ -n "$pem" ]] || continue
+    team_id=$(printf '%s\n' "$pem" \
+      | openssl x509 -noout -subject -nameopt RFC2253 2>/dev/null \
+      | sed -nE 's/^.*OU=([A-Z0-9]{10})(,.*)?$/\1/p')
+    [[ -n "$team_id" ]] && echo "$team_id"
+  done <<< "$held_fingerprints"
+}
+
+######################################
+# Detect Apple Development Team ID
+######################################
+function detect_apple_team_id() {
+  # 1. Honour explicit override
+  if [ -n "${APPLE_DEVELOPMENT_TEAM:-}" ]; then
+    local override
+    override=$(echo "$APPLE_DEVELOPMENT_TEAM" | tr '[:lower:]' '[:upper:]' | tr -d ' ')
+    if [[ ! "$override" =~ ^[A-Z0-9]{10}$ ]]; then
+      echo "❌ Invalid APPLE_DEVELOPMENT_TEAM '${APPLE_DEVELOPMENT_TEAM}' — must be exactly 10 letters/digits." >&2
+      return 1
+    fi
+    echo "$override"
+    return 0
+  fi
+
+  local profiles_dir="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+  local team_id=""
+  # 2. Offer the teams named by installed profiles, but only if this
+  #    machine holds an iOS development identity at all.
+  #
+  #    Deliberately does NOT try to decide which team a certificate belongs to.
+  #    The team in a certificate's common name is not authoritative: Apple keeps
+  #    the original personal-team ID there when a developer joins a paid team, so
+  #    a certificate reading "Apple Development: NAME (PERSONALTEAM)" can be
+  #    issued under a different team entirely — the real one is the OU, readable
+  #    only by decoding the certificate. Matching the common name therefore
+  #    rejects teams the developer can sign for and accepts ones they cannot.
+  #
+  #    The profile's own TeamIdentifier is authoritative, so that is what gets
+  #    offered. The identity check is a presence test only: with no iOS
+  #    development identity, nothing here is signable and prompting for a team
+  #    would be pointless. "iPhone Developer" is the legacy name for the same
+  #    identity and still exists on older machines. "Developer ID Application"
+  #    is deliberately excluded — it signs Mac distribution builds and cannot
+  #    sign an iOS development build.
+  #
+  #    When several teams qualify this cannot tell them apart, so it asks rather
+  #    than guessing — see the prompt below.
+  # SHA-1 fingerprints of the iOS development identities whose private keys this
+  # machine holds. "Developer ID Application" is excluded: it signs Mac
+  # distribution builds and cannot sign an iOS development build.
+  local held_fingerprints
+  held_fingerprints=$(security find-identity -v -p codesigning 2>/dev/null \
+    | grep -E "Apple Development|iPhone Developer" \
+    | awk '{print toupper($2)}' | grep -E '^[0-9A-F]{40}$')
+  local held_team_ids
+  held_team_ids=$(held_apple_development_team_ids "$held_fingerprints" | sort -u)
+
+  if [ -d "$profiles_dir" ] && [ -n "$held_fingerprints" ]; then
+    local seen_teams=()
+    while IFS= read -r -d '' profile; do
+      local plist candidate
+      plist=$(security cms -D -i "$profile" 2>/dev/null) || continue
+      candidate=$(echo "$plist" | xmllint --xpath \
+        "string(//key[text()='TeamIdentifier']/following-sibling::array[1]/string[1])" \
+        - 2>/dev/null)
+      [ -n "$candidate" ] || continue
+
+      local already_seen=false
+      for t in "${seen_teams[@]:-}"; do [ "$t" = "$candidate" ] && already_seen=true && break; done
+      $already_seen && continue
+
+      # Offer the team only if the profile embeds a certificate whose private key
+      # is on this machine — the same question Xcode asks when it picks a profile.
+      # Deliberately not decided from the certificate's common name: Apple keeps
+      # the original personal-team ID there when a developer joins a paid team, so
+      # a certificate reading "Apple Development: NAME (PERSONALTEAM)" can be
+      # issued under a different team (the real one is the OU). Matching the name
+      # both rejects teams the developer can sign for and accepts ones they cannot.
+      local usable=false idx=0 der fingerprint
+      while [ "$idx" -lt 50 ]; do
+        der=$(printf '%s' "$plist" \
+          | plutil -extract "DeveloperCertificates.$idx" raw -o - - 2>/dev/null) || break
+        [ -n "$der" ] || break
+        fingerprint=$(printf '%s' "$der" | base64 -d 2>/dev/null \
+          | openssl x509 -inform DER -noout -fingerprint -sha1 2>/dev/null \
+          | sed 's/.*=//; s/://g' | tr '[:lower:]' '[:upper:]')
+        if [ -n "$fingerprint" ] && printf '%s\n' "$held_fingerprints" | grep -qx "$fingerprint"; then
+          usable=true
+          break
+        fi
+        idx=$((idx + 1))
+      done
+      # Profiles outlive the certificates embedded in them. A profile may carry
+      # only retired fingerprints even though this Mac holds a newer private-key
+      # identity for the same team. The certificate subject OU is Apple's
+      # authoritative Team ID, so it keeps that team selectable while Xcode
+      # automatic signing refreshes the stale profile.
+      if ! $usable && printf '%s\n' "$held_team_ids" | grep -qx "$candidate"; then
+        usable=true
+      fi
+      $usable && seen_teams+=("$candidate")
+    done < <(find "$profiles_dir" -name '*.mobileprovision' -print0 2>/dev/null)
+
+    if [ "${#seen_teams[@]}" -eq 1 ]; then
+      team_id="${seen_teams[0]}"
+    elif [ "${#seen_teams[@]}" -gt 1 ]; then
+      echo "⚠️  Multiple Apple Developer accounts found. Choose one:" >&2
+      for i in "${!seen_teams[@]}"; do
+        echo "   $((i+1))) ${seen_teams[$i]}" >&2
+      done
+      # Same reasoning as the prompt below: never block on read without a TTY.
+      if [ -t 0 ]; then
+        local choice
+        read -rp "   Enter number [1-${#seen_teams[@]}]: " choice
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#seen_teams[@]}" ]; then
+          team_id="${seen_teams[$((choice-1))]}"
+        fi
+      fi
+    fi
+  fi
+
+  # 3. Last resort: prompt the user (with format validation)
+  if [ -z "$team_id" ]; then
+    echo "⚠️  Could not auto-detect your Apple Development Team ID." >&2
+    echo "   Find it at: https://developer.apple.com/account -> Membership" >&2
+    echo "   or run: APPLE_DEVELOPMENT_TEAM=XXXXXXXXXX bash setup.sh ios" >&2
+    # Only prompt when a human is actually attached. Without this, a
+    # non-interactive run (CI, nested automation) blocks forever on read
+    # instead of failing with a usable message.
+    if [ ! -t 0 ]; then
+      echo "   ❌ No terminal available to prompt for a Team ID." >&2
+      echo "      Set APPLE_DEVELOPMENT_TEAM and re-run." >&2
+      return 1
+    fi
+    while true; do
+      read -rp "   Enter your Team ID (10 uppercase alphanumeric characters): " team_id
+      team_id=$(echo "${team_id}" | tr '[:lower:]' '[:upper:]' | tr -d ' ')
+      if [[ "$team_id" =~ ^[A-Z0-9]{10}$ ]]; then
+        break
+      fi
+      echo "   ❌ Invalid Team ID '${team_id}' — must be exactly 10 uppercase letters/digits." >&2
+    done
+  fi
+
+  echo "$team_id"
+}
+
 ######################################
 # Generate custom configs for iOS
 ######################################
@@ -73,26 +267,44 @@ function generate_ios_custom_config() {
   local callback_scheme="${2:-omi-dev}"
   bash scripts/generate_ios_custom_config.sh "ios/Config/${config_name}/GoogleService-Info.plist" ios/Flutter
 
+  # Select the signing owner before deriving identifiers. The Omi team owns the
+  # checked-in development App ID; every other team needs machine-scoped IDs it
+  # can register through Xcode automatic signing.
+  echo "🔍 Detecting Apple Development Team ID..."
+  local development_team
+  development_team=$(detect_apple_team_id)
+  echo "✅ Team ID: ${development_team}"
+
   if [[ "$config_name" == "Dev" ]]; then
-    # Keep ordinary local builds installable beside the App Store build.
-    local suffix
-    suffix=$(generate_device_suffix)
-    echo "APP_BUNDLE_IDENTIFIER=com.friend-app-with-wearable.ios12-${suffix}" >> ios/Flutter/Custom.xcconfig
+    local bundle_id app_group_id widget_bundle_id
+    bundle_id=$(ios_dev_bundle_id_for_team "$development_team")
+    app_group_id=$(ios_dev_app_group_for_team "$development_team")
+    widget_bundle_id=$(ios_dev_widget_bundle_id_for_team "$development_team")
+    echo "APP_BUNDLE_IDENTIFIER=${bundle_id}" >> ios/Flutter/Custom.xcconfig
+    echo "WIDGET_BUNDLE_IDENTIFIER=${widget_bundle_id}" >> ios/Flutter/Custom.xcconfig
+    if [[ "$development_team" != "$OMI_APPLE_DEVELOPMENT_TEAM" ]]; then
+      # The checked-in watch companion is provisioned by the Omi team. Xcode
+      # otherwise embeds its unsigned watchOS product into a personal-team app
+      # and rejects the parent bundle before installation.
+      echo "EXCLUDED_SOURCE_FILE_NAMES=\$(inherited) omiWatchApp.app" >> ios/Flutter/Custom.xcconfig
+    fi
     # The prebuilt/placeholder GoogleService-Info.plist (setup_firebase) carries the
     # stock unsuffixed BUNDLE_ID. Firebase's native SDK validates that field against
     # the running app's actual bundle identifier at Firebase.initializeApp() and
     # refuses to start if they don't match. Runner/GoogleService-Info.plist is what
     # Xcode actually bundles (project.pbxproj references that path directly, not
     # Config/Dev/); patch both so on-disk copies stay consistent.
-    local suffixed_bundle_id="com.friend-app-with-wearable.ios12-${suffix}"
-    /usr/libexec/PlistBuddy -c "Set :BUNDLE_ID ${suffixed_bundle_id}" "ios/Config/${config_name}/GoogleService-Info.plist"
-    /usr/libexec/PlistBuddy -c "Set :BUNDLE_ID ${suffixed_bundle_id}" ios/Runner/GoogleService-Info.plist
+    /usr/libexec/PlistBuddy -c "Set :BUNDLE_ID ${bundle_id}" "ios/Config/${config_name}/GoogleService-Info.plist"
+    /usr/libexec/PlistBuddy -c "Set :BUNDLE_ID ${bundle_id}" ios/Runner/GoogleService-Info.plist
+    echo "APP_GROUP_IDENTIFIER=${app_group_id}" >> ios/Flutter/Custom.xcconfig
   else
     # Beta uses a distinct bundle/callback identity and must be provisioned
     # explicitly by the developer's Apple team.
     echo "APP_BUNDLE_IDENTIFIER=${OMI_MOBILE_BETA_BUNDLE_ID:-com.friend-app-with-wearable.ios12.beta}" >> ios/Flutter/Custom.xcconfig
     echo "AUTH_CALLBACK_SCHEME=${callback_scheme}" >> ios/Flutter/Custom.xcconfig
   fi
+
+  echo "DEVELOPMENT_TEAM=${development_team}" >> ios/Flutter/Custom.xcconfig
 }
 
 ######################################
