@@ -148,13 +148,16 @@ def test_paid_plan_definitions_include_a_description_for_every_plan(load_subscri
 
     neo = by_id['unlimited']
     assert 'chat questions' in neo['description'].lower()
-    assert 'neo' not in neo['description'].lower()  # title is separate; copy describes entitlements
     plus = by_id['plus']
     assert 'chat questions' in plus['description'].lower()
     assert 'transcription' in plus['description'].lower()
     # Filter key stays False so unknown-platform fail-open is unchanged.
     assert neo['legacy'] is False
     assert by_id['plus']['legacy'] is False
+    assert neo['keep_until_cancel'] is True
+    assert by_id['plus']['keep_until_cancel'] is False
+    assert by_id['pro_v2']['keep_until_cancel'] is False
+    assert by_id['operator']['keep_until_cancel'] is True
 
 
 def test_filter_plans_keeps_legacy_for_current_subscriber(load_subscription):

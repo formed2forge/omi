@@ -23,6 +23,7 @@ from config.plan_catalog import (
     RECOGNIZED_STRIPE_PRICE_INTERVALS,
     allocation_limit,
     get_plan_allocation,
+    is_keep_until_cancel_plan,
     plan_uses_overage,
     resolve_stripe_price_plan,
 )
@@ -523,7 +524,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
     is set separately from ``is_keep_until_cancel_plan`` (catalog lifecycle /
     empty storefronts).
     """
-    return [
+    definitions = [
         {
             "plan_type": PlanType.unlimited,
             "plan_id": "unlimited",
@@ -597,6 +598,9 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "legacy": False,
         },
     ]
+    for definition in definitions:
+        definition["keep_until_cancel"] = is_keep_until_cancel_plan(definition["plan_type"])
+    return definitions
 
 
 # Platform identifiers for the two mobile clients (X-App-Platform header).

@@ -28,7 +28,6 @@ from services.users.account_deletion import background_wipe_user_data, start_acc
 from database.app_review_config import should_hide_subscription_ui
 from database.webhook_health import record_dev_webhook_success
 from database.conversations import get_in_progress_conversation, get_conversation
-from config.plan_catalog import is_keep_until_cancel_plan
 from database.redis_db import (
     cache_user_geolocation,
     get_cached_user_geolocation,
@@ -1443,7 +1442,7 @@ def _user_subscription_response(
                     eyebrow=definition.get("eyebrow"),
                     features=features,
                     prices=plan_prices,
-                    legacy=is_keep_until_cancel_plan(definition["plan_type"]),
+                    legacy=bool(definition.get("keep_until_cancel")),
                 )
             )
 
