@@ -517,6 +517,11 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
     Unlimited is kept as legacy so existing subscribers keep their access
     and Stripe webhooks still resolve, but it's filtered out of the "new user"
     purchase catalog via `filter_plans_for_user`.
+
+    The ``legacy`` key on these dicts stays False so unknown-platform
+    ``filter_plans_for_user`` fail-open is unchanged. Wire ``SubscriptionPlan.legacy``
+    is set separately from ``is_keep_until_cancel_plan`` (catalog lifecycle /
+    empty storefronts).
     """
     return [
         {
@@ -524,7 +529,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_id": "unlimited",
             "title": "Neo",
             "subtitle": f"{_chat_allowance_text(PlanType.unlimited)}",
-            "description": f"{_chat_allowance_text(PlanType.unlimited)}. Shared with mobile and web.",
+            "description": _plan_storefront_description(PlanType.unlimited),
             "eyebrow": "Starter",
             "monthly_price_id": _configured_plan_price_id(PlanType.unlimited, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.unlimited, 'year'),
@@ -536,7 +541,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_id": "operator",
             "title": "Operator",
             "subtitle": f"{_chat_allowance_text(PlanType.operator)}",
-            "description": f"{_chat_allowance_text(PlanType.operator)}. Shared with mobile and web.",
+            "description": _plan_storefront_description(PlanType.operator),
             "eyebrow": "Most popular",
             "monthly_price_id": _configured_plan_price_id(PlanType.operator, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.operator, 'year'),
@@ -548,7 +553,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_id": "architect",
             "title": "Architect",
             "subtitle": "Power-user AI — thousands of chats + agentic automations",
-            "description": "Power-user AI for heavy agentic workflows and vibe coding.",
+            "description": _plan_storefront_description(PlanType.architect),
             "eyebrow": "Automation + coding",
             "monthly_price_id": _configured_plan_price_id(PlanType.architect, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.architect, 'year'),
@@ -559,8 +564,8 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_type": PlanType.plus,
             "plan_id": "plus",
             "title": "Plus",
-            "subtitle": f"{_transcription_allowance_text(PlanType.plus)}",
-            "description": f"{_transcription_allowance_text(PlanType.plus)}.",
+            "subtitle": f"{_chat_allowance_text(PlanType.plus)}",
+            "description": _plan_storefront_description(PlanType.plus),
             "eyebrow": "For everyday use",
             "monthly_price_id": _configured_plan_price_id(PlanType.plus, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.plus, 'year'),
@@ -572,7 +577,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_id": "pro_v2",
             "title": "Pro",
             "subtitle": f"{_chat_allowance_text(PlanType.pro_v2)}",
-            "description": f"{_chat_allowance_text(PlanType.pro_v2)}. Full desktop, mobile, and web access.",
+            "description": _plan_storefront_description(PlanType.pro_v2),
             "eyebrow": "For power users",
             "monthly_price_id": _configured_plan_price_id(PlanType.pro_v2, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.pro_v2, 'year'),
@@ -584,7 +589,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_id": "unlimited_v2",
             "title": "Unlimited",
             "subtitle": "Unlimited transcription",
-            "description": "Unlimited transcription — record all day.",
+            "description": _plan_storefront_description(PlanType.unlimited_v2),
             "eyebrow": "Most popular",
             "monthly_price_id": _configured_plan_price_id(PlanType.unlimited_v2, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.unlimited_v2, 'year'),
@@ -1099,6 +1104,28 @@ def _transcription_allowance_text(plan: PlanType) -> str:
     if limit is None:
         return 'Unlimited transcription'
     return f'{limit // 60:,} minutes of transcription per month'
+
+
+def _plan_storefront_description(plan: PlanType) -> str:
+    """User-visible description of what the plan includes, for current-plan and storefront cards."""
+
+    chat = _chat_allowance_text(plan)
+    transcription = _transcription_allowance_text(plan)
+    if plan == PlanType.basic:
+        return f'{chat}. {transcription}, then on-device. Shared with mobile and web.'
+    if plan == PlanType.plus:
+        return f'{chat}. {transcription}, then on-device. Full desktop, mobile, and web access.'
+    if plan == PlanType.pro_v2:
+        return f'{chat}. Full desktop, mobile, and web access.'
+    if plan == PlanType.unlimited:
+        return f'{chat}. Unlimited transcription. Desktop capture with Free-tier allowance.'
+    if plan == PlanType.operator:
+        return f'{chat}. Shared with mobile and web.'
+    if plan == PlanType.architect:
+        return 'Power-user AI for heavy agentic workflows and vibe coding.'
+    if plan == PlanType.unlimited_v2:
+        return f'{transcription} — record all day.'
+    return chat
 
 
 # Compatibility names for callers and fixtures still importing the old

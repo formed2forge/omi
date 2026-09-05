@@ -46,8 +46,31 @@ class UnresolvedPlanDecision(ValueError):
     """A consumer requested a value whose product policy is still open."""
 
 
+def canonical_plan_type(plan: PlanType | str) -> PlanType:
+    """Resolve a wire value (including aliases such as ``pro``) to a catalog plan."""
+
+    resolved = PlanType(plan)
+    return WIRE_PLAN_ALIASES.get(resolved.value, resolved)
+
+
 def get_plan_definition(plan: PlanType | str) -> Mapping[str, Any]:
-    return PLAN_CATALOG_DATA[PlanType(plan).value]
+    return PLAN_CATALOG_DATA[canonical_plan_type(plan).value]
+
+
+def is_keep_until_cancel_plan(plan: PlanType | str) -> bool:
+    """Paid catalog plans that are no longer sold and persist only for existing subscribers.
+
+    Storefront emptiness and a non-``current`` lifecycle are the catalog's keep-until-cancel
+    signal. Free is unpaid with empty storefronts and is not legacy. Sold Plus/Pro have
+    current lifecycle and storefronts. Do not treat old Plus price IDs as a different plan.
+    """
+
+    definition = get_plan_definition(plan)
+    if not definition.get('is_paid'):
+        return False
+    if definition.get('lifecycle') != 'current':
+        return True
+    return not tuple(definition.get('storefronts') or ())
 
 
 def get_plan_allocation(plan: PlanType | str, allocation: str) -> Mapping[str, Any]:
@@ -209,11 +232,13 @@ __all__ = [
     'WIRE_PLAN_ALIASES',
     'allocation_exhaustion_policy',
     'allocation_limit',
+    'canonical_plan_type',
     'configured_billing_price_plans',
     'get_plan_allocation',
     'get_plan_definition',
     'get_measurement_contract',
     'get_plan_contract',
+    'is_keep_until_cancel_plan',
     'plan_uses_overage',
     'resolve_stripe_price_plan',
 ]

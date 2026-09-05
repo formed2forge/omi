@@ -135,6 +135,28 @@ def test_filter_plans_for_basic_user(load_subscription):
     assert 'architect' in plan_ids
 
 
+def test_paid_plan_definitions_include_a_description_for_every_plan(load_subscription):
+    """Current-plan Settings copy comes from this description. Neo used to ship empty on the card."""
+    with load_subscription() as sub_mod:
+        definitions = sub_mod.get_paid_plan_definitions()
+        by_id = {d['plan_id']: d for d in definitions}
+
+    for plan_id, definition in by_id.items():
+        description = definition.get('description') or ''
+        assert description.strip(), plan_id
+        assert definition.get('subtitle'), plan_id
+
+    neo = by_id['unlimited']
+    assert 'chat questions' in neo['description'].lower()
+    assert 'neo' not in neo['description'].lower()  # title is separate; copy describes entitlements
+    plus = by_id['plus']
+    assert 'chat questions' in plus['description'].lower()
+    assert 'transcription' in plus['description'].lower()
+    # Filter key stays False so unknown-platform fail-open is unchanged.
+    assert neo['legacy'] is False
+    assert by_id['plus']['legacy'] is False
+
+
 def test_filter_plans_keeps_legacy_for_current_subscriber(load_subscription):
     """Unlimited subscribers see their plan in catalog for active-plan detection."""
     with load_subscription() as sub_mod:
@@ -264,12 +286,9 @@ def test_filter_plans_shows_unlimited_v2_only_for_current_subscriber(load_subscr
     """Unlimited-v2 is keep-until-cancel: hidden from new users, visible to its own subscriber."""
     with load_subscription() as sub_mod:
         definitions = sub_mod.get_paid_plan_definitions()
-        new_user = [
-            d['plan_id'] for d in sub_mod.filter_plans_for_user(definitions, PlanType.basic, platform='ios')
-        ]
+        new_user = [d['plan_id'] for d in sub_mod.filter_plans_for_user(definitions, PlanType.basic, platform='ios')]
         current = [
-            d['plan_id']
-            for d in sub_mod.filter_plans_for_user(definitions, PlanType.unlimited_v2, platform='ios')
+            d['plan_id'] for d in sub_mod.filter_plans_for_user(definitions, PlanType.unlimited_v2, platform='ios')
         ]
     assert 'unlimited_v2' not in new_user
     assert current == ['plus', 'pro_v2', 'unlimited_v2']

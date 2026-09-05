@@ -13,9 +13,11 @@ from config.plan_catalog import (
     RECOGNIZED_STRIPE_PRICE_PLAN_TYPES,
     PlanType,
     allocation_limit,
+    canonical_plan_type,
     configured_billing_price_plans,
     get_plan_allocation,
     get_plan_contract,
+    is_keep_until_cancel_plan,
     plan_uses_overage,
     resolve_stripe_price_plan,
 )
@@ -212,6 +214,28 @@ def test_joined_plan_contract_answers_policy_and_cost_coverage_in_one_query():
     assert contract['features']['chat']['policy']['unit'] == 'usd_cent'
     assert contract['features']['chat']['policy']['limit']['value'] == 40_000
     assert contract['features']['chat']['measurement']['cost_status'] == 'partial'
+
+
+def test_keep_until_cancel_plans_are_paid_unsold_catalog_rows():
+    """Settings labels these '(Legacy Plan)'. Sold Free/Plus/Pro must not qualify."""
+
+    keep_until_cancel = {
+        PlanType.unlimited,
+        PlanType.unlimited_v2,
+        PlanType.operator,
+        PlanType.architect,
+    }
+    for plan in PlanType:
+        if canonical_plan_type(plan) in keep_until_cancel:
+            assert is_keep_until_cancel_plan(plan), plan
+        else:
+            assert not is_keep_until_cancel_plan(plan), plan
+
+    assert canonical_plan_type('pro') is PlanType.architect
+    assert is_keep_until_cancel_plan('pro')
+    assert not is_keep_until_cancel_plan(PlanType.basic)
+    assert not is_keep_until_cancel_plan(PlanType.plus)
+    assert not is_keep_until_cancel_plan(PlanType.pro_v2)
 
 
 def test_compatibility_guard_rejects_destructive_identity_and_billing_changes():
