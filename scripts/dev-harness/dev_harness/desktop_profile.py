@@ -70,6 +70,13 @@ def _local_storage_name(app_name: str) -> str:
     return app_name
 
 
+def _is_pricing_harness_launch(*, user: str, app_name: str) -> bool:
+    if user.startswith("pricing_"):
+        return True
+    lowered = app_name.lower()
+    return lowered == "omi-pricing" or lowered.startswith("omi-pricing-")
+
+
 PROHIBITED_ENDPOINT_PATTERNS = (
     re.compile(r"https://api\.omi\.me", re.IGNORECASE),
     re.compile(r"https://api\.omiapi\.com", re.IGNORECASE),
@@ -191,6 +198,8 @@ def resolve_profile(
         "FIRESTORE_DATABASE_ID": cfg.database_id,
         "FIREBASE_API_KEY": LOCAL_FIREBASE_API_KEY,
     }
+    if _is_pricing_harness_launch(user=user, app_name=app_name):
+        profile_env["OMI_SKIP_ONBOARDING"] = "1"
     if app_name != LOCAL_APP_NAME:
         profile_env["OMI_APP_NAME"] = app_name
         profile_env["OMI_ENABLE_LOCAL_AUTOMATION"] = source_env.get("OMI_ENABLE_LOCAL_AUTOMATION", "1")

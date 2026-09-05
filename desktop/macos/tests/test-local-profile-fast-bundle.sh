@@ -34,7 +34,16 @@ grep -qx 'OMI_PYTHON_API_URL=http://127.0.0.1:8080' "$env_file"
 grep -qx 'OMI_AUTH_API_URL=http://127.0.0.1:8080' "$env_file"
 grep -qx 'OMI_LOCAL_AUTH_PASSWORD=local-profile-password-only-in-bundle' "$env_file"
 grep -qx 'FIRESTORE_DATABASE_ID=(default)' "$env_file"
+! grep -q '^OMI_SKIP_ONBOARDING=' "$env_file"
 ! grep -q '^stale=' "$env_file"
+
+export OMI_SKIP_ONBOARDING=1
+omi_write_local_profile_env "$env_file"
+grep -qx 'OMI_SKIP_ONBOARDING=1' "$env_file"
+grep -qx 'OMI_AUTH_API_URL=http://127.0.0.1:8080' "$env_file"
+unset OMI_SKIP_ONBOARDING
+omi_write_local_profile_env "$env_file"
+! grep -q '^OMI_SKIP_ONBOARDING=' "$env_file"
 
 # A fast-only eligibility probe runs before any launch side effects. Local
 # profiles must now reach the ordinary bundle eligibility result; the secret
@@ -75,6 +84,11 @@ if ! grep -q 'desktop_api_fingerprint="local-profile-refreshed"' <<<"$fingerprin
   || ! grep -q 'python_api_fingerprint="local-profile-refreshed"' <<<"$fingerprint_function" \
   || ! grep -q 'auth_api_fingerprint="local-profile-refreshed"' <<<"$fingerprint_function"; then
   echo "local-profile endpoint settings must remain eligible for fast patching" >&2
+  exit 1
+fi
+
+if ! grep -q 'AUTOMATION_ARGS+=("--skip-onboarding")' "$MACOS_DIR/run.sh"; then
+  echo "run.sh must forward OMI_SKIP_ONBOARDING=1 as --skip-onboarding" >&2
   exit 1
 fi
 

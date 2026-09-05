@@ -81,6 +81,7 @@ Options (via environment variables):
   OMI_AUTOMATION_UI_MODE=quiet    Window presentation for automation: quiet, interactive, or normal
   OMI_FORCE_CANONICAL_MEMORY_ATLAS=1  Non-production-only local QA override for the canonical atlas rollout gate
   OMI_DESKTOP_LOCAL_PROFILE=1     Local harness profile; localhost endpoints/Auth emulator only
+  OMI_SKIP_ONBOARDING=1           Local/dev only: pass --skip-onboarding (pricing harness sets this)
 
 Required files:
   ../../backend/.env         Environment variables (copy from ../../backend/.env.template)
@@ -343,6 +344,9 @@ if [ "$AUTOMATION_UI_MODE" != "normal" ]; then
 fi
 if [ "${OMI_ENABLE_LOCAL_AUTOMATION:-0}" = "1" ]; then
     AUTOMATION_ARGS=(--automation-bridge "${AUTOMATION_ARGS[@]}")
+fi
+if [ "${OMI_SKIP_ONBOARDING:-}" = "1" ]; then
+    AUTOMATION_ARGS+=("--skip-onboarding")
 fi
 
 # Backend configuration

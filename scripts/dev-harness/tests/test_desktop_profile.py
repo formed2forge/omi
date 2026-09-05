@@ -99,3 +99,24 @@ def test_pricing_seed_password_is_used_instead_of_memory_suffix(tmp_path: Path) 
     assert plus.selected_user_password == "pricing_plus-local-password-pricing"
     assert plus.selected_user_email == "pricing_plus@local.omi.invalid"
     assert plus.env["OMI_LOCAL_AUTH_PASSWORD"] == plus.selected_user_password
+    assert plus.env.get("OMI_SKIP_ONBOARDING") == "1"
+    # The pricing named bundle skips for every selected user, including Alice.
+    assert alice.env.get("OMI_SKIP_ONBOARDING") == "1"
+
+
+def test_memory_alice_profile_does_not_skip_onboarding() -> None:
+    profile = _resolve({"OMI_APP_NAME": "omi-memory"})
+    assert profile.selected_user == "alice"
+    assert "OMI_SKIP_ONBOARDING" not in profile.env
+
+
+def test_pricing_user_skips_onboarding_on_any_named_bundle() -> None:
+    env = {
+        "OMI_LOCAL_STATE_ROOT": str(REPO_ROOT / ".local-harness-state"),
+        "OMI_APP_NAME": "omi-memory",
+    }
+    cfg = config.load_config(REPO_ROOT, env=env, create_layout=False)
+    plus = desktop_profile.resolve_profile(
+        cfg, user="pricing_plus", seeded_users=("pricing_plus",), env=env
+    )
+    assert plus.env["OMI_SKIP_ONBOARDING"] == "1"

@@ -26,5 +26,8 @@ omi_write_local_profile_env() {
         printf '%s\n' "FIREBASE_AUTH_PROJECT_ID=${FIREBASE_AUTH_PROJECT_ID:-${FIREBASE_PROJECT_ID:-}}"
         printf '%s\n' "FIRESTORE_DATABASE_ID=${FIRESTORE_DATABASE_ID:-(default)}"
         printf '%s\n' "FIREBASE_API_KEY=${FIREBASE_API_KEY:-}"
+        if [ "${OMI_SKIP_ONBOARDING:-}" = "1" ]; then
+            printf '%s\n' "OMI_SKIP_ONBOARDING=1"
+        fi
     } >> "$env_file"
 }

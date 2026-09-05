@@ -35,6 +35,12 @@ If local Firestore/Auth emulators are not reachable, seed/reset still validate f
 
 `make desktop-run-local` reads auth passwords from the newest seed manifest of **every** scenario kind. Pricing passwords use `-local-password-pricing`; memory passwords stay `-local-password-030`. Seed both kinds if you need Alice *and* a paid pricing user in the same session.
 
+Pricing launches skip Second Brain onboarding. The Python profile sets `OMI_SKIP_ONBOARDING=1` when the selected user starts with `pricing_` or the named bundle is `omi-pricing` / `omi-pricing-*`. `run.sh` also passes `--skip-onboarding`, and the bundle `.env` writer copies the env flag so `open` (which does not inherit the launcher shell) still skips. Memory / `alice` launches are unchanged.
+
+Local Auth HTTP must use the harness Python API. The profile now writes `OMI_AUTH_API_URL` equal to `OMI_PYTHON_API_URL`. If that key is missing, AuthService falls back to production `https://api.omi.me/`, emulator tokens get HTTP 401, and the app signs the tester out.
+
+Windows `pnpm dev` is outside this Mac launcher path and does not skip onboarding unless you pass `--skip-onboarding` yourself.
+
 ## Scenarios
 
 | Scenario | What it seeds |
