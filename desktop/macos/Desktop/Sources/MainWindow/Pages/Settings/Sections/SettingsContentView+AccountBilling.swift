@@ -309,6 +309,32 @@ extension SettingsContentView {
             }
           }
 
+          if !currentPlanDescription.isEmpty || !currentPlanFeatureList.isEmpty {
+            GlassSeparator()
+
+            VStack(alignment: .leading, spacing: OmiSpacing.sm) {
+              if !currentPlanDescription.isEmpty {
+                Text(currentPlanDescription)
+                  .scaledFont(size: OmiType.body)
+                  .foregroundColor(Ink.secondary)
+                  .fixedSize(horizontal: false, vertical: true)
+              }
+
+              ForEach(currentPlanFeatureList, id: \.self) { feature in
+                trialFeatureRow(text: feature)
+              }
+            }
+          }
+
+          if currentPlanIsKeepUntilCancel {
+            GlassSeparator()
+
+            Text(SubscriptionPlanPresentation.legacySupporterNote)
+              .scaledFont(size: OmiType.body)
+              .foregroundColor(Ink.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+
           if let periodText = currentPlanPeriodText {
             GlassSeparator()
 

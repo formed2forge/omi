@@ -6,6 +6,12 @@ import WebKit
 
 enum SubscriptionPlanPresentation {
   static let purchaseOrder = ["plus": 0, "pro_v2": 1]
+  static let keepUntilCancelPlanIds: Set<String> = [
+    "unlimited", "unlimited_v2", "operator", "architect",
+  ]
+  static let legacyPlanTitleSuffix = " (Legacy Plan)"
+  static let legacySupporterNote =
+    "Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan."
 
   static func isPurchasablePlan(id: String) -> Bool {
     purchaseOrder[id] != nil
@@ -31,6 +37,32 @@ enum SubscriptionPlanPresentation {
     }
   }
 
+  static func isKeepUntilCancelPlan(
+    plan: SubscriptionPlanType,
+    features: [String],
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> Bool {
+    if features.contains("byok") {
+      return false
+    }
+    if let owning = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog) {
+      if owning.legacy == true {
+        return true
+      }
+      return keepUntilCancelPlanIds.contains(owning.id)
+    }
+    return keepUntilCancelPlanIds.contains(plan.rawValue)
+  }
+
+  static func titledWithLegacySuffix(_ title: String, isLegacy: Bool) -> String {
+    guard isLegacy else { return title }
+    if title.hasSuffix(legacyPlanTitleSuffix) {
+      return title
+    }
+    return title + legacyPlanTitleSuffix
+  }
+
   static func currentPlanTitle(
     plan: SubscriptionPlanType,
     features: [String],
@@ -40,28 +72,91 @@ enum SubscriptionPlanPresentation {
     if features.contains("byok") {
       return "Free (BYOK)"
     }
+    let baseTitle: String
     if let catalogTitle = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog)?.title
     {
-      return catalogTitle
+      baseTitle = catalogTitle
+    } else {
+      switch plan {
+      case .basic:
+        baseTitle = "Free"
+      case .plus:
+        baseTitle = "Plus"
+      case .proV2:
+        baseTitle = "Pro"
+      case .unlimited:
+        baseTitle = "Neo"
+      case .unlimitedV2:
+        baseTitle = "Unlimited"
+      case .architect, .pro:
+        baseTitle = "Architect"
+      case .operator:
+        baseTitle = "Operator"
+      case .unknown:
+        baseTitle = plan.displayName
+      }
     }
-    switch plan {
-    case .basic:
-      return "Free"
-    case .plus:
-      return "Plus"
-    case .proV2:
-      return "Pro"
-    case .unlimited:
-      return "Neo"
-    case .unlimitedV2:
-      return "Unlimited"
-    case .architect, .pro:
-      return "Architect"
-    case .operator:
-      return "Operator"
-    case .unknown:
-      return plan.displayName
+    return titledWithLegacySuffix(
+      baseTitle,
+      isLegacy: isKeepUntilCancelPlan(
+        plan: plan, features: features, currentPriceId: currentPriceId, catalog: catalog)
+    )
+  }
+
+  static func fallbackDescription(for planId: String) -> String {
+    switch planId {
+    case "basic":
+      return "30 chat questions per month. 300 minutes of transcription per month, then on-device. Shared with mobile and web."
+    case "plus":
+      return "200 chat questions per month. 1,500 minutes of transcription per month, then on-device. Full desktop, mobile, and web access."
+    case "pro_v2":
+      return "1,000 chat questions per month. Full desktop, mobile, and web access."
+    case "unlimited":
+      return "200 chat questions per month. Unlimited transcription. Desktop capture with Free-tier allowance."
+    case "unlimited_v2":
+      return "Unlimited transcription — record all day."
+    case "operator":
+      return "500 chat questions per month. Shared with mobile and web."
+    case "architect":
+      return "Power-user AI for heavy agentic workflows and vibe coding."
+    default:
+      return ""
     }
+  }
+
+  static func currentPlanDescription(
+    plan: SubscriptionPlanType,
+    features: [String],
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> String {
+    if features.contains("byok") {
+      return "Your own API keys. Cloud transcription and chat still follow the Free plan."
+    }
+    if let owning = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog) {
+      if let description = owning.description?.trimmingCharacters(in: .whitespacesAndNewlines),
+        !description.isEmpty
+      {
+        return description
+      }
+      return fallbackDescription(for: owning.id)
+    }
+    return fallbackDescription(for: plan.rawValue)
+  }
+
+  static func currentPlanFeatures(
+    plan: SubscriptionPlanType,
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption],
+    fallback: (String) -> [String]
+  ) -> [String] {
+    if let owning = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog),
+      !owning.features.isEmpty
+    {
+      return Array(owning.features.prefix(4))
+    }
+    let planId = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog)?.id ?? plan.rawValue
+    return Array(fallback(planId).prefix(4))
   }
 
   static func isCurrentSubscriptionPlan(
@@ -117,6 +212,41 @@ extension SettingsContentView {
       features: subscription.features,
       currentPriceId: subscription.currentPriceId,
       catalog: mergedPlanCatalog
+    )
+  }
+
+  var currentPlanIsKeepUntilCancel: Bool {
+    guard let subscription = userSubscription?.subscription else { return false }
+    return SubscriptionPlanPresentation.isKeepUntilCancelPlan(
+      plan: subscription.plan,
+      features: subscription.features,
+      currentPriceId: subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )
+  }
+
+  var currentPlanDescription: String {
+    guard let subscription = userSubscription?.subscription else {
+      return isLoadingSubscription
+        ? "" : SubscriptionPlanPresentation.fallbackDescription(for: "basic")
+    }
+    return SubscriptionPlanPresentation.currentPlanDescription(
+      plan: subscription.plan,
+      features: subscription.features,
+      currentPriceId: subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )
+  }
+
+  var currentPlanFeatureList: [String] {
+    guard let subscription = userSubscription?.subscription else {
+      return fallbackFeatures(for: "basic")
+    }
+    return SubscriptionPlanPresentation.currentPlanFeatures(
+      plan: subscription.plan,
+      currentPriceId: subscription.currentPriceId,
+      catalog: mergedPlanCatalog,
+      fallback: fallbackFeatures(for:)
     )
   }
 
@@ -234,20 +364,13 @@ extension SettingsContentView {
   }
 
   func planDescription(for planId: String) -> String {
-    switch planId {
-    case "plus":
-      return "200 chat questions per month. Full desktop, mobile, and web access."
-    case "pro_v2":
-      return "1,000 chat questions per month. Full desktop, mobile, and web access."
-    case "unlimited":
-      return "100 chat questions per month. Shared with mobile and web."
-    case "operator":
-      return "500 chat questions per month. Shared with mobile and web."
-    case "architect":
-      return "Power-user AI for heavy agentic workflows and vibe coding."
-    default:
-      return ""
+    if let catalogDescription = mergedPlanCatalog.first(where: { $0.id == planId })?.description {
+      let trimmed = catalogDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+      if !trimmed.isEmpty {
+        return trimmed
+      }
     }
+    return SubscriptionPlanPresentation.fallbackDescription(for: planId)
   }
 
   func sortedPrices(for plan: SubscriptionPlanOption) -> [SubscriptionPriceOption] {
@@ -319,6 +442,19 @@ extension SettingsContentView {
         "200 chat questions per month",
         "Unlimited listening and transcription",
         "Unlimited memories and insights",
+        "Desktop capture with Free-tier allowance",
+      ]
+    case "unlimited_v2":
+      return [
+        "Unlimited transcription",
+        "Unlimited memories and insights",
+        "Shared with mobile and web",
+      ]
+    case "basic":
+      return [
+        "30 chat questions per month",
+        "300 minutes of cloud transcription, then on-device",
+        "Unlimited memories",
         "Shared with mobile and web",
       ]
     default:

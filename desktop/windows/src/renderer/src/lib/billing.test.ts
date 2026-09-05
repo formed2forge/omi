@@ -8,6 +8,9 @@ import {
   hasPaidSubscription,
   currentPlanSubtitle,
   currentPlanPeriodText,
+  currentPlanDescription,
+  isKeepUntilCancelPlan,
+  LEGACY_SUPPORTER_NOTE,
   chatQuotaView,
   quotaResetText,
   orderedCatalog,
@@ -101,22 +104,22 @@ describe('resolvePlanTitle', () => {
   it('maps unlimited to Neo by default', () => {
     expect(
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'price_neo_m' }), CATALOG)
-    ).toBe('Neo')
+    ).toBe('Neo (Legacy Plan)')
   })
   it('remaps unlimited to Operator when the price belongs to the Operator catalog plan', () => {
     expect(
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'price_op_y' }), CATALOG)
-    ).toBe('Operator')
+    ).toBe('Operator (Legacy Plan)')
   })
   it('maps operator to Operator and architect to Architect', () => {
-    expect(resolvePlanTitle(sub({ plan: 'operator' }), CATALOG)).toBe('Operator')
-    expect(resolvePlanTitle(sub({ plan: 'architect' }), CATALOG)).toBe('Architect')
+    expect(resolvePlanTitle(sub({ plan: 'operator' }), CATALOG)).toBe('Operator (Legacy Plan)')
+    expect(resolvePlanTitle(sub({ plan: 'architect' }), CATALOG)).toBe('Architect (Legacy Plan)')
   })
   it.each([
     ['plus', 'Plus'],
-    ['unlimited_v2', 'Unlimited'],
+    ['unlimited_v2', 'Unlimited (Legacy Plan)'],
     ['pro_v2', 'Pro'],
-    ['pro', 'Architect']
+    ['pro', 'Architect (Legacy Plan)']
   ] as const)('handles the known wire plan %s', (wirePlan, title) => {
     expect(resolvePlanTitle(sub({ plan: wirePlan }), undefined)).toBe(title)
     expect(hasPaidSubscription(sub({ plan: wirePlan }))).toBe(true)
@@ -196,15 +199,15 @@ describe('resolvePlanTitle — catalog-first with the live Windows catalog', () 
   it('shows the catalog title the user actually bought, not the enum name', () => {
     expect(
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'price_u_m' }), LIVE_CATALOG)
-    ).toBe('Unlimited Plan')
+    ).toBe('Unlimited Plan (Legacy Plan)')
     expect(
       resolvePlanTitle(sub({ plan: 'architect', current_price_id: 'price_p_m' }), LIVE_CATALOG)
-    ).toBe('Omi Pro')
+    ).toBe('Omi Pro (Legacy Plan)')
   })
   it('falls back to the enum name when the price id is not in the catalog', () => {
     expect(
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'legacy_price' }), LIVE_CATALOG)
-    ).toBe('Neo')
+    ).toBe('Neo (Legacy Plan)')
   })
   it('still short-circuits to Free (BYOK) even with a catalog price match', () => {
     expect(
@@ -269,6 +272,32 @@ describe('currentPlanSubtitle', () => {
   it('shows the free-tier line otherwise', () => {
     expect(currentPlanSubtitle(sub({ plan: 'basic' }), CATALOG)).toBe(
       'You are currently on the free tier.'
+    )
+  })
+})
+
+describe('current-plan description and legacy label', () => {
+  it('always has a description for Neo, even when the catalog omits copy', () => {
+    const description = currentPlanDescription(
+      sub({ plan: 'unlimited', current_price_id: 'price_neo_m' }),
+      CATALOG
+    )
+    expect(description).toContain('200 chat')
+    expect(description.toLowerCase()).not.toContain('100 chat')
+    expect(isKeepUntilCancelPlan(sub({ plan: 'unlimited' }), CATALOG)).toBe(true)
+    expect(isKeepUntilCancelPlan(sub({ plan: 'plus' }), NEW_LADDER_CATALOG)).toBe(false)
+    expect(isKeepUntilCancelPlan(sub({ plan: 'unlimited', features: ['byok'] }), CATALOG)).toBe(
+      false
+    )
+    expect(LEGACY_SUPPORTER_NOTE).toContain('early supporter')
+  })
+  it('describes Free, Plus, and Pro so current plans can be compared', () => {
+    expect(currentPlanDescription(sub({ plan: 'basic' }), [])).toContain('30 chat')
+    expect(currentPlanDescription(sub({ plan: 'plus' }), NEW_LADDER_CATALOG)).toContain(
+      '200 chat'
+    )
+    expect(currentPlanDescription(sub({ plan: 'pro_v2' }), NEW_LADDER_CATALOG)).toContain(
+      '1,000 chat'
     )
   })
 })

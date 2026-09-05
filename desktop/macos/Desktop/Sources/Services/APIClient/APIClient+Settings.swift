@@ -495,10 +495,12 @@ struct SubscriptionPlanOption: Codable, Identifiable {
   let eyebrow: String?
   let features: [String]
   let prices: [SubscriptionPriceOption]
+  /// Keep-until-cancel / no longer sold. Absent on older backends.
+  let legacy: Bool?
 
   init(
     id: String, title: String, subtitle: String? = nil, description: String? = nil, eyebrow: String? = nil,
-    features: [String] = [], prices: [SubscriptionPriceOption] = []
+    features: [String] = [], prices: [SubscriptionPriceOption] = [], legacy: Bool? = nil
   ) {
     self.id = id
     self.title = title
@@ -507,6 +509,7 @@ struct SubscriptionPlanOption: Codable, Identifiable {
     self.eyebrow = eyebrow
     self.features = features
     self.prices = prices
+    self.legacy = legacy
   }
 }
 

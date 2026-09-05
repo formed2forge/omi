@@ -67,7 +67,7 @@ final class SubscriptionPlanPresentationTests: XCTestCase {
         currentPriceId: "price_local_operator_month",
         catalog: catalog
       ),
-      "Operator"
+      "Operator (Legacy Plan)"
     )
   }
 
@@ -79,7 +79,46 @@ final class SubscriptionPlanPresentationTests: XCTestCase {
         currentPriceId: "price_unknown",
         catalog: []
       ),
-      "Neo"
+      "Neo (Legacy Plan)"
+    )
+  }
+
+  func testCurrentPlanTitleMarksKeepUntilCancelPlansAsLegacy() {
+    let catalog = [
+      Self.catalogPlan(id: "unlimited", title: "Neo", priceId: "price_neo"),
+      Self.catalogPlan(id: "architect", title: "Architect", priceId: "price_architect"),
+      Self.catalogPlan(id: "unlimited_v2", title: "Unlimited", priceId: "price_unlimited_v2"),
+    ]
+
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanTitle(
+        plan: .unlimited, features: [], currentPriceId: "price_neo", catalog: catalog),
+      "Neo (Legacy Plan)"
+    )
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanTitle(
+        plan: .architect, features: [], currentPriceId: "price_architect", catalog: catalog),
+      "Architect (Legacy Plan)"
+    )
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanTitle(
+        plan: .unlimitedV2, features: [], currentPriceId: "price_unlimited_v2", catalog: catalog),
+      "Unlimited (Legacy Plan)"
+    )
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanTitle(
+        plan: .plus, features: [], currentPriceId: nil, catalog: []),
+      "Plus"
+    )
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanTitle(
+        plan: .proV2, features: [], currentPriceId: nil, catalog: []),
+      "Pro"
+    )
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanTitle(
+        plan: .basic, features: [], currentPriceId: nil, catalog: []),
+      "Free"
     )
   }
 
@@ -94,6 +133,45 @@ final class SubscriptionPlanPresentationTests: XCTestCase {
       ),
       "Free (BYOK)"
     )
+    XCTAssertFalse(
+      SubscriptionPlanPresentation.isKeepUntilCancelPlan(
+        plan: .unlimited,
+        features: ["byok"],
+        currentPriceId: "price_local_plus_month",
+        catalog: catalog
+      )
+    )
+  }
+
+  func testCurrentPlanDescriptionIsPresentForEveryCatalogPlanIncludingNeo() {
+    let neo = SubscriptionPlanOption(
+      id: "unlimited",
+      title: "Neo",
+      description: "200 chat questions per month. Unlimited transcription. Desktop capture with Free-tier allowance.",
+      prices: [
+        SubscriptionPriceOption(
+          id: "price_neo", title: "Monthly", description: nil, priceString: "$0.00/month")
+      ]
+    )
+
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanDescription(
+        plan: .unlimited, features: [], currentPriceId: "price_neo", catalog: [neo]),
+      neo.description
+    )
+    XCTAssertFalse(
+      SubscriptionPlanPresentation.currentPlanDescription(
+        plan: .unlimited, features: [], currentPriceId: "price_unknown", catalog: []
+      ).isEmpty
+    )
+    XCTAssertTrue(
+      SubscriptionPlanPresentation.fallbackDescription(for: "unlimited").contains("200 chat")
+    )
+    XCTAssertFalse(SubscriptionPlanPresentation.fallbackDescription(for: "unlimited").contains("100 chat"))
+    XCTAssertFalse(SubscriptionPlanPresentation.fallbackDescription(for: "basic").isEmpty)
+    XCTAssertFalse(SubscriptionPlanPresentation.fallbackDescription(for: "plus").isEmpty)
+    XCTAssertFalse(SubscriptionPlanPresentation.fallbackDescription(for: "pro_v2").isEmpty)
+    XCTAssertFalse(SubscriptionPlanPresentation.legacySupporterNote.isEmpty)
   }
 
   func testIsCurrentSubscriptionPlanMatchesPlusByPriceIdWhenWireSaysUnlimited() {

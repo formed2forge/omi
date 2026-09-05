@@ -145,6 +145,17 @@ function captureLegacyCatalog(reasons: string[], plans: SubscriptionPlan[] | und
 
 // ── Plan-name resolution (BillingHelpers.currentPlanTitle) ──────────────────
 
+export const LEGACY_PLAN_TITLE_SUFFIX = ' (Legacy Plan)'
+export const LEGACY_SUPPORTER_NOTE =
+  'Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan.'
+
+const KEEP_UNTIL_CANCEL_PLAN_IDS = new Set([
+  'unlimited',
+  'unlimited_v2',
+  'operator',
+  'architect'
+])
+
 /**
  * Whether the current subscription is really Operator. The backend serializes
  * Operator as plan='unlimited' for old-mobile compatibility; Mac disambiguates
@@ -163,6 +174,32 @@ export function isCurrentSubscriptionOperator(
     .some((p) => (p.prices ?? []).some((price) => price.id === priceId))
 }
 
+/** The catalog plan that owns the current price (for the billing-detail subtitle). */
+function owningCatalogPlan(
+  sub: Pick<BillingSubscription, 'current_price_id'>,
+  availablePlans: SubscriptionPlan[] | undefined
+): SubscriptionPlan | undefined {
+  const priceId = sub.current_price_id
+  if (!priceId) return undefined
+  return (availablePlans ?? []).find((p) => (p.prices ?? []).some((price) => price.id === priceId))
+}
+
+export function isKeepUntilCancelPlan(
+  sub: Pick<BillingSubscription, 'plan' | 'current_price_id' | 'features'>,
+  availablePlans: SubscriptionPlan[] | undefined
+): boolean {
+  if ((sub.features ?? []).includes('byok')) return false
+  const owning = owningCatalogPlan(sub, availablePlans)
+  if (owning?.legacy === true) return true
+  const id = owning?.id ?? canonicalPlanId(sub.plan)
+  return id !== undefined && KEEP_UNTIL_CANCEL_PLAN_IDS.has(id)
+}
+
+function withLegacyPlanSuffix(title: string, isLegacy: boolean): string {
+  if (!isLegacy) return title
+  return title.endsWith(LEGACY_PLAN_TITLE_SUFFIX) ? title : `${title}${LEGACY_PLAN_TITLE_SUFFIX}`
+}
+
 /**
  * Display name for the current subscription. BYOK always wins (checked first,
  * as on Mac). Then CATALOG-FIRST: if the current price belongs to a catalog
@@ -171,6 +208,7 @@ export function isCurrentSubscriptionOperator(
  * enum names would mismatch). This price-id match also subsumes Mac's
  * Operator-as-unlimited disambiguation. Fall back to the Mac enum names only
  * when there's no catalog match (empty catalog / legacy price id).
+ * Keep-until-cancel plans append " (Legacy Plan)".
  */
 export function resolvePlanTitle(
   sub: Pick<BillingSubscription, 'plan' | 'current_price_id' | 'features'>,
@@ -180,8 +218,8 @@ export function resolvePlanTitle(
   if (!planId) return planDisplayName(sub.plan)
   if ((sub.features ?? []).includes('byok')) return 'Free (BYOK)'
   const owning = owningCatalogPlan(sub, availablePlans)
-  if (owning) return owning.title
-  return planDisplayName(planId)
+  const title = owning ? owning.title : planDisplayName(planId)
+  return withLegacyPlanSuffix(title, isKeepUntilCancelPlan(sub, availablePlans))
 }
 
 /** BillingHelpers.hasPaidSubscription — BYOK is never "paid". */
@@ -190,16 +228,6 @@ export function hasPaidSubscription(
 ): boolean {
   if ((sub.features ?? []).includes('byok')) return false
   return isPaidPlanValue(sub.plan) && sub.status === 'active'
-}
-
-/** The catalog plan that owns the current price (for the billing-detail subtitle). */
-function owningCatalogPlan(
-  sub: Pick<BillingSubscription, 'current_price_id'>,
-  availablePlans: SubscriptionPlan[] | undefined
-): SubscriptionPlan | undefined {
-  const priceId = sub.current_price_id
-  if (!priceId) return undefined
-  return (availablePlans ?? []).find((p) => (p.prices ?? []).some((price) => price.id === priceId))
 }
 
 /**
@@ -219,6 +247,34 @@ export function currentPlanSubtitle(
     if (plan && price) return `${plan.title} ${price.title} • ${price.price_string}`
   }
   return paid ? 'Your paid plan is active.' : 'You are currently on the free tier.'
+}
+
+export function currentPlanDescription(
+  sub: Pick<BillingSubscription, 'plan' | 'current_price_id' | 'features'>,
+  availablePlans: SubscriptionPlan[] | undefined
+): string {
+  if ((sub.features ?? []).includes('byok')) {
+    return 'Your own API keys. Cloud transcription and chat still follow the Free plan.'
+  }
+  const owning = owningCatalogPlan(sub, availablePlans)
+  if (owning) {
+    const description = planDescription(owning).trim()
+    if (description) return description
+  }
+  const planId = owning?.id ?? canonicalPlanId(sub.plan)
+  if (!planId) return ''
+  return PLAN_FALLBACKS[planId]?.description ?? ''
+}
+
+export function currentPlanFeatures(
+  sub: Pick<BillingSubscription, 'plan' | 'current_price_id'>,
+  availablePlans: SubscriptionPlan[] | undefined
+): string[] {
+  const owning = owningCatalogPlan(sub, availablePlans)
+  if (owning) return planFeatures(owning)
+  const planId = canonicalPlanId(sub.plan)
+  if (!planId) return []
+  return (PLAN_FALLBACKS[planId]?.features ?? []).slice(0, 4)
 }
 
 /**
@@ -366,7 +422,8 @@ const PLAN_FALLBACKS: Record<
   plus: {
     eyebrow: 'For everyday use',
     subtitle: '200 questions per month',
-    description: '200 chat questions per month. Full desktop, mobile, and web access.',
+    description:
+      '200 chat questions per month. 1,500 minutes of transcription per month, then on-device. Full desktop, mobile, and web access.',
     features: [
       '200 chat questions per month',
       '1,500 minutes of cloud transcription, then on-device',
@@ -388,11 +445,34 @@ const PLAN_FALLBACKS: Record<
   unlimited: {
     eyebrow: 'Starter',
     subtitle: '200 questions per month',
-    description: '100 chat questions per month. Shared with mobile and web.',
+    description:
+      '200 chat questions per month. Unlimited transcription. Desktop capture with Free-tier allowance.',
     features: [
       '200 chat questions per month',
       'Unlimited listening and transcription',
       'Unlimited memories and insights',
+      'Desktop capture with Free-tier allowance'
+    ]
+  },
+  unlimited_v2: {
+    eyebrow: 'Most popular',
+    subtitle: 'Unlimited transcription',
+    description: 'Unlimited transcription — record all day.',
+    features: [
+      'Unlimited transcription',
+      'Unlimited memories and insights',
+      'Shared with mobile and web'
+    ]
+  },
+  basic: {
+    eyebrow: 'Plan',
+    subtitle: '30 questions per month',
+    description:
+      '30 chat questions per month. 300 minutes of transcription per month, then on-device. Shared with mobile and web.',
+    features: [
+      '30 chat questions per month',
+      '300 minutes of cloud transcription, then on-device',
+      'Unlimited memories',
       'Shared with mobile and web'
     ]
   },
