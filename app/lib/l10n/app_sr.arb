@@ -10802,5 +10802,13 @@
     "conversationsNotCapturedCount": "Није снимљено ({count})",
     "transcriptionNoAudio": "Транскрипција не прима аудио",
     "couldNotLoadMemories": "Није могуће учитати успомене",
-    "couldNotLoadKnowledgeGraph": "Није могуће учитати граф знања"
+    "couldNotLoadKnowledgeGraph": "Није могуће учитати граф знања",
+    "legacyPlanTitleSuffix": " (стари план)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Хвала што сте рани подржавалац omi! Можете остати на старом плану неодређено. Имајте на уму да се ти стари планови више не продају и не могу се изабрати ако пређете на други план.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

@@ -3278,5 +3278,13 @@
     "conversationsNotCapturedCount": "Tidak direkam ({count})",
     "transcriptionNoAudio": "Transkripsi tidak menerima audio",
     "couldNotLoadMemories": "Tidak dapat memuat kenangan",
-    "couldNotLoadKnowledgeGraph": "Tidak dapat memuat graf pengetahuan"
+    "couldNotLoadKnowledgeGraph": "Tidak dapat memuat graf pengetahuan",
+    "legacyPlanTitleSuffix": " (Paket Lama)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Terima kasih telah menjadi pendukung awal omi! Anda dapat tetap di paket lama tanpa batas waktu. Perlu diketahui, paket lama ini tidak lagi dijual dan tidak dapat dipilih jika Anda beralih ke paket lain.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

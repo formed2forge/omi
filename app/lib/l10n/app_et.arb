@@ -3236,5 +3236,13 @@
     "conversationsNotCapturedCount": "Salvestamata ({count})",
     "transcriptionNoAudio": "Transkriptsioon ei saa heli",
     "couldNotLoadMemories": "Mälestusi ei õnnestunud laadida",
-    "couldNotLoadKnowledgeGraph": "Teadmiste graafi ei õnnestunud laadida"
+    "couldNotLoadKnowledgeGraph": "Teadmiste graafi ei õnnestunud laadida",
+    "legacyPlanTitleSuffix": " (pärandplaan)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Aitäh, et oled omi varajane toetaja! Võid oma pärandplaanil jääda määramata ajaks. Pane tähele, et neid pärandplaane enam ei müüda ja neid ei saa valida, kui vahetad teisele plaanile.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

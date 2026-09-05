@@ -9994,4 +9994,11 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Δεν ήταν δυνατή η φόρτωση του γραφήματος γνώσης';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (παλιό πλάνο)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Ευχαριστούμε που είστε από τους πρώτους υποστηρικτές του omi! Μπορείτε να μείνετε στο παλιό σας πλάνο επ\' αόριστον. Ωστόσο, αυτά τα παλιά πλάνα δεν πωλούνται πλέον και δεν μπορούν να επιλεγούν αν αλλάξετε σε άλλο πλάνο.';
 }

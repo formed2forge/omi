@@ -9933,4 +9933,11 @@ class AppLocalizationsMr extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'ज्ञान आलेख लोड करता आला नाही';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (जुनी योजना)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omiचे सुरुवातीचे समर्थक असल्याबद्दल धन्यवाद! तुम्ही तुमच्या जुन्या योजनेवर अनिश्चितकाळ राहू शकता. लक्षात घ्या की या जुन्या योजना आता विकल्या जात नाहीत आणि दुसऱ्या योजनेवर गेल्यास त्या पुन्हा निवडता येत नाहीत.';
 }

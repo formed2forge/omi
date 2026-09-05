@@ -3332,5 +3332,13 @@
     "conversationsNotCapturedCount": "Nincs rögzítve ({count})",
     "transcriptionNoAudio": "Az átírás nem kap hangot",
     "couldNotLoadMemories": "Nem sikerült betölteni az emlékeket",
-    "couldNotLoadKnowledgeGraph": "Nem sikerült betölteni a tudásgráfot"
+    "couldNotLoadKnowledgeGraph": "Nem sikerült betölteni a tudásgráfot",
+    "legacyPlanTitleSuffix": " (korábbi csomag)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Köszönjük, hogy az omi korai támogatója vagy! A korábbi csomagodon korlátlan ideig maradhatsz. Vedd figyelembe azonban, hogy ezeket a korábbi csomagokat már nem áruljuk, és másik csomagra váltás után nem választhatók újra.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

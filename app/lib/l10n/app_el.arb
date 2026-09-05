@@ -3236,5 +3236,13 @@
     "conversationsNotCapturedCount": "Δεν καταγράφηκε ({count})",
     "transcriptionNoAudio": "Η μεταγραφή δεν λαμβάνει ήχο",
     "couldNotLoadMemories": "Δεν ήταν δυνατή η φόρτωση των αναμνήσεων",
-    "couldNotLoadKnowledgeGraph": "Δεν ήταν δυνατή η φόρτωση του γραφήματος γνώσης"
+    "couldNotLoadKnowledgeGraph": "Δεν ήταν δυνατή η φόρτωση του γραφήματος γνώσης",
+    "legacyPlanTitleSuffix": " (παλιό πλάνο)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Ευχαριστούμε που είστε από τους πρώτους υποστηρικτές του omi! Μπορείτε να μείνετε στο παλιό σας πλάνο επ' αόριστον. Ωστόσο, αυτά τα παλιά πλάνα δεν πωλούνται πλέον και δεν μπορούν να επιλεγούν αν αλλάξετε σε άλλο πλάνο.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

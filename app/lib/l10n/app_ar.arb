@@ -3212,5 +3212,13 @@
     "conversationsNotCapturedCount": "لم يتم التسجيل ({count})",
     "transcriptionNoAudio": "النسخ لا يستلم الصوت",
     "couldNotLoadMemories": "تعذر تحميل الذكريات",
-    "couldNotLoadKnowledgeGraph": "تعذر تحميل الرسم البياني للمعرفة"
+    "couldNotLoadKnowledgeGraph": "تعذر تحميل الرسم البياني للمعرفة",
+    "legacyPlanTitleSuffix": " (خطة قديمة)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "شكرًا لكونك من أوائل داعمِي omi! يمكنك البقاء على خطتك القديمة إلى أجل غير مسمى. يرجى ملاحظة أن هذه الخطط القديمة لم تعد تُباع ولا يمكن اختيارها إذا انتقلت إلى خطة أخرى.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

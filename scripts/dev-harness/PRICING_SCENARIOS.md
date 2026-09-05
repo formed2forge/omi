@@ -15,7 +15,7 @@ Plan identity is read from `backend/config/plan_catalog_generated.py` at import 
 
 ## Wire trap (read this before judging Settings)
 
-`UserSubscriptionResponse` still rejects `plus` / `pro_v2` / `unlimited_v2` on the OpenAPI `PlanType` enum. `/v1/users/me/subscription` serializes those as `plan=unlimited`. Clients recover Plus / Pro by matching `current_price_id` against `available_plans`.
+`UserSubscriptionResponse` still rejects `plus` / `pro_v2` / `unlimited_v2` on the OpenAPI `PlanType` enum. `/v1/users/me/subscription` remaps those through `wire_plan_for_client` using `WIRE_FALLBACK_PLAN_TYPES` (not `MOBILE_PLAN_TYPES` — Unlimited-v2 is keep-until-cancel, not a sold mobile SKU) and serializes `plan=unlimited`. Skipping that remap 500s the endpoint and Settings falls through to Free. Clients recover Plus / Pro / Unlimited-v2 by matching `current_price_id` against `available_plans`.
 
 The harness injects `price_local_*` Stripe price ids and stubs `retrieve_price` when `ENVIRONMENT=local-dev-harness` (or `OMI_HARNESS_STRIPE_STUB=1`) so `available_plans` is populated without a network call. Testers should trust the catalog title, not the raw `plan=` field.
 
@@ -65,6 +65,31 @@ Default selected user for `plan_catalog_matrix` is `pricing_plus`.
 | `pricing_unlimited_v2` | `pricing_unlimited_v2@local.omi.invalid` | `pricing_unlimited_v2-local-password-pricing` | Unlimited |
 | `pricing_pro` | `pricing_pro@local.omi.invalid` | `pricing_pro-local-password-pricing` | Architect |
 | `pricing_plus_lapsed` | `pricing_plus_lapsed@local.omi.invalid` | `pricing_plus_lapsed-local-password-pricing` | Free |
+
+## iOS / Android (Flutter)
+
+The Mac named-bundle launcher does not install the phone app. Flutter does **not** read desktop `OMI_AUTH_API_URL`. A **dev** `local_dev` build talks to the harness through `API_BASE_URL` / `OMI_API_BASE_URL` (Python API, default `http://127.0.0.1:8000/` on simulator) and the Firebase Auth emulator host.
+
+After the same seed:
+
+```bash
+PROVIDER_MODE=offline make dev-up
+make seed-pricing-scenario SCENARIO=plan_catalog_matrix
+cd app && APPLE_DEVELOPMENT_TEAM=<10-char-team> bash setup.sh ios
+```
+
+`setup.sh ios` (dev flavor) writes `.dev.env`, injects `OMI_APP_PROFILE=local_dev`, and for a simulator uses loopback. A physical iPhone needs `OMI_DEV_HOST=<Mac LAN>` set **before** both `make dev-up` and `setup.sh ios`, otherwise the phone talks to itself. Personal/community Apple teams must pass `APPLE_DEVELOPMENT_TEAM` (or have a matching provisioning profile); without a TTY the script fails fast instead of hanging. Sign in with email/password `{uid}@local.omi.invalid` / `{uid}-local-password-pricing`.
+
+Open **Settings → Plan & Usage**. That card is the iOS equivalent of the desktop current-plan Settings card. Tap **Manage** to open the plans sheet.
+
+Pass/fail (same titles as desktop; recover Plus/Pro from `current_price_id`, not from `plan=`):
+
+| uid | Title | Note | Description |
+|---|---|---|---|
+| `pricing_plus` / `pricing_pro_v2` | Plus / Pro, **no** Legacy suffix | none | non-empty |
+| `pricing_unlimited` | `Neo (Legacy Plan)` | supporter note | non-empty Neo entitlements |
+| `pricing_architect` / `pricing_operator` / `pricing_unlimited_v2` | `{Title} (Legacy Plan)` | supporter note | non-empty |
+| `pricing_basic` | Free, no Legacy | none | non-empty |
 
 ## What this Cloud / Linux lane can prove
 

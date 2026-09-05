@@ -21,9 +21,10 @@ Inherits all rules from the root [`../AGENTS.md`](../AGENTS.md). This file adds 
 ### Setup Sequence
 ```bash
 bash setup.sh ios    # or: bash setup.sh android
+# Personal/community Apple team (not BasedHardware 9536L8KLMP):
+APPLE_DEVELOPMENT_TEAM=XXXXXXXXXX bash setup.sh ios
 ```
 This handles: pub get, build_runner, gen-l10n, and flavor configuration.
-For community iOS builds, run `APPLE_DEVELOPMENT_TEAM=<10-character-team-id> bash setup.sh ios`.
 Dev signing uses team-and-machine-scoped app/widget/group identifiers for non-Omi teams and excludes the Omi watch companion; prod/beta/raybanDat retain their Omi signing configuration.
 
 For physical-device builds, use the wrapper: it owns `dev + local_dev` and

@@ -3236,5 +3236,13 @@
     "conversationsNotCapturedCount": "Neįrašyta ({count})",
     "transcriptionNoAudio": "Transkripcija negauna garso",
     "couldNotLoadMemories": "Nepavyko įkelti prisiminimų",
-    "couldNotLoadKnowledgeGraph": "Nepavyko įkelti žinių grafo"
+    "couldNotLoadKnowledgeGraph": "Nepavyko įkelti žinių grafo",
+    "legacyPlanTitleSuffix": " (senasis planas)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Ačiū, kad esate ankstyvasis omi rėmėjas! Sename plane galite likti neribotą laiką. Atminkite, kad šie senieji planai jau neparduodami ir jų negalima pasirinkti perėjus prie kito plano.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

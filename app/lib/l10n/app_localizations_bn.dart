@@ -9929,4 +9929,11 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'নলেজ গ্রাফ লোড করা যায়নি';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (পুরোনো প্ল্যান)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omi-এর একজন প্রাথমিক সমর্থক হওয়ার জন্য ধন্যবাদ! আপনি আপনার পুরোনো প্ল্যানে অনির্দিষ্টকাল থাকতে পারেন। তবে মনে রাখবেন, এই পুরোনো প্ল্যানগুলো আর বিক্রি হয় না এবং অন্য প্ল্যানে গেলে সেগুলো আর বেছে নেওয়া যাবে না।';
 }

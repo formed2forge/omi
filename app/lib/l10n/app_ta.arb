@@ -10802,5 +10802,13 @@
     "conversationsNotCapturedCount": "பதிவு செய்யப்படவில்லை ({count})",
     "transcriptionNoAudio": "நகலெடுப்பு ஆடியோவைப் பெறவில்லை",
     "couldNotLoadMemories": "நினைவுகளை ஏற்ற முடியவில்லை",
-    "couldNotLoadKnowledgeGraph": "அறிவு வரைபடத்தை ஏற்ற முடியவில்லை"
+    "couldNotLoadKnowledgeGraph": "அறிவு வரைபடத்தை ஏற்ற முடியவில்லை",
+    "legacyPlanTitleSuffix": " (பழைய திட்டம்)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "omi-யின் ஆரம்ப ஆதரவாளராக இருந்ததற்கு நன்றி! உங்கள் பழைய திட்டத்தில் காலவரையின்றி இருக்கலாம். ஆனால் இந்தப் பழைய திட்டங்கள் இனி விற்கப்படுவதில்லை, வேறு திட்டத்துக்கு மாறினால் அவற்றை மீண்டும் தேர்வு செய்ய முடியாது.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

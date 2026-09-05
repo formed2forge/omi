@@ -15,12 +15,12 @@ from database._client import get_customer_firestore_client
 from database.announcements import compare_versions
 from config.plan_catalog import (
     DESKTOP_ENTITLED_PLAN_TYPES,
-    MOBILE_PLAN_TYPES,
     PAID_PLAN_TYPES,
     PLAN_DISPLAY_NAMES,
     PLAN_STOREFRONTS,
     PRIMARY_BILLING_ENV_VARS,
     RECOGNIZED_STRIPE_PRICE_INTERVALS,
+    WIRE_FALLBACK_PLAN_TYPES,
     allocation_limit,
     get_plan_allocation,
     is_keep_until_cancel_plan,
@@ -801,13 +801,17 @@ def client_understands_plus_unlimited_v2(platform: Optional[str], app_version: O
 
 
 def wire_plan_for_client(plan: PlanType, platform: Optional[str], app_version: Optional[str]) -> PlanType:
-    """Serialize `plus`/`pro_v2` as `unlimited` for clients whose enum predates them.
+    """Serialize plans outside the released OpenAPI enum as their wire fallback.
 
+    `plus` / `pro_v2` / `unlimited_v2` are catalog identities, but
+    `UserSubscriptionResponse` still rejects them. Current clients (below the
+    version floor) must receive `unlimited` so Settings does not 500 into Free.
     Only the label is remapped — real entitlement/limits are computed from the
     true plan before this is called. Mirrors the `operator`→`unlimited` remap.
     """
-    if plan in MOBILE_PLAN_TYPES and not client_understands_plus_unlimited_v2(platform, app_version):
-        return PlanType.unlimited
+    fallback = WIRE_FALLBACK_PLAN_TYPES.get(plan)
+    if fallback is not None and not client_understands_plus_unlimited_v2(platform, app_version):
+        return fallback
     return plan
 
 

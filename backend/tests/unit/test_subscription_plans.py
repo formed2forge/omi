@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from models.users import PlanType
+from models.users import PlanType, Subscription, UserSubscriptionResponse
 from testing.import_isolation import load_module_fresh, stub_modules
 
 _BACKEND = Path(__file__).resolve().parents[2]
@@ -334,7 +334,19 @@ def test_plus_is_capped_unlimited_v2_is_unlimited(subscription_module):
     assert subscription_module.is_paid_plan(PlanType.unlimited_v2) is True
 
 
-def test_wire_plan_remaps_mobile_tiers_only_for_clients_without_the_enum(monkeypatch, subscription_module):
+def _released_subscription_response(plan: PlanType) -> UserSubscriptionResponse:
+    return UserSubscriptionResponse(
+        subscription=Subscription(plan=plan),
+        transcription_seconds_used=0,
+        transcription_seconds_limit=0,
+        words_transcribed_used=0,
+        words_transcribed_limit=0,
+        insights_gained_used=0,
+        insights_gained_limit=0,
+    )
+
+
+def test_wire_plan_remaps_fallback_tiers_for_clients_without_the_enum(monkeypatch, subscription_module):
     # The module fixture stubs compare_versions to a no-op; use a real semver
     # comparator so the version floor actually gates the remap.
     def _cmp(a, b):
@@ -345,13 +357,21 @@ def test_wire_plan_remaps_mobile_tiers_only_for_clients_without_the_enum(monkeyp
     monkeypatch.setattr(subscription_module, 'compare_versions', _cmp)
     wire = subscription_module.wire_plan_for_client
     # Current clients (below the plus/unlimited_v2-aware floor) must see a known paid label.
+    # unlimited_v2 is keep-until-cancel, not a sold mobile SKU — still remap it.
+    # Leaving it on the wire 500s UserSubscriptionResponse and Settings shows Free.
     assert wire(PlanType.plus, 'ios', '1.0.600') == PlanType.unlimited
+    assert wire(PlanType.pro_v2, 'ios', '1.0.600') == PlanType.unlimited
     assert wire(PlanType.unlimited_v2, 'android', '1.0.600') == PlanType.unlimited
+    assert wire(PlanType.unlimited_v2, 'ios', '1.0.600') == PlanType.unlimited
     assert wire(PlanType.plus, 'macos', '0.12.0') == PlanType.unlimited
+    assert wire(PlanType.unlimited_v2, 'macos', '0.12.0') == PlanType.unlimited
+    assert _released_subscription_response(wire(PlanType.unlimited_v2, 'ios', '1.0.600')).subscription.plan == (
+        PlanType.unlimited
+    )
     # A plus/unlimited_v2-aware client (at/above the floor) receives the real plan.
     assert wire(PlanType.plus, 'ios', '999.0.0') == PlanType.plus
     assert wire(PlanType.unlimited_v2, 'ios', '999.0.0') == PlanType.unlimited_v2
-    # Non-mobile plans are never remapped.
+    # Plans already on the released wire are never remapped.
     assert wire(PlanType.unlimited, 'ios', '1.0.600') == PlanType.unlimited
     assert wire(PlanType.operator, 'ios', '1.0.600') == PlanType.operator
 

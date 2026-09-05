@@ -3236,5 +3236,13 @@
     "conversationsNotCapturedCount": "Nav ierakstīts ({count})",
     "transcriptionNoAudio": "Transkripcija nesaņem audio",
     "couldNotLoadMemories": "Neizdevās ielādēt atmiņas",
-    "couldNotLoadKnowledgeGraph": "Neizdevās ielādēt zināšanu grafu"
+    "couldNotLoadKnowledgeGraph": "Neizdevās ielādēt zināšanu grafu",
+    "legacyPlanTitleSuffix": " (iepriekšējais plāns)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Paldies, ka esi omi agrīnais atbalstītājs! Savā iepriekšējā plānā vari palikt nenoteiktu laiku. Ņem vērā, ka šie iepriekšējie plāni vairs netiek pārdoti un tos nevar izvēlēties, ja pārej uz citu plānu.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

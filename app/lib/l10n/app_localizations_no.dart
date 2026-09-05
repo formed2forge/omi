@@ -9922,4 +9922,11 @@ class AppLocalizationsNo extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Kunne ikke laste kunnskapsgrafen';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (eldre abonnement)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Takk for at du er en tidlig støttespiller av omi! Du kan bli på det eldre abonnementet ditt på ubestemt tid. Merk at disse eldre abonnementene ikke lenger selges og ikke kan velges hvis du bytter til et annet abonnement.';
 }

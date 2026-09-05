@@ -10802,5 +10802,13 @@
     "conversationsNotCapturedCount": "রেকর্ড করা হয়নি ({count})",
     "transcriptionNoAudio": "ট্রান্সক্রিপশন অডিও গ্রহণ করছে না",
     "couldNotLoadMemories": "স্মৃতি লোড করা যায়নি",
-    "couldNotLoadKnowledgeGraph": "নলেজ গ্রাফ লোড করা যায়নি"
+    "couldNotLoadKnowledgeGraph": "নলেজ গ্রাফ লোড করা যায়নি",
+    "legacyPlanTitleSuffix": " (পুরোনো প্ল্যান)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "omi-এর একজন প্রাথমিক সমর্থক হওয়ার জন্য ধন্যবাদ! আপনি আপনার পুরোনো প্ল্যানে অনির্দিষ্টকাল থাকতে পারেন। তবে মনে রাখবেন, এই পুরোনো প্ল্যানগুলো আর বিক্রি হয় না এবং অন্য প্ল্যানে গেলে সেগুলো আর বেছে নেওয়া যাবে না।",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

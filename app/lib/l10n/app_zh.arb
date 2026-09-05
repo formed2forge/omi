@@ -3258,5 +3258,13 @@
     "conversationsNotCapturedCount": "未记录 ({count})",
     "transcriptionNoAudio": "转录未接收到音频",
     "couldNotLoadMemories": "无法加载回忆",
-    "couldNotLoadKnowledgeGraph": "无法加载知识图谱"
+    "couldNotLoadKnowledgeGraph": "无法加载知识图谱",
+    "legacyPlanTitleSuffix": "（旧套餐）",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "感谢你从一开始就支持 omi！你可以无限期留在旧套餐上。请注意，这些旧套餐已不再出售，换成其他套餐后也无法再选回来。",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

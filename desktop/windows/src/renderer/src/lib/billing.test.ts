@@ -111,6 +111,21 @@ describe('resolvePlanTitle', () => {
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'price_op_y' }), CATALOG)
     ).toBe('Operator (Legacy Plan)')
   })
+  it('remaps unlimited to Unlimited-v2 rather than Free when the price matches', () => {
+    const catalog: SubscriptionPlan[] = [
+      ...CATALOG,
+      {
+        id: 'unlimited_v2',
+        title: 'Unlimited',
+        legacy: true,
+        prices: [{ id: 'price_uv2_m', title: 'Monthly', price_string: '$19/mo' }]
+      }
+    ]
+    const s = sub({ plan: 'unlimited', current_price_id: 'price_uv2_m', status: 'active' })
+    expect(resolvePlanTitle(s, catalog)).toBe('Unlimited (Legacy Plan)')
+    expect(hasPaidSubscription(s)).toBe(true)
+    expect(currentPlanSubtitle(s, catalog)).not.toBe('You are currently on the free tier.')
+  })
   it('maps operator to Operator and architect to Architect', () => {
     expect(resolvePlanTitle(sub({ plan: 'operator' }), CATALOG)).toBe('Operator (Legacy Plan)')
     expect(resolvePlanTitle(sub({ plan: 'architect' }), CATALOG)).toBe('Architect (Legacy Plan)')

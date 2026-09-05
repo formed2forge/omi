@@ -9933,4 +9933,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Não foi possível carregar o grafo de conhecimento';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (plano antigo)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Obrigado por ser um dos primeiros a apoiar o omi! Pode permanecer no seu plano antigo indefinidamente. Note, contudo, que estes planos antigos já não são vendidos e não podem ser escolhidos se mudar para outro plano.';
 }

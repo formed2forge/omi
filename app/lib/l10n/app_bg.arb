@@ -3214,5 +3214,13 @@
     "conversationsNotCapturedCount": "Не е записано ({count})",
     "transcriptionNoAudio": "Транскрипцията не получава аудио",
     "couldNotLoadMemories": "Неуспешно зареждане на спомените",
-    "couldNotLoadKnowledgeGraph": "Неуспешно зареждане на графа на знанията"
+    "couldNotLoadKnowledgeGraph": "Неуспешно зареждане на графа на знанията",
+    "legacyPlanTitleSuffix": " (стар план)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Благодарим ви, че сте ранен поддръжник на omi! Можете да останете на стария си план за неопределено време. Имайте предвид обаче, че тези стари планове вече не се продават и не могат да бъдат избрани, ако преминете към друг план.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

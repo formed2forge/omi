@@ -3236,5 +3236,13 @@
     "conversationsNotCapturedCount": "Ei tallennettu ({count})",
     "transcriptionNoAudio": "Transkriptio ei vastaanota ääntä",
     "couldNotLoadMemories": "Muistoja ei voitu ladata",
-    "couldNotLoadKnowledgeGraph": "Tietograafia ei voitu ladata"
+    "couldNotLoadKnowledgeGraph": "Tietograafia ei voitu ladata",
+    "legacyPlanTitleSuffix": " (vanha tilaus)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Kiitos, että olet omi:n varhainen tukija! Voit pysyä vanhalla tilauksellasi toistaiseksi. Huomaa kuitenkin, että näitä vanhoja tilauksia ei enää myydä, eikä niitä voi valita, jos vaihdat toiseen tilaukseen.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

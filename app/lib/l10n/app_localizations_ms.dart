@@ -9950,4 +9950,11 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Tidak dapat memuatkan graf pengetahuan';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Pelan Lama)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Terima kasih kerana menjadi penyokong awal omi! Anda boleh kekal pada pelan lama tanpa had masa. Sila ambil perhatian bahawa pelan lama ini tidak lagi dijual dan tidak boleh dipilih jika anda bertukar ke pelan lain.';
 }

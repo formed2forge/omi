@@ -10802,5 +10802,13 @@
     "conversationsNotCapturedCount": "Не запісана ({count})",
     "transcriptionNoAudio": "Транскрыпцыя не атрымлівае аўдыё",
     "couldNotLoadMemories": "Не ўдалося загрузіць успаміны",
-    "couldNotLoadKnowledgeGraph": "Не ўдалося загрузіць граф ведаў"
+    "couldNotLoadKnowledgeGraph": "Не ўдалося загрузіць граф ведаў",
+    "legacyPlanTitleSuffix": " (састарэлы план)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Дзякуй, што вы адзін з ранніх прыхільнікаў omi! Вы можаце заставацца на сваім састарэлым плане бестэрмінова. Звярніце ўвагу: гэтыя састарэлыя планы больш не прадаюцца і іх нельга выбраць, калі вы пераключыцеся на іншы план.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

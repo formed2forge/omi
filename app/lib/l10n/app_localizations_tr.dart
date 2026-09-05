@@ -9936,4 +9936,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Bilgi grafiği yüklenemedi';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Eski Plan)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omi\'nin erken destekçilerinden olduğunuz için teşekkürler! Eski planınızda süresiz kalabilirsiniz. Ancak bu eski planlar artık satılmıyor ve başka bir plana geçerseniz yeniden seçilemez.';
 }

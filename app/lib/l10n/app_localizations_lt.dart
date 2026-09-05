@@ -9944,4 +9944,11 @@ class AppLocalizationsLt extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Nepavyko įkelti žinių grafo';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (senasis planas)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Ačiū, kad esate ankstyvasis omi rėmėjas! Sename plane galite likti neribotą laiką. Atminkite, kad šie senieji planai jau neparduodami ir jų negalima pasirinkti perėjus prie kito plano.';
 }

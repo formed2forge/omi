@@ -23,6 +23,7 @@ import 'package:omi/pages/settings/widgets/plans_sheet.dart';
 import 'package:omi/providers/usage_provider.dart';
 import 'package:omi/services/wals/sync_rate_limit_reconciliation.dart';
 import 'package:omi/utils/l10n_extensions.dart';
+import 'package:omi/utils/subscription_plan_presentation.dart';
 
 class UsagePage extends StatefulWidget {
   final bool showUpgradeDialog;
@@ -329,7 +330,8 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
       ),
       body: Consumer<UsageProvider>(
         builder: (context, provider, child) {
-          final hasAnyData = provider.todayUsage != null ||
+          final hasAnyData =
+              provider.todayUsage != null ||
               provider.monthlyUsage != null ||
               provider.yearlyUsage != null ||
               provider.allTimeUsage != null;
@@ -433,10 +435,16 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
       return const SizedBox.shrink();
     }
 
-    final plan = provider.subscription!.subscription.plan;
+    final response = provider.subscription!;
+    final plan = response.subscription.plan;
     final isPaid = plan.isPaid;
-    // Plan names are product names; only the free/unlimited labels are localized.
-    final planLabel = plan == PlanType.plus ? 'Plus' : (isPaid ? context.l10n.unlimitedPlan : context.l10n.basicPlan);
+    // Catalog-first: Plus/Pro serialize as plan=unlimited on the wire, so the
+    // price-id match is what testers (and subscribers) see as the real title.
+    final view = currentPlanView(subscription: response.subscription, catalog: response.availablePlans);
+    final planLabel = view.titled(legacySuffix: context.l10n.legacyPlanTitleSuffix);
+    final planDescription = view.description.isNotEmpty
+        ? view.description
+        : (!isPaid ? context.l10n.basicPlanDescription : '');
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -452,7 +460,9 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(planLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(planLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
               if (isPaid)
                 GestureDetector(
                   onTap: _isUpgrading ? null : _showPlansSheet,
@@ -466,9 +476,15 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
                 ),
             ],
           ),
-          if (!isPaid) ...[
+          if (planDescription.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(context.l10n.basicPlanDescription, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+            Text(planDescription, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+          ],
+          if (view.isKeepUntilCancel) ...[
+            const SizedBox(height: 8),
+            Text(context.l10n.legacyPlanSupporterNote, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+          ],
+          if (!isPaid) ...[
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -1162,8 +1178,8 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
                 builder: (context) {
                   final minutesUsed = (subscription.transcriptionSecondsUsed / 60).round();
                   final minutesLimit = (subscription.transcriptionSecondsLimit / 60).round();
-                  final percentage =
-                      (subscription.transcriptionSecondsUsed / subscription.transcriptionSecondsLimit).clamp(0.0, 1.0);
+                  final percentage = (subscription.transcriptionSecondsUsed / subscription.transcriptionSecondsLimit)
+                      .clamp(0.0, 1.0);
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

@@ -9758,4 +9758,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => '지식 그래프를 불러올 수 없습니다';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (레거시 플랜)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omi의 초기 후원자가 되어 주셔서 감사합니다. 레거시 플랜은 기한 없이 유지할 수 있습니다. 다만 이 레거시 플랜은 더 이상 판매되지 않으며, 다른 플랜으로 바꾸면 다시 선택할 수 없습니다.';
 }

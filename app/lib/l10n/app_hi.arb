@@ -3237,5 +3237,13 @@
     "conversationsNotCapturedCount": "रिकॉर्ड नहीं हुआ ({count})",
     "transcriptionNoAudio": "ट्रांसक्रिप्शन ऑडियो प्राप्त नहीं कर रहा है",
     "couldNotLoadMemories": "यादें लोड नहीं हो सकीं",
-    "couldNotLoadKnowledgeGraph": "नॉलेज ग्राफ़ लोड नहीं हो सका"
+    "couldNotLoadKnowledgeGraph": "नॉलेज ग्राफ़ लोड नहीं हो सका",
+    "legacyPlanTitleSuffix": " (पुराना प्लान)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "omi के शुरुआती समर्थक होने के लिए धन्यवाद! आप अपने पुराने प्लान पर अनिश्चितकाल तक रह सकते हैं। ध्यान दें कि ये पुराने प्लान अब बेचे नहीं जाते और दूसरे प्लान पर जाने के बाद इन्हें फिर से नहीं चुना जा सकता।",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

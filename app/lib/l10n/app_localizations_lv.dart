@@ -9948,4 +9948,11 @@ class AppLocalizationsLv extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Neizdevās ielādēt zināšanu grafu';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (iepriekšējais plāns)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Paldies, ka esi omi agrīnais atbalstītājs! Savā iepriekšējā plānā vari palikt nenoteiktu laiku. Ņem vērā, ka šie iepriekšējie plāni vairs netiek pārdoti un tos nevar izvēlēties, ja pārej uz citu plānu.';
 }

@@ -9917,4 +9917,11 @@ class AppLocalizationsSk extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Nepodarilo sa načítať graf znalostí';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (starší tarif)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Ďakujeme, že ste raným podporovateľom omi! Na staršom tarife môžete zostať neobmedzene dlho. Upozorňujeme však, že tieto staršie tarify sa už nepredávajú a po prechode na iný tarif ich nemožno znova vybrať.';
 }

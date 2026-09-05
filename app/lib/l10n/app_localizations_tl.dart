@@ -10015,4 +10015,11 @@ class AppLocalizationsTl extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Hindi ma-load ang knowledge graph';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Dating Plano)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Salamat sa pagiging maagang tagasuporta ng omi! Maaari kang manatili sa dating plano nang walang takdang panahon. Tandaan na ang mga dating planong ito ay hindi na ibinebenta at hindi na mapipili kung lilipat ka sa ibang plano.';
 }

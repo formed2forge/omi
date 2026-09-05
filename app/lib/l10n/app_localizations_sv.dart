@@ -9928,4 +9928,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Kunde inte läsa in kunskapsgrafen';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (äldre plan)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Tack för att du är en tidig supporter av omi! Du kan stanna på din äldre plan tills vidare. Observera dock att dessa äldre planer inte längre säljs och inte kan väljas om du byter till en annan plan.';
 }

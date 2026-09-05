@@ -21,15 +21,7 @@ class PlanType {
   /// The canonical catalog identities known by this client.
   ///
   /// Legacy aliases and future identities are deliberately not included.
-  static const List<PlanType> values = <PlanType>[
-    basic,
-    unlimited,
-    architect,
-    operator,
-    plus,
-    proV2,
-    unlimitedV2,
-  ];
+  static const List<PlanType> values = <PlanType>[basic, unlimited, architect, operator, plus, proV2, unlimitedV2];
 
   /// Dart-style identifier used by existing analytics and UI call sites.
   final String name;
@@ -272,10 +264,23 @@ class PricingOption {
 class SubscriptionPlan {
   final String id;
   final String title;
+  final String? subtitle;
+  final String? description;
+  final String? eyebrow;
   final List<String> features;
   final List<PricingOption> prices;
+  final bool legacy;
 
-  SubscriptionPlan({required this.id, required this.title, this.features = const [], this.prices = const []});
+  SubscriptionPlan({
+    required this.id,
+    required this.title,
+    this.subtitle,
+    this.description,
+    this.eyebrow,
+    this.features = const [],
+    this.prices = const [],
+    this.legacy = false,
+  });
 
   factory SubscriptionPlan.fromJson(Map<String, dynamic> json) {
     return SubscriptionPlan.fromGenerated(wire.GeneratedSubscriptionPlan.fromJson(json));
@@ -285,8 +290,12 @@ class SubscriptionPlan {
     return SubscriptionPlan(
       id: generated.id,
       title: generated.title,
+      subtitle: generated.subtitle,
+      description: generated.description,
+      eyebrow: generated.eyebrow,
       features: generated.features,
       prices: generated.prices.map(PricingOption.fromGenerated).toList(),
+      legacy: generated.legacy,
     );
   }
 
@@ -294,8 +303,12 @@ class SubscriptionPlan {
     return wire.GeneratedSubscriptionPlan(
       id: id,
       title: title,
+      subtitle: subtitle,
+      description: description,
+      eyebrow: eyebrow,
       features: features,
       prices: prices.map((price) => price.toGenerated()).toList(),
+      legacy: legacy,
     );
   }
 

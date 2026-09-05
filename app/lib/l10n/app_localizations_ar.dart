@@ -9866,4 +9866,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'تعذر تحميل الرسم البياني للمعرفة';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (خطة قديمة)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'شكرًا لكونك من أوائل داعمِي omi! يمكنك البقاء على خطتك القديمة إلى أجل غير مسمى. يرجى ملاحظة أن هذه الخطط القديمة لم تعد تُباع ولا يمكن اختيارها إذا انتقلت إلى خطة أخرى.';
 }

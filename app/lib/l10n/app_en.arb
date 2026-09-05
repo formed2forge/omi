@@ -11752,5 +11752,13 @@
     },
     "@couldNotLoadKnowledgeGraph": {
         "description": "Short user-facing error when the knowledge graph request is non-200; must not include the response body"
+    },
+    "legacyPlanTitleSuffix": " (Legacy Plan)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     }
 }
