@@ -151,6 +151,19 @@ void main() {
   });
 
   group('currentPlanView', () {
+    test('Unlimited-v2 recovered from a remapped unlimited wire is not Free', () {
+      // Wire trap: unlimited_v2 serializes as plan=unlimited. Testers must still
+      // see Unlimited (Legacy Plan), not the Free card.
+      final view = currentPlanView(
+        subscription: _sub(plan: 'unlimited', currentPriceId: 'price_uv2_m'),
+        catalog: _keepUntilCancelCatalog,
+      );
+      expect(view.baseTitle, 'Unlimited');
+      expect(view.isKeepUntilCancel, isTrue);
+      expect(view.titled(legacySuffix: defaultLegacyPlanTitleSuffix), 'Unlimited (Legacy Plan)');
+      expect(view.description, isNotEmpty);
+    });
+
     test('Plus recovered from price id is Plus with no Legacy suffix', () {
       // Wire trap: plus serializes as plan=unlimited. Testers must still see Plus.
       final view = currentPlanView(

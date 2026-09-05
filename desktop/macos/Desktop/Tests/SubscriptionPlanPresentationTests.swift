@@ -107,6 +107,11 @@ final class SubscriptionPlanPresentationTests: XCTestCase {
     )
     XCTAssertEqual(
       SubscriptionPlanPresentation.currentPlanTitle(
+        plan: .unlimited, features: [], currentPriceId: "price_unlimited_v2", catalog: catalog),
+      "Unlimited (Legacy Plan)"
+    )
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanTitle(
         plan: .plus, features: [], currentPriceId: nil, catalog: []),
       "Plus"
     )

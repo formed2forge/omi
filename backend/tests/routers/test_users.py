@@ -581,6 +581,44 @@ def test_subscription_endpoint_falls_back_to_basic_when_no_valid_subscription():
     assert response.subscription.plan == users_router.PlanType.basic
 
 
+def test_unlimited_v2_subscription_does_not_500_current_ios_into_free():
+    # unlimited_v2 is keep-until-cancel, not MOBILE_PLAN_TYPES. If the wire remap
+    # skips it, UserSubscriptionResponse rejects the value and iOS Settings shows Free.
+    subscription = users_router.Subscription(
+        plan=users_router.PlanType.unlimited_v2,
+        status=users_router.SubscriptionStatus.active,
+        current_period_end=2_000_000_000,
+        current_price_id='price_local_unlimited_v2_month',
+    )
+    with patch.object(users_router.users_db, 'is_byok_active', MagicMock(return_value=False)), patch.object(
+        users_router, 'get_user_subscription', MagicMock(return_value=subscription)
+    ), patch.object(users_router, 'reconcile_basic_plan_with_stripe', MagicMock()), patch.object(
+        users_router, 'get_user_valid_subscription', MagicMock(return_value=subscription)
+    ), patch.object(
+        users_router, 'get_monthly_usage_for_subscription', MagicMock(return_value={})
+    ), patch.object(
+        users_router, 'get_paid_plan_definitions', MagicMock(return_value=[])
+    ), patch.object(
+        users_router, 'should_hide_subscription_ui', MagicMock(return_value=False)
+    ), patch.object(
+        users_router,
+        'get_phone_call_quota_snapshot',
+        MagicMock(return_value=MagicMock(to_client_dict=lambda: {'has_access': False, 'is_paid': False})),
+    ), patch.object(
+        users_router,
+        'get_chat_quota_snapshot',
+        MagicMock(return_value={'used': 0.0, 'limit': None, 'unit': 'questions', 'allowed': True, 'reset_at': None}),
+    ), patch.dict(
+        users_router.os.environ, {'MARKETPLACE_APP_REVIEWERS': ''}
+    ):
+        response = users_router.get_user_subscription_endpoint(
+            uid='pricing_unlimited_v2', x_app_platform='ios', x_app_version='1.0.600'
+        )
+
+    assert response.subscription.plan is users_router.PlanType.unlimited
+    assert response.subscription.current_price_id == 'price_local_unlimited_v2_month'
+
+
 def test_usage_quota_endpoint_reads_customer_firestore_like_desktop_enforcement():
     # GET /v1/users/me/usage-quota (routers/users.py:1386) is the desktop app's own
     # quota display and called get_chat_quota_snapshot() with no firestore_client,

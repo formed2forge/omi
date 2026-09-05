@@ -15,7 +15,7 @@ Plan identity is read from `backend/config/plan_catalog_generated.py` at import 
 
 ## Wire trap (read this before judging Settings)
 
-`UserSubscriptionResponse` still rejects `plus` / `pro_v2` / `unlimited_v2` on the OpenAPI `PlanType` enum. `/v1/users/me/subscription` serializes those as `plan=unlimited`. Clients recover Plus / Pro by matching `current_price_id` against `available_plans`.
+`UserSubscriptionResponse` still rejects `plus` / `pro_v2` / `unlimited_v2` on the OpenAPI `PlanType` enum. `/v1/users/me/subscription` remaps those through `wire_plan_for_client` using `WIRE_FALLBACK_PLAN_TYPES` (not `MOBILE_PLAN_TYPES` — Unlimited-v2 is keep-until-cancel, not a sold mobile SKU) and serializes `plan=unlimited`. Skipping that remap 500s the endpoint and Settings falls through to Free. Clients recover Plus / Pro / Unlimited-v2 by matching `current_price_id` against `available_plans`.
 
 The harness injects `price_local_*` Stripe price ids and stubs `retrieve_price` when `ENVIRONMENT=local-dev-harness` (or `OMI_HARNESS_STRIPE_STUB=1`) so `available_plans` is populated without a network call. Testers should trust the catalog title, not the raw `plan=` field.
 
