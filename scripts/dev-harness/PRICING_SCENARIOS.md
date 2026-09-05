@@ -39,7 +39,15 @@ Pricing launches skip Second Brain onboarding. The Python profile sets `OMI_SKIP
 
 Local Auth HTTP must use the harness Python API. The profile now writes `OMI_AUTH_API_URL` equal to `OMI_PYTHON_API_URL`. If that key is missing, AuthService falls back to production `https://api.omi.me/`, emulator tokens get HTTP 401, and the app signs the tester out.
 
-Windows `pnpm dev` is outside this Mac launcher path and does not skip onboarding unless you pass `--skip-onboarding` yourself.
+Windows has no Mac named-bundle launcher and no `--skip-onboarding` flag.
+`pnpm dev` signs in through Google/Apple OAuth against `.env` (default
+`https://api.omi.me`), so harness emails cannot open Settings. The Plan &
+Usage GUI is covered hermetically:
+
+```bash
+cd desktop/windows
+pnpm exec vitest run src/renderer/src/pages/Settings.planUsage.test.tsx
+```
 
 ## Scenarios
 

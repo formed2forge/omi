@@ -37,7 +37,8 @@ for this alone.
 - **Typecheck**: `pnpm typecheck` (`typecheck:node` + `typecheck:web`).
 - **Lint**: `pnpm lint` (ESLint; Prettier formatting is non-blocking in CI).
 - **Unit tests**: `pnpm test` (vitest, ~550 tests, runs against an Electron
-  stub — no real Electron binary needed).
+  stub — no real Electron binary needed). Settings → Plan & Usage current-plan
+  card: `pnpm exec vitest run src/renderer/src/pages/Settings.planUsage.test.tsx`.
 - **Build**: `pnpm build:win` / `pnpm build:mac` / `pnpm build:linux`. Every
   build must pass `--config electron-builder.config.mjs` explicitly (not
   auto-detected — see `docs/release-pipeline.md`) and `--publish never`
