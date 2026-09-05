@@ -176,10 +176,16 @@ Future _init() async {
 
   await PlatformManager.initializeServices();
   await NotificationChannelStrings.loadAppLocale();
-  await NotificationService.instance.initialize();
+  // The local Firebase project is intentionally emulator-only and has no
+  // Google API key. FCM initialization asks Firebase Installations to call
+  // the public Google endpoint, which rejects the local placeholder key and
+  // adds no value to a pricing/auth harness run.
+  if (!Env.profile.usesFirebaseAuthEmulator) {
+    await NotificationService.instance.initialize();
+  }
 
   // Register FCM background message handler
-  if (PlatformManager().isFCMSupported) {
+  if (!Env.profile.usesFirebaseAuthEmulator && PlatformManager().isFCMSupported) {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
 
@@ -220,8 +226,10 @@ Future _init() async {
     Logger.debug('main: restored ${peripheralUuids.length} BLE peripherals');
   };
 
-  await CrashlyticsManager.init();
-  if (isAuth) {
+  if (!Env.profile.usesFirebaseAuthEmulator) {
+    await CrashlyticsManager.init();
+  }
+  if (isAuth && !Env.profile.usesFirebaseAuthEmulator) {
     PlatformManager.instance.crashReporter.identifyUser(
       FirebaseAuth.instance.currentUser?.email ?? '',
       SharedPreferencesUtil().fullName,
