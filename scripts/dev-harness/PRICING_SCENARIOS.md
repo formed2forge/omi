@@ -75,10 +75,10 @@ After the same seed:
 ```bash
 PROVIDER_MODE=offline make dev-up
 make seed-pricing-scenario SCENARIO=plan_catalog_matrix
-cd app && bash setup.sh ios
+cd app && APPLE_DEVELOPMENT_TEAM=<10-char-team> bash setup.sh ios
 ```
 
-`setup.sh ios` (dev flavor) writes `.dev.env`, injects `OMI_APP_PROFILE=local_dev`, and for a simulator uses loopback. A physical iPhone needs `OMI_DEV_HOST=<Mac LAN>` set **before** both `make dev-up` and `setup.sh ios`, otherwise the phone talks to itself. Sign in with email/password `{uid}@local.omi.invalid` / `{uid}-local-password-pricing`.
+`setup.sh ios` (dev flavor) writes `.dev.env`, injects `OMI_APP_PROFILE=local_dev`, and for a simulator uses loopback. A physical iPhone needs `OMI_DEV_HOST=<Mac LAN>` set **before** both `make dev-up` and `setup.sh ios`, otherwise the phone talks to itself. Personal/community Apple teams must pass `APPLE_DEVELOPMENT_TEAM` (or have a matching provisioning profile); without a TTY the script fails fast instead of hanging. Sign in with email/password `{uid}@local.omi.invalid` / `{uid}-local-password-pricing`.
 
 Open **Settings → Plan & Usage**. That card is the iOS equivalent of the desktop current-plan Settings card. Tap **Manage** to open the plans sheet.
 

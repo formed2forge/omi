@@ -21,8 +21,14 @@ Inherits all rules from the root [`../AGENTS.md`](../AGENTS.md). This file adds 
 ### Setup Sequence
 ```bash
 bash setup.sh ios    # or: bash setup.sh android
+# Personal/community Apple team (not BasedHardware 9536L8KLMP):
+APPLE_DEVELOPMENT_TEAM=XXXXXXXXXX bash setup.sh ios
 ```
 This handles: pub get, build_runner, gen-l10n, and flavor configuration.
+Dev-flavor iOS signing reads `DEVELOPMENT_TEAM` from `Custom.xcconfig`
+(auto-detected, or the env override). Prod/beta/raybanDat stay on the
+Omi team. Dev entitlements omit capabilities a personal team cannot
+provision.
 
 For physical-device builds, use the wrapper: it owns `dev + local_dev` and
 `prod + mobile_beta` pairing plus auth env setup. Direct builds must first run
