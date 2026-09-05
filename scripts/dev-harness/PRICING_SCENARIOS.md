@@ -68,13 +68,23 @@ Default selected user for `plan_catalog_matrix` is `pricing_plus`.
 
 ## iOS / Android (Flutter)
 
-The Mac named-bundle launcher does not install the phone app. After the same `make seed-pricing-scenario SCENARIO=plan_catalog_matrix` seed, sign into a **dev** Flutter build pointed at the local harness (`OMI_AUTH_API_URL` = the Python API, same as desktop) with `{uid}@local.omi.invalid` / `{uid}-local-password-pricing`.
+The Mac named-bundle launcher does not install the phone app. Flutter does **not** read desktop `OMI_AUTH_API_URL`. A **dev** `local_dev` build talks to the harness through `API_BASE_URL` / `OMI_API_BASE_URL` (Python API, default `http://127.0.0.1:8000/` on simulator) and the Firebase Auth emulator host.
+
+After the same seed:
+
+```bash
+PROVIDER_MODE=offline make dev-up
+make seed-pricing-scenario SCENARIO=plan_catalog_matrix
+cd app && bash setup.sh ios
+```
+
+`setup.sh ios` (dev flavor) writes `.dev.env`, injects `OMI_APP_PROFILE=local_dev`, and for a simulator uses loopback. A physical iPhone needs `OMI_DEV_HOST=<Mac LAN>` set **before** both `make dev-up` and `setup.sh ios`, otherwise the phone talks to itself. Sign in with email/password `{uid}@local.omi.invalid` / `{uid}-local-password-pricing`.
 
 Open **Settings → Plan & Usage**. That card is the iOS equivalent of the desktop current-plan Settings card. Tap **Manage** to open the plans sheet.
 
 Pass/fail (same titles as desktop; recover Plus/Pro from `current_price_id`, not from `plan=`):
 
-| `DESKTOP_USER` / uid | Title | Note | Description |
+| uid | Title | Note | Description |
 |---|---|---|---|
 | `pricing_plus` / `pricing_pro_v2` | Plus / Pro, **no** Legacy suffix | none | non-empty |
 | `pricing_unlimited` | `Neo (Legacy Plan)` | supporter note | non-empty Neo entitlements |
