@@ -78,7 +78,9 @@ make seed-pricing-scenario SCENARIO=plan_catalog_matrix
 cd app && APPLE_DEVELOPMENT_TEAM=<10-char-team> bash setup.sh ios
 ```
 
-`setup.sh ios` (dev flavor) writes `.dev.env`, injects `OMI_APP_PROFILE=local_dev`, and for a simulator uses loopback. A physical iPhone needs `OMI_DEV_HOST=<Mac LAN>` set **before** both `make dev-up` and `setup.sh ios`, otherwise the phone talks to itself. Personal/community Apple teams must pass `APPLE_DEVELOPMENT_TEAM` (or have a matching provisioning profile); without a TTY the script fails fast instead of hanging. Sign in with email/password `{uid}@local.omi.invalid` / `{uid}-local-password-pricing`.
+`setup.sh ios` (dev flavor) writes `.dev.env`, injects `OMI_APP_PROFILE=local_dev`, and for a simulator uses loopback. A physical iPhone needs `OMI_DEV_HOST=<Mac LAN>` set **before** both `make dev-up` and `setup.sh ios`, otherwise the phone talks to itself. Personal/community Apple teams must pass `APPLE_DEVELOPMENT_TEAM` (or have a matching provisioning profile); without a TTY the script fails fast instead of hanging. Tap **Sign In (Developer)** on the onboarding sign-in screen, enter the seeded user ID (default `pricing_plus`, or e.g. `pricing_pro_v2`), then tap **Sign In**. This control is only available in `local_dev`; it exchanges a harness custom token with the Firebase Auth emulator and does not invoke Apple/Google OAuth. Your personal Apple developer team signs the app; the selected emulator UID determines the subscription fixture. Your normal Omi account and its production subscription are separate.
+
+The harness backend must include `/v1/auth/local-dev/custom-token`; restart it from the same checkout as the app after adding this feature. The endpoint returns 404 unless `FIREBASE_AUTH_EMULATOR_HOST` is configured. A new UID creates a fresh emulator account; seed first and use an exact fixture UID to see a paid plan. To test another UID, sign out and repeat.
 
 Open **Settings → Plan & Usage**. That card is the iOS equivalent of the desktop current-plan Settings card. Tap **Manage** to open the plans sheet.
 

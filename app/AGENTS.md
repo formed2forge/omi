@@ -127,19 +127,15 @@ PR CI runs `flutter test` and an analyzer ratchet (`app/scripts/analyze_ratchet.
 - Google Sign In (`google_sign_in` package)
 - Apple Sign In (`sign_in_with_apple` package, includes PKCE via nonce+sha256)
 - Firebase Auth as the identity layer
+- Local emulator sign-in: [pricing harness](../scripts/dev-harness/PRICING_SCENARIOS.md).
 
 ### Request Headers
 All API requests include: X-Request-Start-Time, X-App-Platform, X-Device-Id-Hash, X-App-Version, plus Bearer token.
-
-### API Base URLs
-- Dev: configured in `.dev.env` → `Env.apiBaseUrl`
-- Prod: configured in `.prod.env` → `Env.apiBaseUrl`
 
 ## Codegen Rules
 
 - Run `flutter pub run build_runner build` after changing: env files, model annotations, pigeon contracts, or pubspec assets
 - Run `flutter gen-l10n` after changing ARB files
-- Never edit files ending in `.g.dart` or `.gen.dart`
 - If build_runner fails with conflicts: `flutter pub run build_runner build --delete-conflicting-outputs`
 
 ## App Flows & E2E

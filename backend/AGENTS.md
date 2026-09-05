@@ -55,7 +55,7 @@ backend/
     memories.py           #   /v3/memories — CRUD, visibility, semantic search
     apps.py               #   App marketplace, personas, reviews, payment (2000 LOC)
     sync.py               #   /v1/sync — mobile client data sync (1500 LOC)
-    auth.py               #   Google/Apple OAuth callbacks, session management
+    auth.py               #   OAuth, sessions, emulator-only custom tokens
     users.py              #   Profile, subscription, settings (1200 LOC)
     task_integrations.py  #   Todoist, Microsoft Tasks sync (1200 LOC)
     mcp.py, mcp_sse.py    #   Model Context Protocol server endpoints

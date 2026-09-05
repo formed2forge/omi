@@ -8,6 +8,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 import 'package:omi/providers/auth_provider.dart';
+import 'package:omi/pages/onboarding/local_dev_sign_in.dart';
 import 'package:omi/utils/l10n_extensions.dart';
 
 class AuthComponent extends StatefulWidget {
@@ -130,6 +131,11 @@ class _AuthComponentState extends State<AuthComponent> {
                           ],
                         ),
                       ),
+                    ),
+
+                    LocalDevSignIn(
+                      loading: provider.loading,
+                      onSignIn: (uid) => provider.onLocalDevSignIn(widget.onSignIn, uid: uid),
                     ),
 
                     const SizedBox(height: 24),
