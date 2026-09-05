@@ -3214,5 +3214,13 @@
     "conversationsNotCapturedCount": "Nezaznamenáno ({count})",
     "transcriptionNoAudio": "Transkripce nepřijímá zvuk",
     "couldNotLoadMemories": "Nepodařilo se načíst vzpomínky",
-    "couldNotLoadKnowledgeGraph": "Nepodařilo se načíst graf znalostí"
+    "couldNotLoadKnowledgeGraph": "Nepodařilo se načíst graf znalostí",
+    "legacyPlanTitleSuffix": " (starší tarif)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Děkujeme, že jste raným podporovatelem omi! Na svém starším tarifu můžete zůstat neomezeně dlouho. Upozorňujeme však, že tyto starší tarify se již neprodávají a po přechodu na jiný tarif je nelze znovu vybrat.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

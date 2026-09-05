@@ -9940,4 +9940,11 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Није могуће учитати граф знања';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (стари план)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Хвала што сте рани подржавалац omi! Можете остати на старом плану неодређено. Имајте на уму да се ти стари планови више не продају и не могу се изабрати ако пређете на други план.';
 }

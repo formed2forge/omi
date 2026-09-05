@@ -3237,5 +3237,13 @@
     "conversationsNotCapturedCount": "No capturado ({count})",
     "transcriptionNoAudio": "La transcripción no recibe audio",
     "couldNotLoadMemories": "No se pudieron cargar los recuerdos",
-    "couldNotLoadKnowledgeGraph": "No se pudo cargar el grafo de conocimiento"
+    "couldNotLoadKnowledgeGraph": "No se pudo cargar el grafo de conocimiento",
+    "legacyPlanTitleSuffix": " (plan heredado)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "¡Gracias por ser uno de los primeros en apoyar a omi! Puedes quedarte en tu plan heredado de forma indefinida. Ten en cuenta, eso sí, que estos planes heredados ya no se venden y no se pueden elegir si cambias a otro plan.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

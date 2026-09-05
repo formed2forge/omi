@@ -9946,4 +9946,11 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Не вдалося завантажити граф знань';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (застарілий план)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Дякуємо, що ви один із перших, хто підтримав omi! Ви можете залишатися на застарілому плані безстроково. Зверніть увагу: ці застарілі плани більше не продаються, і їх не можна обрати після переходу на інший план.';
 }

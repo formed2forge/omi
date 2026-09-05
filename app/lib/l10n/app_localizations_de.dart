@@ -10007,4 +10007,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Wissensgraph konnte nicht geladen werden';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Legacy-Plan)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Danke, dass du omi von Anfang an unterstützt hast! Du kannst unbegrenzt auf deinem Legacy-Plan bleiben. Bitte beachte jedoch, dass diese Legacy-Pläne nicht mehr verkauft werden und nach einem Wechsel nicht erneut gewählt werden können.';
 }

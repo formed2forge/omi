@@ -9973,4 +9973,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'నాలెడ్జ్ గ్రాఫ్‌ను లోడ్ చేయలేకపోయాం';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (పాత ప్లాన్)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omiకి ముందస్తు మద్దతుదారుగా ఉన్నందుకు ధన్యవాదాలు! మీ పాత ప్లాన్‌లో అనిశ్చితకాలం ఉండవచ్చు. గమనించండి, ఈ పాత ప్లాన్‌లు ఇక అమ్మకం లేవు మరియు మరో ప్లాన్‌కు మారితే వాటిని మళ్లీ ఎంచుకోలేరు.';
 }

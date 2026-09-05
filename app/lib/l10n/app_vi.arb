@@ -3241,5 +3241,13 @@
     "conversationsNotCapturedCount": "Không được ghi âm ({count})",
     "transcriptionNoAudio": "Bản ghi âm không nhận được âm thanh",
     "couldNotLoadMemories": "Không thể tải ký ức",
-    "couldNotLoadKnowledgeGraph": "Không thể tải đồ thị tri thức"
+    "couldNotLoadKnowledgeGraph": "Không thể tải đồ thị tri thức",
+    "legacyPlanTitleSuffix": " (Gói cũ)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Cảm ơn bạn đã là người ủng hộ sớm của omi! Bạn có thể ở lại gói cũ vô thời hạn. Lưu ý rằng các gói cũ này không còn được bán và không thể chọn lại nếu bạn chuyển sang gói khác.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

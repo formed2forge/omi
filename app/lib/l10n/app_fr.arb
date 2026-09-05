@@ -3271,5 +3271,13 @@
     "conversationsNotCapturedCount": "Non capturé ({count})",
     "transcriptionNoAudio": "La transcription ne reçoit pas d'audio",
     "couldNotLoadMemories": "Impossible de charger les souvenirs",
-    "couldNotLoadKnowledgeGraph": "Impossible de charger le graphe de connaissances"
+    "couldNotLoadKnowledgeGraph": "Impossible de charger le graphe de connaissances",
+    "legacyPlanTitleSuffix": " (ancien forfait)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Merci d'être un des premiers soutiens d'omi ! Vous pouvez rester sur votre ancien forfait indéfiniment. Notez toutefois que ces anciens forfaits ne sont plus vendus et ne peuvent pas être choisis si vous passez à un autre forfait.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

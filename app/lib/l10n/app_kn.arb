@@ -10802,5 +10802,13 @@
     "conversationsNotCapturedCount": "ದಾಖಲಾಗಿಲ್ಲ ({count})",
     "transcriptionNoAudio": "ಲಿಪ್ಯಂತರಣ ಆಡಿಯೊ ಸ್ವೀಕರಿಸುತ್ತಿಲ್ಲ",
     "couldNotLoadMemories": "ನೆನಪುಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
-    "couldNotLoadKnowledgeGraph": "ಜ್ಞಾನ ಗ್ರಾಫ್ ಅನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ"
+    "couldNotLoadKnowledgeGraph": "ಜ್ಞಾನ ಗ್ರಾಫ್ ಅನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
+    "legacyPlanTitleSuffix": " (ಹಳೆಯ ಯೋಜನೆ)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "omiಯ ಆರಂಭಿಕ ಬೆಂಬಲಿಗರಾಗಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದಗಳು! ನಿಮ್ಮ ಹಳೆಯ ಯೋಜನೆಯಲ್ಲಿ ಅನಿರ್ದಿಷ್ಟಕಾಲ ಉಳಿಯಬಹುದು. ಗಮನಿಸಿ, ಈ ಹಳೆಯ ಯೋಜನೆಗಳನ್ನು ಇನ್ನು ಮಾರಾಟ ಮಾಡುವುದಿಲ್ಲ ಮತ್ತು ಬೇರೆ ಯೋಜನೆಗೆ ಬದಲಾಯಿಸಿದ ನಂತರ ಅವುಗಳನ್ನು ಆಯ್ಕೆ ಮಾಡಲಾಗುವುದಿಲ್ಲ.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

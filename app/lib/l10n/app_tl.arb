@@ -10802,5 +10802,13 @@
     "conversationsNotCapturedCount": "Hindi na-record ({count})",
     "transcriptionNoAudio": "Hindi tumatanggap ng audio ang transkripsyon",
     "couldNotLoadMemories": "Hindi ma-load ang mga alaala",
-    "couldNotLoadKnowledgeGraph": "Hindi ma-load ang knowledge graph"
+    "couldNotLoadKnowledgeGraph": "Hindi ma-load ang knowledge graph",
+    "legacyPlanTitleSuffix": " (Dating Plano)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Salamat sa pagiging maagang tagasuporta ng omi! Maaari kang manatili sa dating plano nang walang takdang panahon. Tandaan na ang mga dating planong ito ay hindi na ibinebenta at hindi na mapipili kung lilipat ka sa ibang plano.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

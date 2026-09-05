@@ -9956,4 +9956,11 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'ಜ್ಞಾನ ಗ್ರಾಫ್ ಅನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (ಹಳೆಯ ಯೋಜನೆ)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omiಯ ಆರಂಭಿಕ ಬೆಂಬಲಿಗರಾಗಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದಗಳು! ನಿಮ್ಮ ಹಳೆಯ ಯೋಜನೆಯಲ್ಲಿ ಅನಿರ್ದಿಷ್ಟಕಾಲ ಉಳಿಯಬಹುದು. ಗಮನಿಸಿ, ಈ ಹಳೆಯ ಯೋಜನೆಗಳನ್ನು ಇನ್ನು ಮಾರಾಟ ಮಾಡುವುದಿಲ್ಲ ಮತ್ತು ಬೇರೆ ಯೋಜನೆಗೆ ಬದಲಾಯಿಸಿದ ನಂತರ ಅವುಗಳನ್ನು ಆಯ್ಕೆ ಮಾಡಲಾಗುವುದಿಲ್ಲ.';
 }

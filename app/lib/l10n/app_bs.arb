@@ -10802,5 +10802,13 @@
     "conversationsNotCapturedCount": "Nije snimljeno ({count})",
     "transcriptionNoAudio": "Transkripcija ne prima audio",
     "couldNotLoadMemories": "Nije moguće učitati uspomene",
-    "couldNotLoadKnowledgeGraph": "Nije moguće učitati graf znanja"
+    "couldNotLoadKnowledgeGraph": "Nije moguće učitati graf znanja",
+    "legacyPlanTitleSuffix": " (naslijeđeni plan)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Hvala što ste rani podržavalac omi! Možete ostati na svom naslijeđenom planu neograničeno. Imajte na umu da se ti naslijeđeni planovi više ne prodaju i ne mogu se odabrati ako pređete na drugi plan.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

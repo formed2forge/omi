@@ -9915,4 +9915,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Couldn\'t load knowledge graph';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Legacy Plan)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan.';
 }

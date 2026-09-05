@@ -3236,5 +3236,13 @@
     "conversationsNotCapturedCount": "ไม่ได้บันทึก ({count})",
     "transcriptionNoAudio": "การถอดเสียงไม่ได้รับเสียง",
     "couldNotLoadMemories": "ไม่สามารถโหลดความทรงจำได้",
-    "couldNotLoadKnowledgeGraph": "ไม่สามารถโหลดกราฟความรู้ได้"
+    "couldNotLoadKnowledgeGraph": "ไม่สามารถโหลดกราฟความรู้ได้",
+    "legacyPlanTitleSuffix": " (แพ็กเกจเดิม)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "ขอบคุณที่เป็นผู้สนับสนุน omi ตั้งแต่แรก! คุณสามารถใช้แพ็กเกจเดิมได้ไม่จำกัดระยะเวลา อย่างไรก็ตาม แพ็กเกจเดิมเหล่านี้ไม่ได้จำหน่ายแล้ว และเลือกอีกไม่ได้หากคุณย้ายไปแพ็กเกจอื่น",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

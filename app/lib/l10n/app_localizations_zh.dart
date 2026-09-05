@@ -9736,4 +9736,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => '无法加载知识图谱';
+
+  @override
+  String get legacyPlanTitleSuffix => '（旧套餐）';
+
+  @override
+  String get legacyPlanSupporterNote => '感谢你从一开始就支持 omi！你可以无限期留在旧套餐上。请注意，这些旧套餐已不再出售，换成其他套餐后也无法再选回来。';
 }

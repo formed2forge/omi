@@ -3236,5 +3236,13 @@
     "conversationsNotCapturedCount": "Neînregistrat ({count})",
     "transcriptionNoAudio": "Transcrierea nu primește audio",
     "couldNotLoadMemories": "Nu s-au putut încărca amintirile",
-    "couldNotLoadKnowledgeGraph": "Nu s-a putut încărca graful de cunoștințe"
+    "couldNotLoadKnowledgeGraph": "Nu s-a putut încărca graful de cunoștințe",
+    "legacyPlanTitleSuffix": " (plan vechi)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Mulțumim că ești un susținător timpuriu al omi! Poți rămâne pe planul vechi pe termen nelimitat. Reține totuși că aceste planuri vechi nu se mai vând și nu pot fi alese dacă treci la un alt plan.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

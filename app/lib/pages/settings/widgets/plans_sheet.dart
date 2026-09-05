@@ -18,6 +18,7 @@ import 'package:omi/providers/capture_provider.dart';
 import 'package:omi/providers/usage_provider.dart';
 import 'package:omi/providers/user_provider.dart';
 import 'package:omi/utils/plan_pricing.dart';
+import 'package:omi/utils/subscription_plan_presentation.dart';
 import 'package:omi/services/freemium_transcription_service.dart';
 import 'package:omi/utils/alerts/app_snackbar.dart';
 import 'package:omi/utils/l10n_extensions.dart';
@@ -358,13 +359,13 @@ class _PlansSheetState extends State<PlansSheet> {
     Map<String, dynamic>? selectedPlanData;
     if (tierId != null) {
       selectedPlanData = plans.cast<Map<String, dynamic>>().firstWhereOrNull(
-            (plan) => plan['plan_id'] == tierId && plan['interval'] == (isYearly ? 'year' : 'month'),
-          );
+        (plan) => plan['plan_id'] == tierId && plan['interval'] == (isYearly ? 'year' : 'month'),
+      );
     }
     // Fallback to old behavior (first plan matching interval) for backwards compat
     selectedPlanData ??= plans.cast<Map<String, dynamic>>().firstWhereOrNull(
-          (plan) => plan['interval'] == (isYearly ? 'year' : 'month'),
-        );
+      (plan) => plan['interval'] == (isYearly ? 'year' : 'month'),
+    );
 
     if (selectedPlanData == null) {
       AppSnackbar.showSnackbarError(context.l10n.selectedPlanNotAvailable);
@@ -933,6 +934,18 @@ class _PlansSheetState extends State<PlansSheet> {
                                 style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
                               );
                             } else {
+                              final response = provider.subscription;
+                              if (response != null && isUnlimited) {
+                                final view = currentPlanView(
+                                  subscription: response.subscription,
+                                  catalog: response.availablePlans,
+                                );
+                                return Text(
+                                  view.titled(legacySuffix: context.l10n.legacyPlanTitleSuffix),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                                );
+                              }
                               return Text(
                                 isUnlimited ? context.l10n.youAreOnAPaidPlan : context.l10n.planSheetChooseYourPlan,
                                 textAlign: TextAlign.center,
@@ -947,7 +960,8 @@ class _PlansSheetState extends State<PlansSheet> {
                             builder: (context) {
                               // Check if subscription period has ended
                               final sub = provider.subscription?.subscription;
-                              final periodEnded = sub?.currentPeriodEnd != null &&
+                              final periodEnded =
+                                  sub?.currentPeriodEnd != null &&
                                   DateTime.fromMillisecondsSinceEpoch(
                                     sub!.currentPeriodEnd! * 1000,
                                   ).isBefore(DateTime.now());
@@ -990,6 +1004,41 @@ class _PlansSheetState extends State<PlansSheet> {
                             },
                           ),
                         ],
+                        Builder(
+                          builder: (context) {
+                            final response = provider.subscription;
+                            if (response == null) return const SizedBox.shrink();
+                            final view = currentPlanView(
+                              subscription: response.subscription,
+                              catalog: response.availablePlans,
+                            );
+                            final showDescription = view.description.isNotEmpty;
+                            if (!showDescription && !view.isKeepUntilCancel) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: Column(
+                                children: [
+                                  if (showDescription)
+                                    Text(
+                                      view.description,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                                    ),
+                                  if (view.isKeepUntilCancel) ...[
+                                    if (showDescription) const SizedBox(height: 8),
+                                    Text(
+                                      context.l10n.legacyPlanSupporterNote,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                         const SizedBox(height: 24),
                         // Features list - shown to all users
                         ...[
@@ -1022,7 +1071,8 @@ class _PlansSheetState extends State<PlansSheet> {
                         // Training Data Opt-in Option - only show after plans are loaded
                         Consumer2<UsageProvider, UserProvider>(
                           builder: (context, usageProvider, userProvider, child) {
-                            final shouldShowTrainingOption = _showTrainingDataOptIn &&
+                            final shouldShowTrainingOption =
+                                _showTrainingDataOptIn &&
                                 !usageProvider.isLoadingPlans &&
                                 usageProvider.availablePlans != null;
 
@@ -1685,7 +1735,9 @@ class _PlansSheetState extends State<PlansSheet> {
           // Look up plan display name from subscription's available_plans
           final subPlans = context.read<UsageProvider>().subscription?.availablePlans ?? [];
           final matchingPlan = subPlans.firstWhereOrNull((sp) => sp.id == tierId);
-          final displayTitle = matchingPlan?.title ?? planForPeriod['title'] as String;
+          final displayTitle = matchingPlan != null
+              ? catalogPlanDisplayTitle(matchingPlan, legacySuffix: context.l10n.legacyPlanTitleSuffix)
+              : planForPeriod['title'] as String;
 
           // Override title with plan name for tier display
           final planDataWithName = Map<String, dynamic>.from(planForPeriod);
@@ -1693,7 +1745,10 @@ class _PlansSheetState extends State<PlansSheet> {
 
           // Get features from subscription's available_plans
           final planFeatures = matchingPlan?.features ?? [];
-          final planSubtitle = planForPeriod['subtitle'] as String?;
+          final catalogDescription = matchingPlan?.description?.trim();
+          final planSubtitle = (catalogDescription != null && catalogDescription.isNotEmpty)
+              ? catalogDescription
+              : planForPeriod['subtitle'] as String?;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),

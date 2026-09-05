@@ -9845,4 +9845,11 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'לא ניתן לטעון את גרף הידע';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (תוכנית ישנה)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'תודה שהייתם מהתומכים המוקדמים של omi! אפשר להישאר בתוכנית הישנה ללא הגבלת זמן. שימו לב עם זאת שתוכניות ישנות אלה כבר לא נמכרות ולא ניתן לבחור אותן אם עוברים לתוכנית אחרת.';
 }

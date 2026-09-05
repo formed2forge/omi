@@ -3272,5 +3272,13 @@
     "conversationsNotCapturedCount": "Não capturado ({count})",
     "transcriptionNoAudio": "A transcrição não está recebendo áudio",
     "couldNotLoadMemories": "Não foi possível carregar as memórias",
-    "couldNotLoadKnowledgeGraph": "Não foi possível carregar o grafo de conhecimento"
+    "couldNotLoadKnowledgeGraph": "Não foi possível carregar o grafo de conhecimento",
+    "legacyPlanTitleSuffix": " (plano antigo)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Obrigado por ser um dos primeiros a apoiar o omi! Pode permanecer no seu plano antigo indefinidamente. Note, contudo, que estes planos antigos já não são vendidos e não podem ser escolhidos se mudar para outro plano.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

@@ -3212,5 +3212,13 @@
     "conversationsNotCapturedCount": "未記録 ({count})",
     "transcriptionNoAudio": "文字起こしが音声を受信していません",
     "couldNotLoadMemories": "記憶を読み込めませんでした",
-    "couldNotLoadKnowledgeGraph": "ナレッジグラフを読み込めませんでした"
+    "couldNotLoadKnowledgeGraph": "ナレッジグラフを読み込めませんでした",
+    "legacyPlanTitleSuffix": "（旧プラン）",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "omiの初期サポーターになっていただきありがとうございます。旧プランは無期限で継続できます。ただし、これらの旧プランは販売終了しており、別のプランに切り替えたあとに選び直すことはできません。",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

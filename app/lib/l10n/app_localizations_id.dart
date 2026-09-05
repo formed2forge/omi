@@ -9935,4 +9935,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Tidak dapat memuat graf pengetahuan';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Paket Lama)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Terima kasih telah menjadi pendukung awal omi! Anda dapat tetap di paket lama tanpa batas waktu. Perlu diketahui, paket lama ini tidak lagi dijual dan tidak dapat dipilih jika Anda beralih ke paket lain.';
 }

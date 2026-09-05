@@ -9953,4 +9953,11 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Nije moguće učitati graf znanja';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (naslijeđeni plan)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Hvala što ste rani podržavalac omi! Možete ostati na svom naslijeđenom planu neograničeno. Imajte na umu da se ti naslijeđeni planovi više ne prodaju i ne mogu se odabrati ako pređete na drugi plan.';
 }

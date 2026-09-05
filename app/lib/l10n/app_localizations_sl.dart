@@ -9955,4 +9955,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Grafa znanja ni bilo mogoče naložiti';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (podedovani paket)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Hvala, ker ste zgodnji podpornik omi! Na podedovanem paketu lahko ostanete neomejeno dolgo. Upoštevajte pa, da se ti podedovani paketi ne prodajajo več in jih po prehodu na drug paket ni mogoče znova izbrati.';
 }

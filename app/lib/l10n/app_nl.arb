@@ -3236,5 +3236,13 @@
     "conversationsNotCapturedCount": "Niet opgenomen ({count})",
     "transcriptionNoAudio": "Transcriptie ontvangt geen audio",
     "couldNotLoadMemories": "Herinneringen konden niet worden geladen",
-    "couldNotLoadKnowledgeGraph": "Kennisgrafiek kon niet worden geladen"
+    "couldNotLoadKnowledgeGraph": "Kennisgrafiek kon niet worden geladen",
+    "legacyPlanTitleSuffix": " (oud abonnement)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Dank je dat je omi vanaf het begin steunt! Je mag onbeperkt op je oude abonnement blijven. Let wel: deze oude abonnementen worden niet meer verkocht en kun je niet opnieuw kiezen als je naar een ander abonnement overstapt.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

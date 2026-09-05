@@ -3271,5 +3271,13 @@
     "conversationsNotCapturedCount": "Не записано ({count})",
     "transcriptionNoAudio": "Транскрипция не получает аудио",
     "couldNotLoadMemories": "Не удалось загрузить воспоминания",
-    "couldNotLoadKnowledgeGraph": "Не удалось загрузить граф знаний"
+    "couldNotLoadKnowledgeGraph": "Не удалось загрузить граф знаний",
+    "legacyPlanTitleSuffix": " (устаревший план)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Спасибо, что вы один из первых, кто поддержал omi! Вы можете оставаться на устаревшем плане бессрочно. Учтите: эти устаревшие планы больше не продаются и их нельзя выбрать, если вы перейдёте на другой план.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

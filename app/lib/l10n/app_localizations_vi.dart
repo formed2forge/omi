@@ -9919,4 +9919,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Không thể tải đồ thị tri thức';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Gói cũ)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Cảm ơn bạn đã là người ủng hộ sớm của omi! Bạn có thể ở lại gói cũ vô thời hạn. Lưu ý rằng các gói cũ này không còn được bán và không thể chọn lại nếu bạn chuyển sang gói khác.';
 }

@@ -9948,4 +9948,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'No se pudo cargar el grafo de conocimiento';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (plan heredado)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      '¡Gracias por ser uno de los primeros en apoyar a omi! Puedes quedarte en tu plan heredado de forma indefinida. Ten en cuenta, eso sí, que estos planes heredados ya no se venden y no se pueden elegir si cambias a otro plan.';
 }

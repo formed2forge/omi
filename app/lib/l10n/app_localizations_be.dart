@@ -9956,4 +9956,11 @@ class AppLocalizationsBe extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Не ўдалося загрузіць граф ведаў';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (састарэлы план)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Дзякуй, што вы адзін з ранніх прыхільнікаў omi! Вы можаце заставацца на сваім састарэлым плане бестэрмінова. Звярніце ўвагу: гэтыя састарэлыя планы больш не прадаюцца і іх нельга выбраць, калі вы пераключыцеся на іншы план.';
 }

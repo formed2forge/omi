@@ -18476,6 +18476,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load knowledge graph'**
   String get couldNotLoadKnowledgeGraph;
+
+  /// Suffix appended to keep-until-cancel plan titles in Settings
+  ///
+  /// In en, this message translates to:
+  /// **' (Legacy Plan)'**
+  String get legacyPlanTitleSuffix;
+
+  /// Shown on the current-plan card for keep-until-cancel subscribers
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan.'**
+  String get legacyPlanSupporterNote;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

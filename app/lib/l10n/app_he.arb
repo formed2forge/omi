@@ -10802,5 +10802,13 @@
     "conversationsNotCapturedCount": "לא הוקלט ({count})",
     "transcriptionNoAudio": "התמליל אינו מקבל שמע",
     "couldNotLoadMemories": "לא ניתן לטעון את הזיכרונות",
-    "couldNotLoadKnowledgeGraph": "לא ניתן לטעון את גרף הידע"
+    "couldNotLoadKnowledgeGraph": "לא ניתן לטעון את גרף הידע",
+    "legacyPlanTitleSuffix": " (תוכנית ישנה)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "תודה שהייתם מהתומכים המוקדמים של omi! אפשר להישאר בתוכנית הישנה ללא הגבלת זמן. שימו לב עם זאת שתוכניות ישנות אלה כבר לא נמכרות ולא ניתן לבחור אותן אם עוברים לתוכנית אחרת.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

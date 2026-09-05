@@ -66,6 +66,21 @@ Default selected user for `plan_catalog_matrix` is `pricing_plus`.
 | `pricing_pro` | `pricing_pro@local.omi.invalid` | `pricing_pro-local-password-pricing` | Architect |
 | `pricing_plus_lapsed` | `pricing_plus_lapsed@local.omi.invalid` | `pricing_plus_lapsed-local-password-pricing` | Free |
 
+## iOS / Android (Flutter)
+
+The Mac named-bundle launcher does not install the phone app. After the same `make seed-pricing-scenario SCENARIO=plan_catalog_matrix` seed, sign into a **dev** Flutter build pointed at the local harness (`OMI_AUTH_API_URL` = the Python API, same as desktop) with `{uid}@local.omi.invalid` / `{uid}-local-password-pricing`.
+
+Open **Settings → Plan & Usage**. That card is the iOS equivalent of the desktop current-plan Settings card. Tap **Manage** to open the plans sheet.
+
+Pass/fail (same titles as desktop; recover Plus/Pro from `current_price_id`, not from `plan=`):
+
+| `DESKTOP_USER` / uid | Title | Note | Description |
+|---|---|---|---|
+| `pricing_plus` / `pricing_pro_v2` | Plus / Pro, **no** Legacy suffix | none | non-empty |
+| `pricing_unlimited` | `Neo (Legacy Plan)` | supporter note | non-empty Neo entitlements |
+| `pricing_architect` / `pricing_operator` / `pricing_unlimited_v2` | `{Title} (Legacy Plan)` | supporter note | non-empty |
+| `pricing_basic` | Free, no Legacy | none | non-empty |
+
 ## What this Cloud / Linux lane can prove
 
 Pytest, dry-run manifests, emulator seed apply (when emulators are up), and REST catalog stubs. macOS / Windows / device Settings UI is a later human pass on a named bundle.

@@ -9994,4 +9994,11 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'அறிவு வரைபடத்தை ஏற்ற முடியவில்லை';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (பழைய திட்டம்)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omi-யின் ஆரம்ப ஆதரவாளராக இருந்ததற்கு நன்றி! உங்கள் பழைய திட்டத்தில் காலவரையின்றி இருக்கலாம். ஆனால் இந்தப் பழைய திட்டங்கள் இனி விற்கப்படுவதில்லை, வேறு திட்டத்துக்கு மாறினால் அவற்றை மீண்டும் தேர்வு செய்ய முடியாது.';
 }

@@ -9981,4 +9981,11 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'No s\'ha pogut carregar el graf de coneixement';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (pla antic)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Gràcies per ser un dels primers a donar suport a omi! Pots quedar-te al teu pla antic indefinidament. Tingues en compte, però, que aquests plans antics ja no es venen i no es poden triar si canvies a un altre pla.';
 }

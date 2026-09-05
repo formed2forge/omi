@@ -10802,5 +10802,13 @@
     "conversationsNotCapturedCount": "ثبت نشده ({count})",
     "transcriptionNoAudio": "رونویسی صدا دریافت نمی‌کند",
     "couldNotLoadMemories": "بارگذاری خاطرات ممکن نشد",
-    "couldNotLoadKnowledgeGraph": "بارگذاری گراف دانش ممکن نشد"
+    "couldNotLoadKnowledgeGraph": "بارگذاری گراف دانش ممکن نشد",
+    "legacyPlanTitleSuffix": " (طرح قدیمی)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "از اینکه از حامیان اولیه omi هستید سپاسگزاریم! می‌توانید برای همیشه روی طرح قدیمی خود بمانید. توجه داشته باشید که این طرح‌های قدیمی دیگر فروخته نمی‌شوند و اگر به طرح دیگری بروید نمی‌توان آن‌ها را دوباره انتخاب کرد.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

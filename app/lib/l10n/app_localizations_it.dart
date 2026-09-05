@@ -9981,4 +9981,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Impossibile caricare il grafo della conoscenza';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (piano precedente)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Grazie per essere stato tra i primi a sostenere omi! Puoi restare sul tuo piano precedente a tempo indeterminato. Tieni presente però che questi piani precedenti non sono più in vendita e non possono essere scelti se passi a un altro piano.';
 }

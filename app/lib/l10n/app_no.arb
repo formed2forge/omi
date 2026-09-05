@@ -3236,5 +3236,13 @@
     "conversationsNotCapturedCount": "Ikke fanget opp ({count})",
     "transcriptionNoAudio": "Transkripsjon mottar ikke lyd",
     "couldNotLoadMemories": "Kunne ikke laste minner",
-    "couldNotLoadKnowledgeGraph": "Kunne ikke laste kunnskapsgrafen"
+    "couldNotLoadKnowledgeGraph": "Kunne ikke laste kunnskapsgrafen",
+    "legacyPlanTitleSuffix": " (eldre abonnement)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Takk for at du er en tidlig støttespiller av omi! Du kan bli på det eldre abonnementet ditt på ubestemt tid. Merk at disse eldre abonnementene ikke lenger selges og ikke kan velges hvis du bytter til et annet abonnement.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    }
 }

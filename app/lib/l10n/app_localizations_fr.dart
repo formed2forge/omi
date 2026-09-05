@@ -10011,4 +10011,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Impossible de charger le graphe de connaissances';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (ancien forfait)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Merci d\'être un des premiers soutiens d\'omi ! Vous pouvez rester sur votre ancien forfait indéfiniment. Notez toutefois que ces anciens forfaits ne sont plus vendus et ne peuvent pas être choisis si vous passez à un autre forfait.';
 }

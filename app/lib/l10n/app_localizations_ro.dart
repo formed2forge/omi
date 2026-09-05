@@ -9971,4 +9971,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Nu s-a putut încărca graful de cunoștințe';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (plan vechi)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Mulțumim că ești un susținător timpuriu al omi! Poți rămâne pe planul vechi pe termen nelimitat. Reține totuși că aceste planuri vechi nu se mai vând și nu pot fi alese dacă treci la un alt plan.';
 }

@@ -9755,4 +9755,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'ナレッジグラフを読み込めませんでした';
+
+  @override
+  String get legacyPlanTitleSuffix => '（旧プラン）';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omiの初期サポーターになっていただきありがとうございます。旧プランは無期限で継続できます。ただし、これらの旧プランは販売終了しており、別のプランに切り替えたあとに選び直すことはできません。';
 }

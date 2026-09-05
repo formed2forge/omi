@@ -9924,4 +9924,11 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'بارگذاری گراف دانش ممکن نشد';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (طرح قدیمی)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'از اینکه از حامیان اولیه omi هستید سپاسگزاریم! می‌توانید برای همیشه روی طرح قدیمی خود بمانید. توجه داشته باشید که این طرح‌های قدیمی دیگر فروخته نمی‌شوند و اگر به طرح دیگری بروید نمی‌توان آن‌ها را دوباره انتخاب کرد.';
 }

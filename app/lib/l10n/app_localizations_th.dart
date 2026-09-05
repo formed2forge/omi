@@ -9867,4 +9867,11 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'ไม่สามารถโหลดกราฟความรู้ได้';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (แพ็กเกจเดิม)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'ขอบคุณที่เป็นผู้สนับสนุน omi ตั้งแต่แรก! คุณสามารถใช้แพ็กเกจเดิมได้ไม่จำกัดระยะเวลา อย่างไรก็ตาม แพ็กเกจเดิมเหล่านี้ไม่ได้จำหน่ายแล้ว และเลือกอีกไม่ได้หากคุณย้ายไปแพ็กเกจอื่น';
 }

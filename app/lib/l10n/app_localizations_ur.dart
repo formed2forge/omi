@@ -9936,4 +9936,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get couldNotLoadKnowledgeGraph => 'نالج گراف لوڈ نہیں ہو سکا';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (پرانا پلان)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omi کے ابتدائی حامی ہونے کا شکریہ! آپ اپنے پرانے پلان پر غیر معینہ مدت تک رہ سکتے ہیں۔ یاد رہے کہ یہ پرانے پلان اب فروخت نہیں کیے جاتے اور دوسرے پلان پر جانے کے بعد انہیں دوبارہ منتخب نہیں کیا جا سکتا۔';
 }
