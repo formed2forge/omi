@@ -26,8 +26,8 @@ WIRE_PLAN_ALIASES: Final[dict[str, PlanType]] = {
     'pro': PlanType.architect,
 }
 
-CATALOG_SHA256: Final = '67fa1b685e594e991e9a84a944b6145fba267d32b2149cbff43a78f6f6f2c070'
-CATALOG_REVISION: Final = 3
+CATALOG_SHA256: Final = '626bb5b5a4a0d37690396e1ee84d08683e5f3fbc0b20d1940916f6bc37c32a08'
+CATALOG_REVISION: Final = 4
 CATALOG_AUTHORITY: Final = {'plan_identity': 'catalog',
  'price_identity': 'repository_ledger',
  'price_amount': 'stripe_live',
@@ -310,6 +310,8 @@ RECOGNIZED_STRIPE_PRICE_PLAN_TYPES: Final[dict[str, PlanType]] = {
     'price_1RtJQ71F8wnoWYvwKMPaGlGY': PlanType.unlimited,
     'price_1TNIHd1F8wnoWYvwkIrekcQZ': PlanType.unlimited,
     'price_1TNIHd1F8wnoWYvwlKywJ8TO': PlanType.unlimited,
+    'price_1RrFym1F8wnoWYvwQgIFhRWD': PlanType.unlimited,
+    'price_1RrG6k1F8wnoWYvwORsU26Mr': PlanType.unlimited,
     'price_1TLFXK1F8wnoWYvwG1TaUkZ3': PlanType.architect,
     'price_1TN7s21F8wnoWYvwG6JuEFm6': PlanType.architect,
     'price_1TN7sF1F8wnoWYvwd0QaLZNA': PlanType.architect,
@@ -330,6 +332,8 @@ RECOGNIZED_STRIPE_PRICE_INTERVALS: Final[dict[str, str]] = {'price_1RrxXL1F8wnoW
  'price_1RtJQ71F8wnoWYvwKMPaGlGY': 'year',
  'price_1TNIHd1F8wnoWYvwkIrekcQZ': 'month',
  'price_1TNIHd1F8wnoWYvwlKywJ8TO': 'year',
+ 'price_1RrFym1F8wnoWYvwQgIFhRWD': 'month',
+ 'price_1RrG6k1F8wnoWYvwORsU26Mr': 'year',
  'price_1TLFXK1F8wnoWYvwG1TaUkZ3': 'month',
  'price_1TN7s21F8wnoWYvwG6JuEFm6': 'month',
  'price_1TN7sF1F8wnoWYvwd0QaLZNA': 'year',
