@@ -1,5 +1,7 @@
 # Local pricing scenario fixtures
 
+Platform recipes: [iOS](PRICING_IOS.md) · [macOS](PRICING_MACOS.md) · [Windows](PRICING_WINDOWS.md)
+
 The fixtures in `dev_harness.pricing_scenarios` are synthetic, catalog-derived, importable local emulator fixtures for Settings / subscription QA.
 
 They are **LOCAL_EMULATOR_DEV** artifacts only:
