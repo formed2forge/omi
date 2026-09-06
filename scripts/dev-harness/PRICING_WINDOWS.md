@@ -112,6 +112,33 @@ make seed-pricing-scenario SCENARIO=cancellation_and_downgrade_safety
 Firebase session, every backend call 401s) — it is not a substitute for this
 path and does not load live pricing fixtures.
 
+## Troubleshooting
+
+**`firebase: error: (auth/network-request-failed)` on Sign In (Developer).**
+This is a generic "the request never reached the server" error from the
+Firebase SDK, not specific to auth. Two separate causes produce the identical
+message:
+
+- **The harness isn't actually listening on `<mac-host>`.** `make dev-status`'s
+  printed `firebase_auth_emulator` / `backend` labels are always `127.0.0.1`,
+  even when the real bind is wider (a display-only quirk in `dev-status.sh` —
+  it doesn't reflect `dev_bind_host`); check the real socket instead:
+  `lsof -nP -iTCP:9099 -sTCP:LISTEN` on the Mac. `TCP *:9099` means it's bound
+  to all interfaces (correct); `TCP 127.0.0.1:9099` means `OMI_DEV_HOST` wasn't
+  set before `make dev-up` — restart it with `OMI_DEV_HOST` exported first (see
+  step 1). Confirm from the Mac itself with
+  `curl -o /dev/null -w '%{http_code}\n' http://<mac-host>:9099/` (expect `200`).
+- **The renderer's Content-Security-Policy silently blocked it.** The Windows
+  app widens its CSP's `connect-src` for local_dev automatically, computed from
+  the same three `.env` values (see `electron.vite.config.ts` /
+  `src/shared/localDevCsp.ts`) — but only if it was picked up at
+  dev-server/build start. A `.env` edit needs a **full restart** of `pnpm dev`
+  (not a hot reload) to retake effect, same as any other `VITE_*` change.
+
+If both check out and the error persists, capture the Electron DevTools
+console (not just the toast) — a raw CSP violation there points at the second
+cause even if the socket check above passed.
+
 ## 4. Clean up
 
 On Windows: sign out, or just close the app (the emulator session lives only
