@@ -72,10 +72,12 @@ the compatibility `plan` wire value.
   path when present in the build.
 - **macOS:** follow [PRICING_MACOS.md](PRICING_MACOS.md) and use a named
   `omi-pricing` bundle for each selected UID.
-- **Windows:** follow [PRICING_WINDOWS.md](PRICING_WINDOWS.md). Windows does
-  not currently have local emulator sign-in, so synthetic live pricing UI rows
-  should be marked `BLOCKED` with that limitation in Notes. `OMI_E2E_FAKE_AUTH`
-  is a hermetic UI seam and is not a live catalogue result.
+- **Windows:** follow [PRICING_WINDOWS.md](PRICING_WINDOWS.md). Set
+  `VITE_OMI_APP_PROFILE=local_dev` (plus the local API base and Firebase Auth
+  emulator host/port) and use the **Sign In (Developer)** control on Login with
+  the seeded UID — same fixtures, same expected titles as iOS/macOS.
+  `OMI_E2E_FAKE_AUTH` remains a hermetic UI seam and is not a live catalogue
+  result.
 
 ## Tester notes
 
