@@ -18,6 +18,11 @@ interface ImportMetaEnv {
    *  unset) refuses it regardless of what the renderer's own UI gate shows. See
    *  shared/environmentProfile.ts and scripts/dev-harness/PRICING_WINDOWS.md. */
   readonly VITE_OMI_APP_PROFILE?: string
+  /** Firebase Auth emulator host/port (shared VITE_ prefix). Main uses these
+   *  only to widen the local-dev CORS allowlist (shared/localDevCors.ts) —
+   *  the renderer owns the actual emulator connection (lib/firebase.ts). */
+  readonly VITE_FIREBASE_AUTH_EMULATOR_HOST?: string
+  readonly VITE_FIREBASE_AUTH_EMULATOR_PORT?: string
 }
 
 interface ImportMeta {

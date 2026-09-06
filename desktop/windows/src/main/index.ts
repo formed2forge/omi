@@ -18,6 +18,7 @@ import { listCaptureSources } from './ipc/capture'
 import { isAllowedExternalScheme } from './externalUrl'
 import { installContextMenu } from './contextMenu'
 import { GPU_CONTEXT_LOST_CHANNEL } from '../shared/types'
+import { localDevCorsUrlPatterns } from '../shared/localDevCors'
 import type { ConversationFolder, LiveNote } from '../shared/types'
 import {
   isListenSessionOwnedBy,
@@ -713,7 +714,17 @@ app.whenReady().then(async () => {
     // Static analysis suggests it may not actually need CORS help (a same-shape
     // JSON POST that PostHog answers with permissive CORS), but including it is
     // harmless and avoids a surprise block if PostHog tightens its headers.
-    'https://us.i.posthog.com/*'
+    'https://us.i.posthog.com/*',
+    // Local-dev harness API (scripts/dev-harness/PRICING_WINDOWS.md): the
+    // harness backend's CORS_ALLOWED_ORIGINS is empty by default (fail-closed —
+    // see shared/localDevCors.ts), so every omiApi call to it needs the same
+    // relaxation. [] outside local_dev, so this is a no-op everywhere else.
+    ...localDevCorsUrlPatterns({
+      profile: import.meta.env.VITE_OMI_APP_PROFILE,
+      apiBase: import.meta.env.VITE_OMI_API_BASE,
+      authEmulatorHost: import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST,
+      authEmulatorPort: import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT
+    })
   ]
   session.defaultSession.webRequest.onBeforeSendHeaders({ urls: apiUrls }, (details, cb) => {
     const headers = { ...details.requestHeaders }
