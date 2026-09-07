@@ -57,6 +57,28 @@ describe('useLocalDevOnboardingBypass', () => {
     expect(firebaseMock.signInWithLocalDevOnboardingBypass).toHaveBeenCalledTimes(1)
   })
 
+  it('auto-signs-in again after a sign-out that follows a successful auto sign-in', async () => {
+    firebaseMock.localDevOnboardingBypassActive = true
+    const { rerender } = renderHook(
+      ({ user, loading }) => useLocalDevOnboardingBypass(user, loading),
+      {
+        initialProps: { user: null as import('firebase/auth').User | null, loading: false }
+      }
+    )
+    await waitFor(() =>
+      expect(firebaseMock.signInWithLocalDevOnboardingBypass).toHaveBeenCalledTimes(1)
+    )
+
+    // The auto sign-in resolves and useAuth reports the fixture as signed in.
+    rerender({ user: fakeUser, loading: false })
+    // The user signs out (e.g. via the sidebar sign-out control).
+    rerender({ user: null, loading: false })
+
+    await waitFor(() =>
+      expect(firebaseMock.signInWithLocalDevOnboardingBypass).toHaveBeenCalledTimes(2)
+    )
+  })
+
   it('surfaces (logs) a failed auto sign-in without throwing', async () => {
     firebaseMock.localDevOnboardingBypassActive = true
     firebaseMock.signInWithLocalDevOnboardingBypass.mockRejectedValue(new Error('boom'))
