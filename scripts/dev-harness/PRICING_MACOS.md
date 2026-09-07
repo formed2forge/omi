@@ -58,4 +58,3 @@ make seed-pricing-scenario SCENARIO=cancellation_and_downgrade_safety
 make reset-pricing-scenario SCENARIO=plan_catalog_matrix
 make dev-down
 ```
-

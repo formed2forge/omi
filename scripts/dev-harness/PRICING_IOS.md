@@ -81,4 +81,3 @@ cd /Volumes/LEXAR/tempdev/omi
 make reset-pricing-scenario SCENARIO=plan_catalog_matrix
 make dev-down
 ```
-
