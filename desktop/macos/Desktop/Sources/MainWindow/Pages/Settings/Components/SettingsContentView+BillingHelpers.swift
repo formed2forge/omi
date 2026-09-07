@@ -182,10 +182,15 @@ enum SubscriptionPlanPresentation {
   /// distinct plans collapse into one fallback catalog entry.
   static func normalizedPlanId(from title: String) -> String? {
     let normalized = title.lowercased()
+    // "-", "_", and " " are treated as equivalent separators so this matches
+    // regardless of exactly how the backend/Stripe price nickname punctuates
+    // a multi-word plan name (e.g. "pro_v2", "pro-v2", "Pro v2").
+    let collapsed = normalized.replacingOccurrences(of: "-", with: " ")
+      .replacingOccurrences(of: "_", with: " ")
     // Degraded price-fallback identity only. Descriptive copy comes from
     // /v1/users/me/subscription's available_plans. Keep `pro` (Architect's
     // wire alias) distinct from the new Pro SKU (`pro_v2`, display "Pro").
-    if normalized.contains("pro_v2") {
+    if collapsed.contains("pro v2") {
       return "pro_v2"
     }
     if normalized.contains("plus") {
@@ -196,7 +201,7 @@ enum SubscriptionPlanPresentation {
     }
     // Check for Unlimited-v2 before "unlimited", which would otherwise match
     // both "unlimited" and "unlimited_v2" titles and collapse them together.
-    if normalized.contains("unlimited_v2") || normalized.contains("unlimited v2") {
+    if collapsed.contains("unlimited v2") {
       return "unlimited_v2"
     }
     if normalized.contains("unlimited") || normalized.contains("neo") {
