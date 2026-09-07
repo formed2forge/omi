@@ -599,7 +599,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
         },
     ]
     for definition in definitions:
-        definition["keep_until_cancel"] = is_keep_until_cancel_plan(definition["plan_type"])
+        definition["keep_until_cancel"] = is_keep_until_cancel_plan(cast(PlanType, definition["plan_type"]))
     return definitions
 
 
