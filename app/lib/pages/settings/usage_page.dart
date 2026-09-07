@@ -432,6 +432,15 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
     }
 
     if (provider.subscription == null) {
+      // A failed fetch (e.g. the server could not resolve this account's plan
+      // at all — malformed/unrecognized catalog data server-side) leaves
+      // `subscription` null but populates `error`. Show the same explicit
+      // error+retry state as the recognized-but-unknown-plan case below,
+      // rather than silently rendering nothing: a blank card gives the user
+      // no indication their plan failed to load or how to recover.
+      if (provider.error != null) {
+        return _buildPlanErrorCard(context);
+      }
       return const SizedBox.shrink();
     }
 
@@ -442,47 +451,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
     // Unknown plans indicate a future plan catalog entry not yet recognized by this client.
     // Rather than silently rendering as Free, show an explicit error with a retry action.
     if (plan.isUnknown) {
-      return Container(
-        margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F1F25),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.unableToLoadPlans,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              context.l10n.somethingWentWrongTryAgain,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton(
-                onPressed: () {
-                  context.read<UsageProvider>().fetchSubscription();
-                },
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Colors.grey.shade400),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(
-                  context.l10n.retry,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.grey.shade300),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildPlanErrorCard(context);
     }
 
     final isPaid = plan.isPaid;
@@ -562,6 +531,56 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// Explicit error+retry state shared by the two "we have no usable plan
+  /// data" cases: a recognized-but-unknown plan value, and a fetch that
+  /// failed outright (`subscription` stayed null). Both must fail loud
+  /// rather than render a blank card with no way to recover.
+  Widget _buildPlanErrorCard(BuildContext context) {
+    return Container(
+      key: const Key('plan_usage_error_card'),
+      margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F1F25),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.unableToLoadPlans,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.somethingWentWrongTryAgain,
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton(
+              key: const Key('plan_usage_error_retry_button'),
+              onPressed: () {
+                context.read<UsageProvider>().fetchSubscription();
+              },
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.grey.shade400),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                context.l10n.retry,
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.grey.shade300),
+              ),
+            ),
+          ),
         ],
       ),
     );
