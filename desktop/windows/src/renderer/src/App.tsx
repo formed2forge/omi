@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { HOME_PATH } from './routes/manifest'
 import { useAuth } from './hooks/useAuth'
+import { useLocalDevOnboardingBypass } from './hooks/useLocalDevOnboardingBypass'
 import { Login } from './pages/Login'
 import { AppChrome } from './components/layout/AppChrome'
 import { MainViews } from './components/layout/MainViews'
@@ -29,7 +30,8 @@ import { GlowWindow } from './components/glow/GlowWindow'
 import { CaptureApp } from './capture/CaptureApp'
 import { LiveMirrorHost } from './components/recording/LiveMirrorHost'
 import { LiveNotesHost } from './components/recording/LiveNotesHost'
-import { auth, onAuthStateChanged } from './lib/firebase'
+import { auth, onAuthStateChanged, localDevOnboardingBypassActive } from './lib/firebase'
+import { isLocalDevOnboardingBypassIdentity } from '../../shared/localDevOnboardingBypass'
 import { invalidateConversationsCache } from './lib/pageCache'
 import { startOutboxSweep, stopOutboxSweep } from './lib/sync/outboxSweep'
 import { useAppLifetimeJobs } from './lib/appLifetimeJobs'
@@ -214,6 +216,11 @@ function AppShell(): React.JSX.Element {
 function App(): React.JSX.Element {
   const { user, loading } = useAuth()
   useMicaChrome()
+  // Local-dev onboarding bypass (contracts/parity/local_dev_onboarding_bypass.json):
+  // no-op outside local_dev (localDevOnboardingBypassActive is a build-time-frozen
+  // false). Runs unconditionally so it can fire the auto sign-in the moment
+  // useAuth() reports signed-out.
+  useLocalDevOnboardingBypass(user, loading)
   // Under the dev perf bench, treat the user as already onboarded so the authed
   // shell mounts (a returning user always is). The onboarding flag lives in
   // origin-scoped localStorage, which the file:// bench profile can't inherit
@@ -224,10 +231,19 @@ function App(): React.JSX.Element {
   // onboarded here — rather than seeding the onboardingCompletedAt pref — also
   // keeps the background-consent interstitial closed (it gates on that pref),
   // so the sidebar under test is never obstructed.
+  //
+  // The local-dev bypass clause is intentionally RUNTIME-only (never persists
+  // onboardingCompletedAt): disabling the bypass flag and relaunching falls
+  // straight back through to the real onboarding wizard for whatever uid signs
+  // in next, with no stale "completed" residue to clear first. It also checks
+  // the SIGNED-IN uid, not just that the bypass flag is set, so a tester who
+  // manually signs in as pricing_plus while the flag happens to be on still
+  // gets the real wizard.
   const onboarded =
     useOnboardingComplete() ||
     (import.meta.env.DEV && !!window.omi?.isBench) ||
-    !!window.omi?.e2eFakeAuth
+    !!window.omi?.e2eFakeAuth ||
+    (localDevOnboardingBypassActive && isLocalDevOnboardingBypassIdentity(user?.uid))
 
   // Tell main whether the summon shortcut may open the overlay. Enabled once
   // onboarding is complete; during onboarding the shortcut-setup step enables it

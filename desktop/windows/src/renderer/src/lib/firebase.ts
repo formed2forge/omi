@@ -18,6 +18,11 @@ import {
   resolveAppProfile,
   resolveLocalDevConfig
 } from '../../../shared/environmentProfile'
+import {
+  LOCAL_DEV_FIXTURE_DISPLAY_NAME,
+  LOCAL_DEV_FIXTURE_UID,
+  resolveLocalDevOnboardingBypassActive
+} from '../../../shared/localDevOnboardingBypass'
 import type { SignInProvider } from '../../../shared/types'
 
 /** True only when this bundle was built with OMI_APP_PROFILE=local_dev (frozen at
@@ -54,6 +59,16 @@ const localDevResolution = ((): {
  *  instead of a working control, per the fail-closed contract in
  *  shared/environmentProfile.ts. */
 export const localDevConfigError = localDevResolution.error
+
+/** Local-dev onboarding bypass gate — contracts/parity/
+ *  local_dev_onboarding_bypass.json. Requires local_dev to ALSO be validly
+ *  configured (never activates on top of a misconfigured profile) plus the
+ *  separate VITE_OMI_LOCAL_DEV_ONBOARDING_BYPASS='1' flag; local_dev alone
+ *  (the manual "Sign In (Developer)" pricing-QA flow) never trips this. */
+export const localDevOnboardingBypassActive = resolveLocalDevOnboardingBypassActive({
+  localDevProfileActive: isLocalDevProfile && !localDevConfigError,
+  bypassFlagValue: import.meta.env.VITE_OMI_LOCAL_DEV_ONBOARDING_BYPASS
+})
 
 const app = initializeApp({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,
@@ -160,6 +175,30 @@ export async function signInWithLocalDevToken(uid: string): Promise<User> {
   const result = await window.omi.signInWithLocalDevToken(uid)
   if (!result.ok) throw new Error(result.error)
   return (await signInWithCustomToken(auth, result.customToken)).user
+}
+
+/**
+ * Local-dev onboarding bypass entry point (contracts/parity/
+ * local_dev_onboarding_bypass.json) — auto-signs-in the deterministic
+ * `local_dev_fixture` identity, the same way `signInWithLocalDevToken` signs in
+ * any manually-typed uid, then forces the display name to "Local Dev" so a
+ * fresh emulator user (which the backend creates with no displayName at all)
+ * renders a stable, obviously-synthetic identity everywhere the app already
+ * reads `user.displayName`. Never called for any other uid — the generic
+ * `signInWithLocalDevToken` above must not acquire this side effect, or a
+ * tester's manually-typed pricing_plus/pro_v2/etc. sign-in would get silently
+ * renamed too.
+ */
+export async function signInWithLocalDevOnboardingBypass(): Promise<User> {
+  const user = await signInWithLocalDevToken(LOCAL_DEV_FIXTURE_UID)
+  if (!user.displayName) {
+    try {
+      await updateProfile(user, { displayName: LOCAL_DEV_FIXTURE_DISPLAY_NAME })
+    } catch {
+      /* cosmetic only — the uid match is what onboarding-gating relies on */
+    }
+  }
+  return user
 }
 
 export async function signOutUser(): Promise<void> {

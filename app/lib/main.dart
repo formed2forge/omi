@@ -32,6 +32,7 @@ import 'package:omi/core/app_shell.dart';
 import 'package:omi/env/dev_env.dart';
 import 'package:omi/env/env.dart';
 import 'package:omi/env/environment_profile.dart';
+import 'package:omi/env/local_dev_onboarding_bypass.dart';
 import 'package:omi/env/prod_env.dart';
 import 'package:omi/firebase_options_local.dart' as local;
 import 'package:omi/firebase_options_prod.dart' as prod;
@@ -215,6 +216,16 @@ Future _init() async {
     final bootstrapUser = FirebaseAuth.instance.currentUser;
     if (bootstrapUser != null && !bootstrapUser.isAnonymous) {
       await AccountCutoverRuntime.instance.bindAuthenticatedOwner(bootstrapUser.uid);
+    }
+  } else if (localDevOnboardingBypassActive) {
+    // contracts/parity/local_dev_onboarding_bypass.json — no-op outside
+    // local_dev (localDevOnboardingBypassActive is a build-time-frozen
+    // false). Only fires when startup auth found no existing session; a
+    // manually-signed-in tester (pricing_plus, etc.) is left untouched.
+    try {
+      await AuthService.instance.signInWithLocalDevOnboardingBypass();
+    } catch (e) {
+      Logger.debug('local-dev onboarding bypass sign-in failed: $e');
     }
   }
   initOpus(await opus_flutter.load());

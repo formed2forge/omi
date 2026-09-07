@@ -339,14 +339,23 @@ class AuthService {
   }
 
   func bootstrapLocalHarnessAuthIfNeeded() async {
-    let attempt = beginSessionAttempt()
     guard let email = DesktopLocalProfile.selectedEmail,
       let password = DesktopLocalProfile.selectedPassword,
       let selectedUser = DesktopLocalProfile.selectedUser
     else {
-      log("OMI AUTH LOCAL: missing selected local auth user env; staying signed out")
+      // No operator-chosen uid (OMI_LOCAL_AUTH_*) — that's the existing manual
+      // named-bundle flow, unaffected either way. The local-dev onboarding
+      // bypass (contracts/parity/local_dev_onboarding_bypass.json) is a
+      // SEPARATE, narrower opt-in: it auto-signs-in the one canonical fixture
+      // identity instead of requiring a launcher-supplied uid at all.
+      if DesktopLocalProfile.onboardingBypassEnabled {
+        await bootstrapLocalDevOnboardingBypassIfNeeded()
+      } else {
+        log("OMI AUTH LOCAL: missing selected local auth user env; staying signed out")
+      }
       return
     }
+    let attempt = beginSessionAttempt()
 
     if let savedEmail = UserDefaults.standard.string(forKey: .authUserEmail),
       !savedEmail.isEmpty, savedEmail != email
@@ -379,6 +388,104 @@ class AuthService {
       self.error = "Local Auth emulator sign-in failed for \(email): \(error.localizedDescription)"
       AuthState.shared.transition(to: .recoveryRequired)
     }
+  }
+
+  /// Local-dev onboarding bypass entry point (contracts/parity/
+  /// local_dev_onboarding_bypass.json) — auto-signs-in the deterministic
+  /// [DesktopLocalProfile.onboardingBypassFixtureUID] identity via the SAME
+  /// harness custom-token endpoint the iOS/Windows "Sign In (Developer)" flow
+  /// uses (POST /v1/auth/local-dev/custom-token), rather than requiring an
+  /// operator-supplied OMI_LOCAL_AUTH_* email/password like the existing
+  /// named-bundle flow. Goes through commitSignedInSession →
+  /// RuntimeOwnerIdentity.performEffectiveOwnerTransition, same as every other
+  /// sign-in path (INV-AUTH-1) — never writes auth_userId/authIsSignedIn
+  /// directly. Forces the local display name to "Local Dev" so a fresh
+  /// emulator user (the endpoint creates one with no displayName at all)
+  /// renders a stable, obviously-synthetic identity everywhere the app
+  /// already reads givenName/familyName.
+  private func bootstrapLocalDevOnboardingBypassIfNeeded() async {
+    let attempt = beginSessionAttempt()
+    do {
+      let tokens = try await signInWithLocalDevHarnessCustomToken(
+        uid: DesktopLocalProfile.onboardingBypassFixtureUID)
+      guard
+        try await commitSignedInSession(
+          tokens: tokens,
+          email: nil,
+          attempt: attempt)
+      else {
+        return
+      }
+      givenName = DesktopLocalProfile.onboardingBypassFixtureGivenName
+      familyName = DesktopLocalProfile.onboardingBypassFixtureFamilyName
+      log(
+        "OMI AUTH LOCAL: onboarding bypass signed in as \(DesktopLocalProfile.onboardingBypassFixtureUID) uid=\(tokens.localId)"
+      )
+    } catch {
+      logError("OMI AUTH LOCAL: onboarding bypass sign-in failed", error: error)
+      self.error = "Local-dev onboarding bypass sign-in failed: \(error.localizedDescription)"
+      AuthState.shared.transition(to: .recoveryRequired)
+    }
+  }
+
+  /// Exchange `uid` for a Firebase custom token via the harness backend
+  /// (`apiBaseURL` already resolves to the harness's Python API under
+  /// DesktopLocalProfile.isEnabled — see DesktopBackendEnvironment.authBaseURL),
+  /// then exchange that token for an ID token against the Auth EMULATOR (not
+  /// production identitytoolkit.googleapis.com — see
+  /// exchangeCustomTokenForIdToken for the OAuth path's production variant).
+  private func signInWithLocalDevHarnessCustomToken(uid: String) async throws -> FirebaseTokenResult {
+    guard let tokenURL = URL(string: "\(apiBaseURL)v1/auth/local-dev/custom-token") else {
+      throw AuthError.invalidURL
+    }
+    var tokenRequest = URLRequest(url: tokenURL)
+    tokenRequest.httpMethod = "POST"
+    tokenRequest.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    tokenRequest.httpBody = "uid=\(formEncode(uid))".data(using: .utf8)
+
+    let (tokenData, tokenResponse) = try await URLSession.shared.data(for: tokenRequest)
+    guard let tokenHTTPResponse = tokenResponse as? HTTPURLResponse else {
+      throw AuthError.invalidResponse
+    }
+    guard tokenHTTPResponse.statusCode == 200 else {
+      log("OMI AUTH LOCAL: onboarding bypass custom-token request failed: \(tokenHTTPResponse.statusCode)")
+      throw AuthError.tokenExchangeFailed(tokenHTTPResponse.statusCode)
+    }
+    guard let tokenJSON = try? JSONSerialization.jsonObject(with: tokenData) as? [String: Any],
+      let customToken = tokenJSON["custom_token"] as? String
+    else {
+      throw AuthError.missingCustomToken
+    }
+
+    guard let hostPort = DesktopLocalProfile.authEmulatorHost else {
+      throw AuthError.invalidURL
+    }
+    let apiKey = try requireFirebaseApiKey()
+    guard
+      let exchangeURL = URL(
+        string: "http://\(hostPort)/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=\(apiKey)")
+    else {
+      throw AuthError.invalidURL
+    }
+    var exchangeRequest = URLRequest(url: exchangeURL)
+    exchangeRequest.httpMethod = "POST"
+    exchangeRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    exchangeRequest.timeoutInterval = 10
+    exchangeRequest.httpBody = try JSONSerialization.data(withJSONObject: [
+      "token": customToken,
+      "returnSecureToken": true,
+    ])
+
+    let (exchangeData, exchangeResponse) = try await URLSession.shared.data(for: exchangeRequest)
+    guard let exchangeHTTPResponse = exchangeResponse as? HTTPURLResponse else {
+      throw AuthError.invalidResponse
+    }
+    guard exchangeHTTPResponse.statusCode == 200 else {
+      let errorBody = String(data: exchangeData, encoding: .utf8) ?? "unknown"
+      log("OMI AUTH LOCAL: onboarding bypass emulator exchange error \(exchangeHTTPResponse.statusCode): \(errorBody)")
+      throw AuthError.tokenExchangeFailed(exchangeHTTPResponse.statusCode)
+    }
+    return try Self.decodeFirebaseTokenResult(from: exchangeData, requireLocalId: true)
   }
 
   private func signInWithPasswordViaAuthEmulator(email: String, password: String) async throws -> FirebaseTokenResult {

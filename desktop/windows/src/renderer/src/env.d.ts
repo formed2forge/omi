@@ -14,4 +14,10 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_AUTH_EMULATOR_HOST?: string
   /** Firebase Auth emulator port, required alongside the host above. */
   readonly VITE_FIREBASE_AUTH_EMULATOR_PORT?: string
+  /** Local-dev onboarding bypass (contracts/parity/local_dev_onboarding_bypass.json).
+   *  '1' auto-signs-in the deterministic `local_dev_fixture` identity and skips
+   *  onboarding — ONLY on top of an already-valid VITE_OMI_APP_PROFILE=local_dev.
+   *  Any other value (including unset) leaves the normal manual "Sign In
+   *  (Developer)" flow untouched. See shared/localDevOnboardingBypass.ts. */
+  readonly VITE_OMI_LOCAL_DEV_ONBOARDING_BYPASS?: string
 }

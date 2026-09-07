@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:omi/backend/http/api/users.dart';
 import 'package:omi/backend/preferences.dart';
 import 'package:omi/env/env.dart';
+import 'package:omi/env/local_dev_onboarding_bypass.dart';
 import 'package:omi/services/auth/local_dev_auth.dart';
 import 'package:omi/flavors.dart';
 import 'package:omi/services/auth/auth_token_result.dart';
@@ -627,6 +628,26 @@ class AuthService {
     );
     await _updateUserPreferences(credential, 'local_dev');
     Logger.debug('Local development sign-in successful');
+    return credential;
+  }
+
+  /// Local-dev onboarding bypass entry point (contracts/parity/
+  /// local_dev_onboarding_bypass.json) — auto-signs-in the deterministic
+  /// [kLocalDevFixtureUid] identity, the same way [signInWithLocalDevToken]
+  /// signs in any manually-typed uid, then forces the local display name to
+  /// "Local Dev" so a fresh emulator user (which the backend creates with no
+  /// displayName at all) renders a stable, obviously-synthetic identity
+  /// everywhere the app already reads givenName/familyName. Runs AFTER
+  /// [_updateUserPreferences] (called inside [signInWithLocalDevToken]) so
+  /// these overrides are not clobbered by that method's own (empty) reads
+  /// from the fresh Firebase user. Never called for any other uid — the
+  /// generic [signInWithLocalDevToken] must not acquire this side effect, or
+  /// a tester's manually-typed pricing_plus/pro_v2/etc. sign-in would get
+  /// silently renamed too.
+  Future<UserCredential?> signInWithLocalDevOnboardingBypass() async {
+    final credential = await signInWithLocalDevToken(uid: kLocalDevFixtureUid);
+    SharedPreferencesUtil().givenName = kLocalDevFixtureGivenName;
+    SharedPreferencesUtil().familyName = kLocalDevFixtureFamilyName;
     return credential;
   }
 
