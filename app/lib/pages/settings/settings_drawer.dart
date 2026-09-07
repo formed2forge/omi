@@ -20,6 +20,7 @@ import 'package:omi/providers/usage_provider.dart';
 import 'package:omi/utils/auth/clear_user_state.dart';
 import 'package:omi/utils/other/temp.dart';
 import 'package:omi/utils/platform/platform_service.dart';
+import 'package:omi/utils/subscription_plan_presentation.dart';
 import 'package:omi/widgets/dialog.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -509,12 +510,13 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                 const Divider(height: 1, color: Color(0xFF3C3C43)),
                 Consumer<UsageProvider>(
                   builder: (context, usageProvider, child) {
-                    final sp = usageProvider.subscription?.subscription.plan;
-                    final isUnlimited = sp?.isPaid ?? false;
+                    final subscription = usageProvider.subscription?.subscription;
+                    final availablePlans = usageProvider.subscription?.availablePlans ?? const [];
+                    final isUnlimited = subscription?.plan.isPaid ?? false;
                     return _buildSettingsItem(
                       title: context.l10n.planAndUsage,
                       icon: const FaIcon(FontAwesomeIcons.chartLine, color: Color(0xFF8E8E93), size: 20),
-                      trailingChip: isUnlimited
+                      trailingChip: isUnlimited && subscription != null
                           ? Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
@@ -527,7 +529,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                   const FaIcon(FontAwesomeIcons.crown, color: Colors.amber, size: 10),
                                   const SizedBox(width: 4),
                                   Text(
-                                    context.l10n.pro.toUpperCase(),
+                                    planBadgeLabel(subscription: subscription, catalog: availablePlans),
                                     style: const TextStyle(
                                       color: Colors.amber,
                                       fontSize: 10,

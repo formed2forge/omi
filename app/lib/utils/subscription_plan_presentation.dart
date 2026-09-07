@@ -124,3 +124,14 @@ CurrentPlanView currentPlanView({required Subscription subscription, required Li
     features: features,
   );
 }
+
+/// Short badge label for the plan tier (e.g. "PLUS", "PRO", "NEO", "ARCHITECT").
+/// Used by UI badges that display the current plan name in a compact chip.
+String planBadgeLabel({required Subscription subscription, required List<SubscriptionPlan> catalog}) {
+  if (subscription.features.contains('byok')) {
+    return 'BYOK';
+  }
+
+  final view = currentPlanView(subscription: subscription, catalog: catalog);
+  return view.baseTitle.toUpperCase();
+}
