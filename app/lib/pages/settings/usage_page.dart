@@ -437,6 +437,54 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
 
     final response = provider.subscription!;
     final plan = response.subscription.plan;
+
+    // Show explicit error state for unknown/unrecognized plans.
+    // Unknown plans indicate a future plan catalog entry not yet recognized by this client.
+    // Rather than silently rendering as Free, show an explicit error with a retry action.
+    if (plan.isUnknown) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F1F25),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.planLoadingErrorTitle,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.planLoadingErrorDescription,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton(
+                onPressed: () {
+                  context.read<UsageProvider>().fetchSubscription();
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Colors.grey.shade400),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(
+                  context.l10n.retry,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.grey.shade300),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final isPaid = plan.isPaid;
     // Catalog-first: Plus/Pro serialize as plan=unlimited on the wire, so the
     // price-id match is what testers (and subscribers) see as the real title.

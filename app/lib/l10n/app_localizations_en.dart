@@ -4710,6 +4710,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get basicPlanDescription => '300 premium mins + unlimited on-device';
 
   @override
+  String get planLoadingErrorTitle => 'Unable to determine plan';
+
+  @override
+  String get planLoadingErrorDescription => 'Your plan information couldn\'t be loaded. Please try again.';
+
+  @override
   String get minutes => 'minutes';
 
   @override

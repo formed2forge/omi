@@ -4715,6 +4715,12 @@ class AppLocalizationsSr extends AppLocalizations {
   String get basicPlanDescription => '300 премиум минута + без ограничења на уређају';
 
   @override
+  String get planLoadingErrorTitle => 'Unable to determine plan';
+
+  @override
+  String get planLoadingErrorDescription => 'Your plan information couldn\'t be loaded. Please try again.';
+
+  @override
   String get minutes => 'минута';
 
   @override
