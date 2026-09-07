@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   LOCAL_DEV_FIXTURE_UID,
+  isLocalDevOnboardingBypassIdentity,
   resolveLocalDevOnboardingBypassActive
 } from './localDevOnboardingBypass'
 
@@ -15,6 +16,12 @@ type GateCase = {
   local_dev_profile_active: boolean
   bypass_flag_value: string | null
   expected_bypass_active: boolean
+}
+
+type IdentityCase = {
+  name: string
+  uid: string | null
+  expected_identity_match: boolean
 }
 
 type FixtureIdentity = {
@@ -27,6 +34,7 @@ type Contract = {
   fixture_identity: FixtureIdentity
   platform_flag_names: Record<string, string>
   gate_cases: GateCase[]
+  identity_cases: IdentityCase[]
 }
 
 function loadContract(): Contract {
@@ -57,6 +65,14 @@ describe('local-dev onboarding bypass — shared gate_cases conformance', () => 
           bypassFlagValue: c.bypass_flag_value ?? undefined
         })
       ).toBe(c.expected_bypass_active)
+    })
+  }
+})
+
+describe('local-dev onboarding bypass — shared identity_cases conformance', () => {
+  for (const c of contract.identity_cases) {
+    it(c.name, () => {
+      expect(isLocalDevOnboardingBypassIdentity(c.uid)).toBe(c.expected_identity_match)
     })
   }
 })

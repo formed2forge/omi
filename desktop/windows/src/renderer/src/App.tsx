@@ -236,9 +236,11 @@ function App(): React.JSX.Element {
   // onboardingCompletedAt): disabling the bypass flag and relaunching falls
   // straight back through to the real onboarding wizard for whatever uid signs
   // in next, with no stale "completed" residue to clear first. It also checks
-  // the SIGNED-IN uid, not just that the bypass flag is set, so a tester who
-  // manually signs in as pricing_plus while the flag happens to be on still
-  // gets the real wizard.
+  // the SIGNED-IN uid, not just that the bypass flag is set — a tester signed
+  // in as the fixture OR any seeded pricing_* uid skips onboarding while the
+  // flag is on (isLocalDevOnboardingBypassIdentity); anyone else (a real
+  // Google/Apple account) still gets the real wizard even with the flag on,
+  // and every uid still onboards normally with the flag off.
   const onboarded =
     useOnboardingComplete() ||
     (import.meta.env.DEV && !!window.omi?.isBench) ||

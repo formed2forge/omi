@@ -61,12 +61,28 @@ describe('resolveLocalDevOnboardingBypassActive', () => {
 })
 
 describe('isLocalDevOnboardingBypassIdentity', () => {
-  it('matches only the exact fixture uid', () => {
+  it('matches the fixture uid', () => {
     expect(isLocalDevOnboardingBypassIdentity(LOCAL_DEV_FIXTURE_UID)).toBe(true)
   })
 
-  it('rejects any other uid, including a manually-typed pricing fixture', () => {
-    expect(isLocalDevOnboardingBypassIdentity('pricing_plus')).toBe(false)
+  it('matches any seeded pricing-QA fixture uid (pricing_ prefix)', () => {
+    expect(isLocalDevOnboardingBypassIdentity('pricing_plus')).toBe(true)
+    expect(isLocalDevOnboardingBypassIdentity('pricing_unlimited_v2')).toBe(true)
+    // Prefix rule, not an enumerated list — a scenario-specific fixture not on
+    // any hardcoded list still matches, since the harness seeds these
+    // dynamically (dev_harness/pricing_scenarios.py).
+    expect(isLocalDevOnboardingBypassIdentity('pricing_unlimited_grandfathered')).toBe(true)
+  })
+
+  it('rejects a non-pricing, non-fixture uid (e.g. a real signed-in account)', () => {
+    expect(isLocalDevOnboardingBypassIdentity('alice')).toBe(false)
+  })
+
+  it('rejects a uid that merely contains "pricing" without the prefix', () => {
+    expect(isLocalDevOnboardingBypassIdentity('pricingsomething')).toBe(false)
+  })
+
+  it('rejects null/undefined/empty', () => {
     expect(isLocalDevOnboardingBypassIdentity(null)).toBe(false)
     expect(isLocalDevOnboardingBypassIdentity(undefined)).toBe(false)
     expect(isLocalDevOnboardingBypassIdentity('')).toBe(false)

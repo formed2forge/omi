@@ -7,12 +7,19 @@ centrally defined once (see the contract below) with a thin adapter per
 platform; mobile, macOS, and Windows all implement the identical gate and
 fixture identity.
 
-This is a **separate, narrower opt-in** on top of each platform's existing
-local-dev sign-in (the manual "Sign In (Developer)" flow on mobile/Windows,
-the named-bundle launcher on macOS) — that existing path is unaffected and
-still runs onboarding normally, so testers can still verify the wizard itself
-or sign in as a specific `pricing_*` fixture for catalogue QA (see
-[PRICING_SCENARIOS.md](PRICING_SCENARIOS.md)).
+This is a **separate opt-in** on top of each platform's existing local-dev
+sign-in (the manual "Sign In (Developer)" flow on mobile/Windows, the
+named-bundle launcher on macOS). With the flag **off**, that existing path is
+unaffected and still runs onboarding normally, so testers can verify the
+wizard itself with a specific `pricing_*` fixture for catalogue QA (see
+[PRICING_SCENARIOS.md](PRICING_SCENARIOS.md)). With the flag **on**
+(Windows/mobile), signing in as any seeded `pricing_*` fixture — not just the
+bypass's own fixture identity — also skips onboarding (2026-09-07; see
+"Onboarding composition" below). macOS already skips onboarding for any
+`pricing_*` uid unconditionally, through a separate, older mechanism (the
+harness launcher's `OMI_SKIP_ONBOARDING` env var, keyed off the uid prefix —
+see `dev_harness/desktop_profile.py`'s `_is_pricing_harness_launch`), which
+this bypass does not change.
 
 ## The contract
 
@@ -33,11 +40,18 @@ its own production gate function.
   enough, and no other value (`"0"`, `"yes"`, whitespace-padded, unset) counts
   as on — this is a deterministic, non-fuzzy check, never inferred from
   build type, persisted state, or merely having signed in before.
-- **Onboarding composition**: on every platform, onboarding is treated as
+- **Onboarding composition (Windows/mobile)**: onboarding is treated as
   satisfied only when the bypass is active AND the currently signed-in
-  identity is genuinely the fixture uid — never merely because the bypass
-  flag happens to be set. A tester who manually signs in as `pricing_plus`
-  (or any other uid) while the flag is on still runs the real onboarding flow.
+  identity is either the fixture uid OR any seeded `pricing_*` fixture (a
+  prefix rule, not an enumerated list — see `identity_semantics` in the
+  contract) — never merely because the bypass flag happens to be set. A
+  tester signed in as a real Google/Apple account still runs the real
+  onboarding flow even with the flag on; a `pricing_*` fixture still runs the
+  real onboarding flow when the flag is **off**.
+- **Onboarding composition (macOS)**: unaffected by this bypass's flag.
+  `pricing_*` uids already skip onboarding unconditionally through the
+  harness launcher's separate `OMI_SKIP_ONBOARDING` mechanism (see above);
+  this bypass's own onboarding-skip only ever reaches the fixture identity.
 
 ## Enable / disable / reset
 
@@ -107,7 +121,8 @@ control lifts it.
 ## Testing
 
 Each platform has a pure, dependency-injected gate function plus a
-conformance test that loads the shared JSON fixture directly:
+conformance test that loads the shared JSON fixture directly (both
+`gate_cases` and, on Windows/mobile, `identity_cases`):
 
 - Windows: `desktop/windows/src/shared/localDevOnboardingBypass.ts` +
   `localDevOnboardingBypassContract.test.ts` (cross-platform gate contract).

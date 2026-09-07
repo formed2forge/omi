@@ -13,10 +13,13 @@ import 'package:omi/env/environment_profile.dart';
 /// WHY A SEPARATE FLAG FROM local_dev: [AppEnvironmentProfile.localDev] is
 /// ALSO the profile the existing manual "Sign In (Developer)"
 /// (LocalDevSignIn) pricing-QA flow runs under (an arbitrary typed uid, e.g.
-/// pricing_plus), which must keep running onboarding normally so testers can
-/// verify the plan catalogue post-onboarding. The bypass is a SEPARATE,
-/// narrower opt-in on top of local_dev — never inferred from build type,
-/// persisted state, or an existing login alone.
+/// pricing_plus). With the flag OFF, that flow still runs onboarding
+/// normally, so testers can verify the plan catalogue post-onboarding. With
+/// the flag ON, both the fixture identity AND any seeded pricing_* uid skip
+/// onboarding ([isLocalDevOnboardingBypassIdentity]) — a deliberate,
+/// user-decided widening (2026-09-07) on top of local_dev's own profile gate,
+/// never inferred from build type, persisted state, or an existing login
+/// alone.
 
 /// The single non-privileged fixture identity every platform signs in as when
 /// the bypass is active. Carries no Stripe/subscription document, so it
@@ -39,11 +42,22 @@ bool resolveLocalDevOnboardingBypassActive({
   return bypassFlagValue == '1';
 }
 
-/// Whether `uid` is the bypass's own fixture identity — used to require that
-/// onboarding-skip composes with "genuinely signed in as the fixture", not
-/// "any local_dev login" (e.g. a manually-typed pricing_plus session must
-/// still run onboarding even while the bypass flag happens to be set).
-bool isLocalDevOnboardingBypassIdentity(String? uid) => uid == kLocalDevFixtureUid;
+/// Seeded pricing-QA fixture uids (scripts/dev-harness/PRICING_SCENARIOS.md,
+/// e.g. pricing_plus, pricing_unlimited_v2) all carry this prefix. The
+/// harness seeds them dynamically per scenario
+/// (dev_harness/pricing_scenarios.py), so this is a prefix rule, not an
+/// enumerated list — a fixed list would drift the moment a new scenario adds
+/// a fixture.
+const String kPricingFixtureUidPrefix = 'pricing_';
+
+/// Whether `uid` satisfies onboarding under the bypass — contracts/parity/
+/// local_dev_onboarding_bypass.json's identity_semantics: the fixture itself,
+/// OR any seeded pricing-QA fixture uid. Composing with "any local_dev login"
+/// would be wrong (a real Google/Apple-signed-in account must still onboard
+/// even with the flag on) — this only matches the fixture and the pricing_*
+/// prefix, both deliberately onboarding-bypass-eligible identities.
+bool isLocalDevOnboardingBypassIdentity(String? uid) =>
+    uid != null && uid.isNotEmpty && (uid == kLocalDevFixtureUid || uid.startsWith(kPricingFixtureUidPrefix));
 
 /// Build-time-frozen (dart-define) gate — the production entry point. Tests
 /// exercise [resolveLocalDevOnboardingBypassActive] directly with injected

@@ -59,12 +59,28 @@ void main() {
   });
 
   group('isLocalDevOnboardingBypassIdentity', () {
-    test('matches only the exact fixture uid', () {
+    test('matches the fixture uid', () {
       expect(isLocalDevOnboardingBypassIdentity(kLocalDevFixtureUid), isTrue);
     });
 
-    test('rejects any other uid, including a manually-typed pricing fixture', () {
-      expect(isLocalDevOnboardingBypassIdentity('pricing_plus'), isFalse);
+    test('matches any seeded pricing-QA fixture uid (pricing_ prefix)', () {
+      expect(isLocalDevOnboardingBypassIdentity('pricing_plus'), isTrue);
+      expect(isLocalDevOnboardingBypassIdentity('pricing_unlimited_v2'), isTrue);
+      // Prefix rule, not an enumerated list — a scenario-specific fixture not
+      // on any hardcoded list still matches, since the harness seeds these
+      // dynamically (dev_harness/pricing_scenarios.py).
+      expect(isLocalDevOnboardingBypassIdentity('pricing_unlimited_grandfathered'), isTrue);
+    });
+
+    test('rejects a non-pricing, non-fixture uid (e.g. a real signed-in account)', () {
+      expect(isLocalDevOnboardingBypassIdentity('alice'), isFalse);
+    });
+
+    test('rejects a uid that merely contains "pricing" without the prefix', () {
+      expect(isLocalDevOnboardingBypassIdentity('pricingsomething'), isFalse);
+    });
+
+    test('rejects null/empty', () {
       expect(isLocalDevOnboardingBypassIdentity(null), isFalse);
       expect(isLocalDevOnboardingBypassIdentity(''), isFalse);
     });
@@ -115,9 +131,9 @@ void main() {
 
     test('an unsatisfied bypass never overrides a real user still onboarding', () {
       // Regression guard for "must not bypass onboarding based only on an
-      // existing login": bypassSatisfied=false (e.g. a manually-typed
-      // pricing_plus session, or the bypass flag off) must still onboard even
-      // though the caller IS signed in (this function only runs post-sign-in).
+      // existing login": bypassSatisfied=false (e.g. a real Google/Apple
+      // account, or the bypass flag off) must still onboard even though the
+      // caller IS signed in (this function only runs post-sign-in).
       expect(
         resolveMobileAppRoute(
           aiConsentGiven: false,
@@ -158,6 +174,15 @@ void main() {
           bypassFlagValue: c['bypass_flag_value'] as String?,
         );
         expect(result, c['expected_bypass_active'], reason: 'case: ${c['name']}');
+      }
+    });
+
+    test('every identity_case agrees with the production identity function', () {
+      final cases = contract['identity_cases'] as List<dynamic>;
+      for (final raw in cases) {
+        final c = raw as Map<String, dynamic>;
+        final result = isLocalDevOnboardingBypassIdentity(c['uid'] as String?);
+        expect(result, c['expected_identity_match'], reason: 'case: ${c['name']}');
       }
     });
   });
