@@ -174,6 +174,45 @@ enum SubscriptionPlanPresentation {
     }
     return currentPlan.rawValue == plan.id
   }
+
+  /// Maps a raw Stripe price title to the internal plan id used to bucket prices
+  /// into the fallback catalog (`SettingsContentView.planCatalog(from:)`). Order
+  /// matters: more specific substrings (e.g. "unlimited_v2") must be checked
+  /// before the substrings they're contained in (e.g. "unlimited"), or two
+  /// distinct plans collapse into one fallback catalog entry.
+  static func normalizedPlanId(from title: String) -> String? {
+    let normalized = title.lowercased()
+    // Degraded price-fallback identity only. Descriptive copy comes from
+    // /v1/users/me/subscription's available_plans. Keep `pro` (Architect's
+    // wire alias) distinct from the new Pro SKU (`pro_v2`, display "Pro").
+    if normalized.contains("pro_v2") {
+      return "pro_v2"
+    }
+    if normalized.contains("plus") {
+      return "plus"
+    }
+    if normalized.contains("free") || normalized.contains("basic") {
+      return "basic"
+    }
+    // Check for Unlimited-v2 before "unlimited", which would otherwise match
+    // both "unlimited" and "unlimited_v2" titles and collapse them together.
+    if normalized.contains("unlimited_v2") || normalized.contains("unlimited v2") {
+      return "unlimited_v2"
+    }
+    if normalized.contains("unlimited") || normalized.contains("neo") {
+      return "unlimited"
+    }
+    if normalized.contains("operator") {
+      return "operator"
+    }
+    if normalized.contains("architect") || normalized.contains("omi pro") {
+      return "architect"
+    }
+    if normalized == "pro" || normalized.hasPrefix("pro ") {
+      return "pro_v2"
+    }
+    return nil
+  }
 }
 
 extension SettingsContentView {
@@ -463,43 +502,9 @@ extension SettingsContentView {
     }
   }
 
-  func normalizedPlanId(from title: String) -> String? {
-    let normalized = title.lowercased()
-    // Degraded price-fallback identity only. Descriptive copy comes from
-    // /v1/users/me/subscription's available_plans. Keep `pro` (Architect's
-    // wire alias) distinct from the new Pro SKU (`pro_v2`, display "Pro").
-    if normalized.contains("pro_v2") {
-      return "pro_v2"
-    }
-    if normalized.contains("plus") {
-      return "plus"
-    }
-    if normalized.contains("free") || normalized.contains("basic") {
-      return "basic"
-    }
-    // Check for Unlimited-v2 before "unlimited", which would otherwise match
-    // both "unlimited" and "unlimited_v2" titles and collapse them together.
-    if normalized.contains("unlimited_v2") || normalized.contains("unlimited v2") {
-      return "unlimited_v2"
-    }
-    if normalized.contains("unlimited") || normalized.contains("neo") {
-      return "unlimited"
-    }
-    if normalized.contains("operator") {
-      return "operator"
-    }
-    if normalized.contains("architect") || normalized.contains("omi pro") {
-      return "architect"
-    }
-    if normalized == "pro" || normalized.hasPrefix("pro ") {
-      return "pro_v2"
-    }
-    return nil
-  }
-
   func planCatalog(from prices: [AvailablePlanPriceOption]) -> [SubscriptionPlanOption] {
     let groupedPrices = Dictionary(grouping: prices) { price in
-      normalizedPlanId(from: price.title) ?? "unknown"
+      SubscriptionPlanPresentation.normalizedPlanId(from: price.title) ?? "unknown"
     }
 
     return groupedPrices.compactMap { planId, options in
@@ -515,6 +520,8 @@ extension SettingsContentView {
         title = "Pro"
       case "unlimited":
         title = "Neo"
+      case "unlimited_v2":
+        title = "Unlimited"
       case "operator":
         title = "Operator"
       case "architect":
