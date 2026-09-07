@@ -1,13 +1,32 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dev_harness import config, safety
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _make_isolated_repo(tmp_path: Path) -> Path:
+    """Create a minimal fake repo with AGENTS.md and .git markers for config isolation.
+
+    This prevents config.load_config() from reading real developer secrets files
+    (backend/.env.offline or backend/.env.local-dev) that might exist in the
+    actual repo, which could pollute test expectations with ambient credentials
+    or provider mode overrides.
+    """
+    repo = tmp_path / "repo"
+    backend = repo / "backend"
+    backend.mkdir(parents=True)
+    (repo / "AGENTS.md").write_text("test-repo", encoding="utf-8")
+    (repo / ".git").mkdir()
+    return repo
 
 
 def test_child_env_for_offline_mode() -> None:
@@ -59,8 +78,36 @@ def test_offline_mode_still_supplies_the_screen_frame_signing_secret() -> None:
     assert child["SCREEN_FRAME_SIGNING_SECRET"] == config.LOCAL_SCREEN_FRAME_SIGNING_SECRET
 
 
-def test_nondefault_port_offset_propagates_to_every_harness_service() -> None:
-    cfg = config.load_config(REPO_ROOT, env={"OMI_HARNESS_PORT_OFFSET": "321"})
+@pytest.mark.parametrize(
+    "provider_mode,expected_gateway_feature_mode",
+    [
+        # Offline harness uses direct/stub LLM paths. OMI_ENV_STAGE=offline is not a
+        # gateway-local stage, so FEATURE_MODE=gateway would make gateway_client reject
+        # startup while still advertising gateway routing (see commit efba1a05b5).
+        ("offline", "off"),
+        # Real mode uses the gateway with real provider credentials.
+        ("real", "gateway"),
+    ],
+)
+def test_nondefault_port_offset_propagates_to_every_harness_service(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, provider_mode: str, expected_gateway_feature_mode: str
+) -> None:
+    """Test that port offset applies to all harness services for both provider modes.
+
+    Uses an isolated tmp_path-based repo to prevent reading real developer secrets
+    files that might override PROVIDER_MODE and pollute test expectations.
+    """
+    isolated_repo = _make_isolated_repo(tmp_path)
+    # Isolate os.environ: parse_secrets_file reads os.environ directly, not the env
+    # parameter passed to load_config. Use monkeypatch to prevent leakage from the
+    # developer's shell or previous test runs.
+    monkeypatch.setenv("OMI_LOCAL_STATE_ROOT", str(tmp_path / "state"))
+    monkeypatch.setenv("OMI_HARNESS_PORT_OFFSET", "321")
+    monkeypatch.setenv("PROVIDER_MODE", provider_mode)
+    for key in ("OPENAI_API_KEY", "DEEPGRAM_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+
+    cfg = config.load_config(isolated_repo, create_layout=True)
 
     assert cfg.firestore_host == "127.0.0.1:8406"
     assert cfg.auth_host == "127.0.0.1:9420"
@@ -83,8 +130,11 @@ def test_nondefault_port_offset_propagates_to_every_harness_service() -> None:
     assert desktop_env["OMI_LLM_GATEWAY_URL"] == cfg.llm_gateway_url
     assert backend_env["OMI_LLM_GATEWAY_SERVICE_TOKEN"] == cfg.llm_gateway_service_token
     assert desktop_env["OMI_LLM_GATEWAY_SERVICE_TOKEN"] == cfg.llm_gateway_service_token
-    assert backend_env["OMI_LLM_GATEWAY_FEATURE_MODE"] == "gateway"
-    assert desktop_env["OMI_LLM_GATEWAY_FEATURE_MODE"] == "gateway"
+    # Assert the expected feature mode for both backend and desktop environments.
+    # In offline mode, feature_mode="off" (gateway not available, uses direct LLM).
+    # In real mode, feature_mode="gateway" (uses gateway with real provider credentials).
+    assert backend_env["OMI_LLM_GATEWAY_FEATURE_MODE"] == expected_gateway_feature_mode
+    assert desktop_env["OMI_LLM_GATEWAY_FEATURE_MODE"] == expected_gateway_feature_mode
 
 
 def test_offline_child_env_uses_direct_llm_feature_mode() -> None:
