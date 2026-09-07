@@ -1,5 +1,11 @@
 import { useId, useState } from 'react'
-import { isLocalDevProfile, localDevConfigError, signInWithLocalDevToken } from '../../lib/firebase'
+import {
+  isLocalDevProfile,
+  localDevConfigError,
+  localDevOnboardingBypassActive,
+  resetLocalDevOnboardingBypassFixture,
+  signInWithLocalDevToken
+} from '../../lib/firebase'
 
 // Seeded pricing fixtures documented in scripts/dev-harness/PRICING_SCENARIOS.md
 // (plan_catalog_matrix + cancellation_and_downgrade_safety). Offered as
@@ -35,10 +41,11 @@ export function LocalDevSignIn(): React.JSX.Element | null {
   const [uid, setUid] = useState(DEFAULT_UID)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
 
   if (!isLocalDevProfile) return null
 
-  const disabled = loading || !!localDevConfigError
+  const disabled = loading || resetting || !!localDevConfigError
 
   const onSubmit = async (): Promise<void> => {
     const trimmed = uid.trim()
@@ -55,6 +62,25 @@ export function LocalDevSignIn(): React.JSX.Element | null {
       setError((e as Error).message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Undoes the sign-out suppression a prior explicit sign-out set (see
+  // firebase.ts's signOutUser / useLocalDevOnboardingBypass.ts) and signs in
+  // as the fixture immediately, rather than just arming a flag for next
+  // launch — so this control's effect is visible right away. Only rendered
+  // when the bypass is actually configured to auto-fire; with the flag off
+  // there is no "automatic" sign-in to re-enable.
+  const onResetToAutoSignIn = async (): Promise<void> => {
+    setError(null)
+    setResetting(true)
+    try {
+      await resetLocalDevOnboardingBypassFixture()
+      // Signed in — onAuthStateChanged takes over; nothing else to do here.
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -100,6 +126,16 @@ export function LocalDevSignIn(): React.JSX.Element | null {
         </button>
       </div>
       {error && <p className="mt-2 text-center text-sm text-red-400/90">{error}</p>}
+      {localDevOnboardingBypassActive && (
+        <button
+          type="button"
+          onClick={() => void onResetToAutoSignIn()}
+          disabled={disabled}
+          className="mt-3 w-full whitespace-nowrap rounded-xl border border-white/10 px-4 py-2 text-xs font-medium text-white/50 transition-opacity hover:opacity-80 disabled:opacity-50"
+        >
+          {resetting ? 'Resetting…' : 'Reset to auto sign-in'}
+        </button>
+      )}
     </div>
   )
 }

@@ -23,6 +23,10 @@ import {
   LOCAL_DEV_FIXTURE_UID,
   resolveLocalDevOnboardingBypassActive
 } from '../../../shared/localDevOnboardingBypass'
+import {
+  resetLocalDevOnboardingBypassSuppression,
+  suppressLocalDevOnboardingBypass
+} from './localDevOnboardingBypassState'
 import type { SignInProvider } from '../../../shared/types'
 
 /** True only when this bundle was built with OMI_APP_PROFILE=local_dev (frozen at
@@ -207,6 +211,15 @@ export async function signOutUser(): Promise<void> {
   // user-scoped local data FIRST so a second account on this machine can't see
   // it, THEN drop the Firebase session.
   //
+  // Local-dev onboarding bypass: an EXPLICIT sign-out — whether the user was
+  // signed in as the bypass fixture or a manually-typed pricing uid — must
+  // suppress the bypass's auto sign-in, or it would silently resurrect a
+  // session the tester chose to end (see useLocalDevOnboardingBypass.ts). Set
+  // this FIRST and unconditionally on the sign-out path (before anything below
+  // can throw) so a partial teardown failure can't leave the bypass free to
+  // re-fire. No-op outside local_dev — `isLocalDevProfile` is a build-time-
+  // frozen `false` in a normal/production build.
+  if (isLocalDevProfile) suppressLocalDevOnboardingBypass()
   // Grab the token BEFORE signing out so we can deactivate BYOK server-side while
   // the session is still valid: teardownUserData wipes the local keys, and this
   // DELETE drops the matching backend enrollment so this account isn't left
@@ -221,6 +234,19 @@ export async function signOutUser(): Promise<void> {
     }
   }
   await signOut(auth)
+}
+
+/**
+ * Explicit, developer-initiated re-enable of the local-dev onboarding bypass's
+ * automatic fixture sign-in (LocalDevSignIn's "Reset to auto sign-in"
+ * control) — the ONLY way suppression set by signOutUser above is ever
+ * lifted. Clears the persisted suppression and immediately signs in as the
+ * fixture, rather than merely arming the flag for a future launch, so the
+ * action has a visible, immediate effect.
+ */
+export async function resetLocalDevOnboardingBypassFixture(): Promise<User> {
+  resetLocalDevOnboardingBypassSuppression()
+  return signInWithLocalDevOnboardingBypass()
 }
 
 export { onAuthStateChanged }

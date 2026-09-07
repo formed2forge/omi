@@ -65,10 +65,27 @@ behavior) — use a fresh named bundle to see the wizard again, matching the
 platform's existing testing convention.
 
 **Reset** (see a fresh onboarding pass again):
-- **Windows / mobile**: sign out (or just disable the bypass and relaunch —
-  the flag check is re-evaluated live against the current sign-in each time).
+- **Windows**: sign out and pick a different uid from "Sign In (Developer)"
+  (e.g. any `pricing_*` fixture) — an explicit sign-out suppresses the
+  bypass's auto sign-in for that profile (see below), so it will not race you
+  back into the fixture identity before you can choose one. To go back to the
+  auto-bootstrapped fixture, use "Sign In (Developer)"'s **Reset to auto
+  sign-in** control (only shown while the bypass flag is on) — it clears the
+  suppression and signs in as the fixture immediately. Just disabling the
+  bypass flag and relaunching also falls through to the real wizard, same as
+  before.
+- **Mobile**: sign out (or just disable the bypass and relaunch — the flag
+  check is re-evaluated live against the current sign-in each time).
 - **macOS**: launch a new named bundle (`OMI_APP_NAME=omi-<feature>`), which
   gets its own isolated storage/UserDefaults root.
+
+**Windows-specific: sign-out is sticky.** An explicit sign-out — whether from
+the auto-bootstrapped fixture or a manually-typed uid — persists a
+profile-scoped "suppressed" marker (`lib/localDevOnboardingBypassState.ts`,
+survives an app restart) so the bypass never silently signs the fixture back
+in underneath a tester who chose to sign out or is mid-way through picking a
+different pricing uid. Only "Sign In (Developer)"'s **Reset to auto sign-in**
+control lifts it.
 
 ## Safety boundary
 
@@ -93,7 +110,13 @@ Each platform has a pure, dependency-injected gate function plus a
 conformance test that loads the shared JSON fixture directly:
 
 - Windows: `desktop/windows/src/shared/localDevOnboardingBypass.ts` +
-  `localDevOnboardingBypassContract.test.ts`
+  `localDevOnboardingBypassContract.test.ts` (cross-platform gate contract).
+  The Windows-only sign-out-suppression behavior above is covered separately:
+  `src/renderer/src/lib/localDevOnboardingBypassState.test.ts` (the persisted
+  marker), `src/renderer/src/hooks/useLocalDevOnboardingBypass.test.ts` (the
+  auto sign-in effect respects it), and
+  `src/renderer/src/components/auth/LocalDevSignIn.test.tsx` (the Reset
+  control).
 - Mobile: `app/lib/env/local_dev_onboarding_bypass.dart` +
   `app/test/unit/local_dev_onboarding_bypass_test.dart`
 - macOS: `DesktopLocalProfile.onboardingBypassEnabled` (OmiSupport) +

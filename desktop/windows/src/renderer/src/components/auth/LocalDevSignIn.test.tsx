@@ -5,7 +5,9 @@ import { render, cleanup, fireEvent, screen, waitFor } from '@testing-library/re
 const firebaseMock = vi.hoisted(() => ({
   isLocalDevProfile: true,
   localDevConfigError: null as string | null,
-  signInWithLocalDevToken: vi.fn()
+  localDevOnboardingBypassActive: false,
+  signInWithLocalDevToken: vi.fn(),
+  resetLocalDevOnboardingBypassFixture: vi.fn()
 }))
 
 vi.mock('../../lib/firebase', () => firebaseMock)
@@ -20,10 +22,18 @@ function submitButton(name = 'Sign In (Developer)'): HTMLButtonElement {
   return screen.getByRole('button', { name }) as HTMLButtonElement
 }
 
+function resetButton(name = 'Reset to auto sign-in'): HTMLButtonElement {
+  return screen.getByRole('button', { name }) as HTMLButtonElement
+}
+
 beforeEach(() => {
   firebaseMock.isLocalDevProfile = true
   firebaseMock.localDevConfigError = null
+  firebaseMock.localDevOnboardingBypassActive = false
   firebaseMock.signInWithLocalDevToken.mockReset().mockResolvedValue({ uid: 'pricing_plus' })
+  firebaseMock.resetLocalDevOnboardingBypassFixture
+    .mockReset()
+    .mockResolvedValue({ uid: 'local_dev_fixture' })
 })
 
 afterEach(() => {
@@ -105,5 +115,63 @@ describe('LocalDevSignIn — sign-in flow', () => {
     await waitFor(() =>
       expect(firebaseMock.signInWithLocalDevToken).toHaveBeenCalledWith('pricing_unlimited_v2')
     )
+  })
+
+  it('manually selecting a different uid (UID B) still works after a prior sign-in attempt', async () => {
+    render(<LocalDevSignIn />)
+    fireEvent.change(uidInput(), { target: { value: 'pricing_plus' } })
+    fireEvent.click(submitButton())
+    await waitFor(() =>
+      expect(firebaseMock.signInWithLocalDevToken).toHaveBeenCalledWith('pricing_plus')
+    )
+
+    fireEvent.change(uidInput(), { target: { value: 'pricing_architect' } })
+    fireEvent.click(submitButton())
+    await waitFor(() =>
+      expect(firebaseMock.signInWithLocalDevToken).toHaveBeenLastCalledWith('pricing_architect')
+    )
+  })
+})
+
+describe('LocalDevSignIn — reset to auto sign-in', () => {
+  it('is not rendered when the bypass is not active', () => {
+    firebaseMock.localDevOnboardingBypassActive = false
+    render(<LocalDevSignIn />)
+    expect(screen.queryByRole('button', { name: 'Reset to auto sign-in' })).toBeNull()
+  })
+
+  it('is rendered when the bypass is active, and clears suppression + signs in as the fixture', async () => {
+    firebaseMock.localDevOnboardingBypassActive = true
+    render(<LocalDevSignIn />)
+    fireEvent.click(resetButton())
+    await waitFor(() =>
+      expect(firebaseMock.resetLocalDevOnboardingBypassFixture).toHaveBeenCalledTimes(1)
+    )
+  })
+
+  it('shows a resetting state while the call is pending', async () => {
+    firebaseMock.localDevOnboardingBypassActive = true
+    let resolveReset: (v: unknown) => void = () => {}
+    firebaseMock.resetLocalDevOnboardingBypassFixture.mockReturnValue(
+      new Promise((resolve) => {
+        resolveReset = resolve
+      })
+    )
+    render(<LocalDevSignIn />)
+    fireEvent.click(resetButton())
+    await waitFor(() => expect(resetButton('Resetting…').disabled).toBe(true))
+    resolveReset({ uid: 'local_dev_fixture' })
+    await waitFor(() => expect(resetButton().disabled).toBe(false))
+  })
+
+  it('surfaces an error and re-enables the control on failure', async () => {
+    firebaseMock.localDevOnboardingBypassActive = true
+    firebaseMock.resetLocalDevOnboardingBypassFixture.mockRejectedValue(
+      new Error('emulator unreachable')
+    )
+    render(<LocalDevSignIn />)
+    fireEvent.click(resetButton())
+    await waitFor(() => expect(screen.getByText('emulator unreachable')).not.toBeNull())
+    expect(resetButton().disabled).toBe(false)
   })
 })
