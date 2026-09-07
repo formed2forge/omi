@@ -73,8 +73,7 @@ enum SubscriptionPlanPresentation {
       return "Free (BYOK)"
     }
     let baseTitle: String
-    if let catalogTitle = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog)?.title
-    {
+    if let catalogTitle = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog)?.title {
       baseTitle = catalogTitle
     } else {
       switch plan {
@@ -106,9 +105,11 @@ enum SubscriptionPlanPresentation {
   static func fallbackDescription(for planId: String) -> String {
     switch planId {
     case "basic":
-      return "30 chat questions per month. 300 minutes of transcription per month, then on-device. Shared with mobile and web."
+      return
+        "30 chat questions per month. 300 minutes of transcription per month, then on-device. Shared with mobile and web."
     case "plus":
-      return "200 chat questions per month. 1,500 minutes of transcription per month, then on-device. Full desktop, mobile, and web access."
+      return
+        "200 chat questions per month. 1,500 minutes of transcription per month, then on-device. Full desktop, mobile, and web access."
     case "pro_v2":
       return "1,000 chat questions per month. Full desktop, mobile, and web access."
     case "unlimited":
@@ -475,6 +476,11 @@ extension SettingsContentView {
     }
     if normalized.contains("free") || normalized.contains("basic") {
       return "basic"
+    }
+    // Check for Unlimited-v2 before "unlimited", which would otherwise match
+    // both "unlimited" and "unlimited_v2" titles and collapse them together.
+    if normalized.contains("unlimited_v2") || normalized.contains("unlimited v2") {
+      return "unlimited_v2"
     }
     if normalized.contains("unlimited") || normalized.contains("neo") {
       return "unlimited"
