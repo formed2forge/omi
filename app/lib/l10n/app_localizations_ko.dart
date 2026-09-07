@@ -4626,12 +4626,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get basicPlanDescription => '300 프리미엄 분 + 무제한 온디바이스';
 
   @override
-  String get planLoadingErrorTitle => 'Unable to determine plan';
-
-  @override
-  String get planLoadingErrorDescription => 'Your plan information couldn\'t be loaded. Please try again.';
-
-  @override
   String get minutes => '분';
 
   @override

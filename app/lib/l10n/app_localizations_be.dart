@@ -4720,12 +4720,6 @@ class AppLocalizationsBe extends AppLocalizations {
   String get basicPlanDescription => '300 прэміум мін + неабмежавана на прыладзе';
 
   @override
-  String get planLoadingErrorTitle => 'Unable to determine plan';
-
-  @override
-  String get planLoadingErrorDescription => 'Your plan information couldn\'t be loaded. Please try again.';
-
-  @override
   String get minutes => 'хвіліны';
 
   @override

@@ -5517,14 +5517,6 @@
     "@basicPlanDescription": {
         "description": "Description of basic plan features in usage page"
     },
-    "planLoadingErrorTitle": "Unable to determine plan",
-    "@planLoadingErrorTitle": {
-        "description": "Title shown when plan information fails to load for an unknown/future plan"
-    },
-    "planLoadingErrorDescription": "Your plan information couldn't be loaded. Please try again.",
-    "@planLoadingErrorDescription": {
-        "description": "Description shown when plan information fails to load for an unknown/future plan"
-    },
     "minutes": "minutes",
     "@minutes": {
         "description": "Unit label for minutes"

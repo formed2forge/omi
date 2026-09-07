@@ -454,12 +454,12 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              context.l10n.planLoadingErrorTitle,
+              context.l10n.unableToLoadPlans,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
-              context.l10n.planLoadingErrorDescription,
+              context.l10n.somethingWentWrongTryAgain,
               style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
             ),
             const SizedBox(height: 16),

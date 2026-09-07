@@ -4684,12 +4684,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get basicPlanDescription => '300 นาทีพรีเมียม + ไม่จำกัดบนอุปกรณ์';
 
   @override
-  String get planLoadingErrorTitle => 'Unable to determine plan';
-
-  @override
-  String get planLoadingErrorDescription => 'Your plan information couldn\'t be loaded. Please try again.';
-
-  @override
   String get minutes => 'นาที';
 
   @override

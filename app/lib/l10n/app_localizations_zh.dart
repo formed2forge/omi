@@ -4617,12 +4617,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get basicPlanDescription => '300 高级分钟 + 设备端无限';
 
   @override
-  String get planLoadingErrorTitle => 'Unable to determine plan';
-
-  @override
-  String get planLoadingErrorDescription => 'Your plan information couldn\'t be loaded. Please try again.';
-
-  @override
   String get minutes => '分钟';
 
   @override

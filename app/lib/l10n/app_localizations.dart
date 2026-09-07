@@ -8955,18 +8955,6 @@ abstract class AppLocalizations {
   /// **'300 premium mins + unlimited on-device'**
   String get basicPlanDescription;
 
-  /// Title shown when plan information fails to load for an unknown/future plan
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to determine plan'**
-  String get planLoadingErrorTitle;
-
-  /// Description shown when plan information fails to load for an unknown/future plan
-  ///
-  /// In en, this message translates to:
-  /// **'Your plan information couldn\'t be loaded. Please try again.'**
-  String get planLoadingErrorDescription;
-
   /// Unit label for minutes
   ///
   /// In en, this message translates to:
