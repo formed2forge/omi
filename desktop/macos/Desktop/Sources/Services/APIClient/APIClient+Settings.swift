@@ -513,6 +513,54 @@ struct SubscriptionPlanOption: Codable, Identifiable {
   }
 }
 
+/// Where an account stands relative to the end of a *real* paid subscription.
+/// Mirrors `backend.models.users.SubscriptionLapseState`; see
+/// `backend/utils/subscription.py`'s `resolve_subscription_lapse` docstring
+/// for the evidence rules that decide when this is non-nil.
+enum SubscriptionLapseState: String, Codable {
+  // Still entitled: the user asked Stripe to cancel and the paid period is
+  // running out. `effectiveAt` is when access is scheduled to end.
+  case cancellationScheduled = "cancellation_scheduled"
+  // No longer entitled: a paid period this account really had has passed.
+  case accessEnded = "access_ended"
+}
+
+/// Mirrors `backend.models.users.SubscriptionLapseReason`. `accessEnded` is
+/// always `unknown` — the backend deliberately cannot tell cancellation apart
+/// from payment failure or plain expiration after the fact, so this client
+/// must never guess a specific cause in copy.
+enum SubscriptionLapseReason: String, Codable {
+  case userRequested = "user_requested"
+  case unknown
+}
+
+/// Mirrors `backend.models.users.SubscriptionLapseRecovery`. Server-owned:
+/// the one action that resolves this lapse state, not a styling choice.
+enum SubscriptionLapseRecovery: String, Codable {
+  // Access has not lapsed yet: the cancellation can be reverted in place.
+  case keepSubscription = "keep_subscription"
+  // Access is over: a new checkout is required.
+  case resubscribe
+}
+
+/// Mirrors `backend.models.users.SubscriptionLapse`. Read-only projection of
+/// "this account's paid access is ending or over" — never an entitlement
+/// input; see `resolve_subscription_lapse`'s docstring.
+struct SubscriptionLapse: Codable {
+  let state: SubscriptionLapseState
+  let reason: SubscriptionLapseReason
+  let recoveryAction: SubscriptionLapseRecovery
+  // Unix seconds. Null only when the stored row proves the state without
+  // proving its date.
+  let effectiveAt: Int?
+
+  enum CodingKeys: String, CodingKey {
+    case state, reason
+    case recoveryAction = "recovery_action"
+    case effectiveAt = "effective_at"
+  }
+}
+
 struct UserSubscriptionResponse: Codable {
   let subscription: UserSubscriptionInfo
   let transcriptionSecondsUsed: Int
@@ -529,6 +577,11 @@ struct UserSubscriptionResponse: Codable {
   // policy change in #7496 — they retain desktop access until this unix-seconds
   // timestamp (their `current_period_end`). Null for everyone else.
   let desktopGrandfatherUntil: Int?
+  // Read-only projection of "this account's paid access is ending or over".
+  // Null means there is no evidence of a real paid subscription ending —
+  // every always-Free account, every legacy row with no period data, and
+  // every currently-active plan. See `SubscriptionLapse` for the contract.
+  let lapse: SubscriptionLapse?
 
   enum CodingKeys: String, CodingKey {
     case subscription
@@ -543,6 +596,7 @@ struct UserSubscriptionResponse: Codable {
     case availablePlans = "available_plans"
     case showSubscriptionUI = "show_subscription_ui"
     case desktopGrandfatherUntil = "desktop_grandfather_until"
+    case lapse
   }
 
   // Defensive decode: only `subscription` is required. The usage counters and
@@ -563,6 +617,11 @@ struct UserSubscriptionResponse: Codable {
     availablePlans = try c.decodeIfPresent([SubscriptionPlanOption].self, forKey: .availablePlans) ?? []
     showSubscriptionUI = try c.decodeIfPresent(Bool.self, forKey: .showSubscriptionUI) ?? true
     desktopGrandfatherUntil = try c.decodeIfPresent(Int.self, forKey: .desktopGrandfatherUntil)
+    // `try?` (rather than `decodeIfPresent`'s plain optional) also swallows a future
+    // `state`/`reason`/`recovery_action` value this build doesn't recognize yet, so an
+    // unrecognized lapse variant degrades to "no notice shown" instead of blanking the
+    // entire Plan & Usage page — the same forward-compat posture as the rest of this decode.
+    lapse = (try? c.decodeIfPresent(SubscriptionLapse.self, forKey: .lapse)) ?? nil
   }
 }
 

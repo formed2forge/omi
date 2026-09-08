@@ -398,6 +398,66 @@ final class SubscriptionPlanPresentationTests: XCTestCase {
     )
   }
 
+  // MARK: - Subscription lapse notice
+
+  private static func medium(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .none
+    return formatter.string(from: date)
+  }
+
+  private static var testDateFormatter: DateFormatter {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .none
+    return formatter
+  }
+
+  func testCancellationScheduledNoticeRendersKeepSubscriptionCopyAndAction() {
+    let effectiveAt = 1_700_000_000
+    let lapse = SubscriptionLapse(
+      state: .cancellationScheduled, reason: .userRequested, recoveryAction: .keepSubscription,
+      effectiveAt: effectiveAt)
+
+    let dateStr = Self.medium(Date(timeIntervalSince1970: TimeInterval(effectiveAt)))
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.lapseNoticeMessage(for: lapse, dateFormatter: Self.testDateFormatter),
+      "Your plan will end on \(dateStr). You'll keep full access until then."
+    )
+    XCTAssertEqual(SubscriptionPlanPresentation.lapseNoticeActionLabel(for: lapse.state), "Keep My Plan")
+  }
+
+  func testCancellationScheduledNoticeWithoutDateFallsBackToNeutralCopy() {
+    // No date proof — fall back to the neutral message rather than guess one, matching the
+    // Flutter implementation's SubscriptionLapseNoticeCard.
+    let lapse = SubscriptionLapse(
+      state: .cancellationScheduled, reason: .userRequested, recoveryAction: .keepSubscription,
+      effectiveAt: nil)
+
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.lapseNoticeMessage(for: lapse, dateFormatter: Self.testDateFormatter),
+      SubscriptionPlanPresentation.lapseAccessEndedMessage
+    )
+  }
+
+  func testAccessEndedNoticeRendersNeutralCopyAndResubscribeAction() {
+    let lapse = SubscriptionLapse(
+      state: .accessEnded, reason: .unknown, recoveryAction: .resubscribe, effectiveAt: 1_650_000_000)
+
+    let message = SubscriptionPlanPresentation.lapseNoticeMessage(for: lapse, dateFormatter: Self.testDateFormatter)
+    XCTAssertEqual(message, "Your paid access has ended.")
+    XCTAssertEqual(SubscriptionPlanPresentation.lapseNoticeActionLabel(for: lapse.state), "Resubscribe")
+
+    // The backend's `reason` is always `unknown` here — it cannot honestly distinguish
+    // cancellation from payment failure or expiration after the fact, so the copy must never
+    // claim a specific cause.
+    let lowered = message.lowercased()
+    XCTAssertFalse(lowered.contains("cancel"))
+    XCTAssertFalse(lowered.contains("payment failed"))
+    XCTAssertFalse(lowered.contains("expired"))
+  }
+
   private static func catalogPlan(id: String, title: String, priceId: String) -> SubscriptionPlanOption {
     SubscriptionPlanOption(
       id: id,
