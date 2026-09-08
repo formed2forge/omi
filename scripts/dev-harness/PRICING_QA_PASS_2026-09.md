@@ -41,21 +41,23 @@ against current HEAD before being trusted for sign-off.
 
 | Scenario | UID / case | Expected result | iOS | macOS | Windows/Electron | Notes |
 |---|---|---|---|---|---|---|
-| `plan_catalog_matrix` | `pricing_never_subscribed` | Free | PASS (pre-fix, not re-verified this pass) | NOT RUN | NOT RUN | |
-| `plan_catalog_matrix` | `pricing_basic` | Free | PASS (pre-fix, not re-verified this pass) | NOT RUN | NOT RUN | |
-| `plan_catalog_matrix` | `pricing_plus` | Plus | **PASS (post-fix, live)** | NOT RUN | NOT RUN | Fix `c9636e1e29`. Re-verified live on iPhone 17 Pro Simulator, iOS 27.0: Settings badge reads PLUS, Plan & Usage reads Plus. |
-| `plan_catalog_matrix` | `pricing_pro_v2` | Pro | **PASS (post-fix, live)** | NOT RUN | NOT RUN | Regression spot-check: badge still PRO in both places. |
-| `plan_catalog_matrix` | `pricing_unlimited` | Neo (Legacy Plan) | PASS (pre-fix, not re-verified this pass) | NOT RUN | NOT RUN | macOS Unlimited-v2-vs-Neo identity fix on branch (`2fbed4b081`,`cbfdb0691a`,`2f8b144a65`) — macOS is the priority platform for this UID (Agent 3). |
-| `plan_catalog_matrix` | `pricing_architect` | Architect (Legacy Plan) | PASS (pre-fix, not re-verified this pass) | NOT RUN | NOT RUN | |
-| `plan_catalog_matrix` | `pricing_operator` | Operator (Legacy Plan) | PASS (pre-fix, not re-verified this pass) | NOT RUN | NOT RUN | |
-| `plan_catalog_matrix` | `pricing_unlimited_v2` | Unlimited (Legacy Plan) | **PASS (post-fix, live)** | NOT RUN | NOT RUN | Regression spot-check per Agent 2. |
-| `legacy_and_unknown_plan_resilience` | literal `pro` | Architect alias, legacy labeling | PASS (pre-fix, not re-verified this pass) | NOT RUN | NOT RUN | |
-| `legacy_and_unknown_plan_resilience` | Neo inside cutoff | Neo legacy labeling | PASS (pre-fix, not re-verified this pass) | NOT RUN | NOT RUN | |
-| `legacy_and_unknown_plan_resilience` | Neo outside cutoff | Current Neo behavior | PASS/observation (pre-fix, not re-verified this pass) | NOT RUN | NOT RUN | Renders identically to inside-cutoff case; no client-side spec distinguishes them. Not treated as a defect. |
-| `legacy_and_unknown_plan_resilience` | `future_plan_123` | Safe unknown-plan handling | **PASS (post-fix, live, after a 2nd fix)** | NOT RUN | NOT RUN | See "Defect 2 — reopened and re-fixed" below. Original fix (`9df791c20c`) did not cover the actual failure path; a second client-side fix (`e03df2f7b5`, cherry-picked from Agent 2's `68fab8d2e8`) was required and is now verified live, including a proven retry re-fetch. |
-| `cancellation_and_downgrade_safety` | Plus, `cancel_at_period_end` | Plus with cancellation state | **PASS (post-fix, live)** | NOT RUN | NOT RUN | Cancellation copy only shown one level deep (Manage Plan sheet), not a defect. |
-| `cancellation_and_downgrade_safety` | Pro, `cancel_at_period_end` | Pro with cancellation state | **PASS (post-fix, live)** | NOT RUN | NOT RUN | |
-| `cancellation_and_downgrade_safety` | `pricing_plus_lapsed` | Free after lapse | **PASS (post-fix, live)** | NOT RUN | NOT RUN | Entitlement correct; no in-app "why" explanation is a pre-existing UX gap, not a new defect. |
+| `plan_catalog_matrix` | `pricing_never_subscribed` | Free | PASS (pre-fix, not re-verified this pass) | **PASS** | **PASS (Electron-on-Mac)** | |
+| `plan_catalog_matrix` | `pricing_basic` | Free | PASS (pre-fix, not re-verified this pass) | **PASS** | **PASS (Electron-on-Mac)** | |
+| `plan_catalog_matrix` | `pricing_plus` | Plus | **PASS (post-fix, live)** | **PASS** | **PASS (Electron-on-Mac)** | Fix `c9636e1e29`. Re-verified live on iPhone 17 Pro Simulator, iOS 27.0: Settings badge reads PLUS, Plan & Usage reads Plus. |
+| `plan_catalog_matrix` | `pricing_pro_v2` | Pro | **PASS (post-fix, live)** | **PASS** | **PASS (Electron-on-Mac)** | Regression spot-check: badge still PRO in both places. |
+| `plan_catalog_matrix` | `pricing_unlimited` | Neo (Legacy Plan) | PASS (pre-fix, not re-verified this pass) | **PASS (post 2nd fix, live)** | **PASS (Electron-on-Mac)** | Genuine Neo re-verified unaffected by the macOS Unlimited-v2 fix below. |
+| `plan_catalog_matrix` | `pricing_architect` | Architect (Legacy Plan) | PASS (pre-fix, not re-verified this pass) | **PASS** | **PASS (Electron-on-Mac)** | |
+| `plan_catalog_matrix` | `pricing_operator` | Operator (Legacy Plan) | PASS (pre-fix, not re-verified this pass) | **PASS** | **PASS (Electron-on-Mac)** | |
+| `plan_catalog_matrix` | `pricing_unlimited_v2` | Unlimited (Legacy Plan) | **PASS (post-fix, live)** | **PASS (post-fix, live, after a 2nd macOS fix)** | **PASS (Electron-on-Mac)** | Regression spot-check per Agent 2 (iOS). macOS: see "Companion fix — reopened and re-fixed" below — Electron's separate TS implementation never had this bug. |
+| `legacy_and_unknown_plan_resilience` | literal `pro` | Architect alias, legacy labeling | PASS (pre-fix, not re-verified this pass) | **PASS** | **PASS (Electron-on-Mac)** | |
+| `legacy_and_unknown_plan_resilience` | Neo inside cutoff | Neo legacy labeling | PASS (pre-fix, not re-verified this pass) | **PASS** | **PASS (Electron-on-Mac)** | |
+| `legacy_and_unknown_plan_resilience` | Neo outside cutoff | Current Neo behavior | PASS/observation (pre-fix, not re-verified this pass) | **PASS** | **PASS (Electron-on-Mac)** | Renders identically to inside-cutoff case; no client-side spec distinguishes them. Not treated as a defect. |
+| `legacy_and_unknown_plan_resilience` | `future_plan_123` | Safe unknown-plan handling | **PASS (post-fix, live, after a 2nd fix)** | **PASS (no fix needed)** | **PASS (no fix needed, Electron-on-Mac)** | iOS: see "Defect 2 — reopened and re-fixed" below. macOS/Electron do **not** reproduce the iOS blank-card defect — macOS falls back to Free-tier UI + inline "Failed to load plan information." + Refresh; Electron shows "Request failed with status code 500" + "Try again". Both platforms already had adequate (if platform-divergent) error handling; no defect, no fix. |
+| `cancellation_and_downgrade_safety` | Plus, `cancel_at_period_end` | Plus with cancellation state | **PASS (post-fix, live)** | **PASS** | **PASS (Electron-on-Mac)** | Cancellation copy only shown one level deep (Manage Plan sheet), not a defect. |
+| `cancellation_and_downgrade_safety` | Pro, `cancel_at_period_end` | Pro with cancellation state | **PASS (post-fix, live)** | **PASS** | **PASS (Electron-on-Mac)** | |
+| `cancellation_and_downgrade_safety` | `pricing_plus_lapsed` | Free after lapse | **PASS (post-fix, live)** | **PASS** | **PASS (Electron-on-Mac)** | Entitlement correct; no in-app "why" explanation is a pre-existing UX gap, not a new defect. |
+
+**Electron results above were run on macOS ("Electron-on-Mac"), not native Windows.** No native Windows verification has been performed in this pass — that remains a gap (see Handoff log).
 
 ## Confirmed defects
 
@@ -97,12 +99,34 @@ still has no real representation of a genuinely unrecognized plan id — a
 literal future plan will still 500 server-side; this fix only stops the
 *client* from going silent about it.
 
-**Companion fix — macOS Unlimited-v2 vs. genuine Neo identity (not from this
-defect list but bundled in the same pass).** Fixed at `2fbed4b081`
-("fix(macos): resolve Unlimited-v2 plan identity from currentPriceId, not
-wire plan value"), `cbfdb0691a` (regression test), `2f8b144a65` (separator
-normalization fixup). **Status: fix on branch, full macOS GUI verification
-pending (Agent 3), including title/description/features/price.**
+**Companion fix — macOS Unlimited-v2 vs. genuine Neo identity — reopened and re-fixed.**
+Originally fixed at `2fbed4b081`/`cbfdb0691a`/`2f8b144a65`. Live GUI
+verification by Agent 3 found it incomplete: `pricing_unlimited_v2` rendered
+**"Neo (Legacy Plan)"** with Neo's description/features on first Settings
+load, self-correcting to "Unlimited (Legacy Plan)" only after a manual
+refresh — reproduced on two independent clean app launches. Root cause: the
+fix's title-parsing (`normalizedPlanId`) never engages against real backend
+data, because Unlimited-v2's actual Stripe price title is **"Unlimited
+Monthly"** — no "v2" substring at all (its catalog display name is just
+"Unlimited"; the original regression test's fabricated "Unlimited-v2
+Monthly" title never occurs on the wire). Title parsing falls into the same
+bucket genuine Neo uses, so two fallback-catalog entries end up claiming the
+same price id, and which one wins depends on unspecified dictionary
+iteration order. Fixed at `7c35ebf34e` (cherry-picked from Agent 3's
+`94ac9b70a1`): decode the backend's own `plan_id` field (`PricingOption.plan_id`
+in `backend/routers/payment.py`, already sent on every real deploy, previously
+dropped by the Swift model's `CodingKeys`) and prefer it over title parsing
+in a new `SubscriptionPlanPresentation.catalogGroupingKey(for:)`, degrading
+to the old title-parsing path only when a backend omits the field.
+`Failure-Class: FC-mirrored-model-omits-new-member` (3rd instance of an
+open class). **Status: CLOSED.** Verified live: 2 clean relaunches show
+correct "Unlimited (Legacy Plan)" / $19.00/month / 1000-chat features on
+first render; genuine Neo re-verified unaffected. Regression test
+(`SubscriptionPlanPresentationTests.swift`, real `JSONDecoder`-decoded
+fixtures matching actual backend shape) independently re-run by the
+coordinator: 15/15 pass. Electron's separate TypeScript implementation never
+had this bug (doesn't share the Swift title-parsing path) — verified PASS
+on Electron-on-Mac without any fix needed.
 
 ## Handoff log
 
@@ -207,4 +231,83 @@ Non-blocking gaps noted by Agent 2, not fixed (pre-existing, out of scope):
 Next responsible task: get this integration branch pushed to
   origin/pricing-update-sept-2026, then Agent 3 (desktop macOS/Electron QA)
   can start — harness is already seeded and ready.
+```
+
+```text
+2026-09-07 — coordinator checkpoint (desktop QA integrated; push saga)
+Tested/integrated on: coordinator/push-pricing-update-sept-2026, currently at
+  7f680ca10e, based on pricing-update-sept-2026 @ e7968a9271 + this session's
+  9 commits (not yet confirmed landed on origin — see push attempts below).
+Agent 3 (desktop macOS/Electron QA): completed on
+  qa/desktop-pricing-verification-sept2026 (local commits 94ac9b70a1,
+  a8d54a7e14; not pushed from that branch — same pre-existing
+  product-file-line-count-ratchet blocker, subset of the 9 files this
+  integration branch already has an exception for). Found the macOS
+  Unlimited-v2-vs-Neo fix was also incomplete (see Defects section);
+  implemented and verified a proper fix keyed on the backend's wire plan_id.
+  All three scenario matrices PASS on both macOS and Electron-on-Mac (NOT
+  native Windows — no way to test that from this Mac, explicitly labeled
+  throughout). pricing_unknown_future_plan does not reproduce the iOS
+  blank-card defect on either desktop platform — both already had adequate,
+  platform-appropriate error handling (macOS: Free-tier fallback + inline
+  error + Refresh; Electron: explicit 500 + Try again). Cleaned up ~28
+  orphaned processes left over from an earlier interrupted QA attempt
+  (hours-old, harmless) before starting fresh. Full Electron vitest suite:
+  5625/5625 passed. Fix and evidence cherry-picked onto the integration
+  branch as 7c35ebf34e and 7f680ca10e; independently re-ran the focused
+  Swift regression suite myself (`./scripts/dev-feedback.py --once swift
+  'SubscriptionPlanPresentationTests'` from desktop/macos — 15/15 pass)
+  before trusting and integrating.
+Harness/desktop state left behind by Agent 3: harness up (not torn down),
+  seeded to cancellation_and_downgrade_safety. macOS omi-pricing.app still
+  running, signed out. Electron dev processes stopped (not shared state).
+Push saga (chasing a long tail of pre-existing, branch-wide preflight
+  issues, none caused by pricing QA work, discovered one at a time because
+  this branch had apparently never been pushed clean before):
+  - check_backend_runtime_env_if_needed: worktree had no backend/.venv.
+    Fixed by running `make setup` in the push worktree (documented repo
+    setup step, not a workaround).
+  - check_backend_typecheck_if_needed: 1 real pyright error (0 before were
+    just warnings) in backend/utils/subscription.py:602, pre-existing since
+    23b2732be1 (2026-09-05, unrelated to this session). A dict-literal's
+    unioned value type made `plan_type` infer as
+    `PlanType | str | bool | None`; fixed with an explicit `cast(PlanType, ...)`
+    (already-imported helper), zero runtime behavior change. User approved
+    this specific edit before it was made (backend/subscription code is
+    sensitive; classifier flagged the edit, asked first). Commit a2858a8cb5.
+  - check_openapi_contract_if_needed: docs/api-reference/app-client-openapi.json
+    was stale (missing `pro_v2` in the PlanType enum) — pre-existing drift
+    from earlier plan-catalog work. Regenerated via
+    backend/scripts/export_openapi.py per the check's own instructions.
+    One-line diff. Commit 8190018715.
+  - check_backend_unit_tests_if_needed: two failure modes seen across
+    attempts. (1) tests/unit/test_verify_pusher_config_references.py
+    genuinely failed everywhere — root cause: `helm` CLI was not installed
+    on this Mac at all (`which helm` → not found), a missing local
+    dev-tool dependency, unrelated to any pricing QA change. Fixed via
+    `brew install helm` (standard, reversible local tool install). (2) A
+    recurring, non-deterministic CPU-time duration-guard flake in
+    tests/unit/test_backend_runtime_env_validator.py (a different specific
+    test tripped the 0.30s budget on each of 3 consecutive attempts, all
+    99 tests logically passing every time) — traced to genuine system
+    contention while Agent 3's Xcode builds were running concurrently
+    (`uptime` load average 8–13 during the flakes). Did not touch the
+    duration guard or the allowlist file (that would misrepresent transient
+    contention as an "intentional exception"); waited for Agent 3 to finish
+    (confirmed via its transcript file's last-modified time, not a guess)
+    before retrying, rather than continuing to retry blind.
+  - Multiple `OMI_PR_BODY_FILE=... git push` attempts were blocked outright
+    by the Claude Code permission classifier for the coordinator session
+    specifically (the env-var pattern reads as CI-metadata tampering even
+    though it is the repo's own documented mechanism, per AGENTS.md and
+    scripts/pr-preflight's own help text); the user ran the command manually
+    each round and relayed the actual preflight output back, which is how
+    each issue above was found and fixed in turn.
+Next responsible task: land the final push attempt (or the next one, if
+  another previously-unseen pre-existing check surfaces — this branch has
+  had a long tail of them), then reconcile qa/ios-post-fix-verification-sept2026
+  and qa/desktop-pricing-verification-sept2026's remote state (both still
+  only local on their respective worktrees) once origin/pricing-update-sept-2026
+  is confirmed updated. Native Windows verification remains an open gap —
+  no native Windows machine was available this pass.
 ```
