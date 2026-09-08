@@ -4006,6 +4006,19 @@ export interface Subscription {
   stripe_subscription_id?: string | null;
 }
 
+export interface SubscriptionLapse {
+  effective_at?: number | null;
+  reason: SubscriptionLapseReason;
+  recovery_action: SubscriptionLapseRecovery;
+  state: SubscriptionLapseState;
+}
+
+export type SubscriptionLapseReason = "user_requested" | "unknown";
+
+export type SubscriptionLapseRecovery = "keep_subscription" | "resubscribe";
+
+export type SubscriptionLapseState = "cancellation_scheduled" | "access_ended";
+
 export interface SubscriptionPlan {
   description?: string | null;
   eyebrow?: string | null;
@@ -4624,6 +4637,7 @@ export interface UserSubscriptionResponse {
   desktop_grandfather_until?: number | null;
   insights_gained_limit: number;
   insights_gained_used: number;
+  lapse?: SubscriptionLapse | null;
   phone_call_quota?: PhoneCallQuota | null;
   show_subscription_ui?: boolean;
   subscription: Subscription;
@@ -5370,6 +5384,10 @@ export interface OmiApiSchemas {
   "Structured": Structured;
   "SubjectAttribution": SubjectAttribution;
   "Subscription": Subscription;
+  "SubscriptionLapse": SubscriptionLapse;
+  "SubscriptionLapseReason": SubscriptionLapseReason;
+  "SubscriptionLapseRecovery": SubscriptionLapseRecovery;
+  "SubscriptionLapseState": SubscriptionLapseState;
   "SubscriptionPlan": SubscriptionPlan;
   "SubscriptionStatus": SubscriptionStatus;
   "SyncBatchItem": SyncBatchItem;
