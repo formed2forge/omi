@@ -2040,7 +2040,8 @@ class AppLocalizationsNo extends AppLocalizations {
   String get memoryDeleted => 'Minne slettet.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Noe av minnehistorikken er ikke tilgjengelig. Viser historikken mottatt så langt.';
 
   @override
   String get undo => 'Angre';
@@ -9915,7 +9916,7 @@ class AppLocalizationsNo extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripsjon mottar ikke lyd';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Trykk på + for å starte opptak';
 
   @override
   String get couldNotLoadMemories => 'Kunne ikke laste minner';

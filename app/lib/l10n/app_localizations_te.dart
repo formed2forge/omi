@@ -2051,7 +2051,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get memoryDeleted => 'జ్ఞాపకం తొలగించబడింది.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'కొంత మెమరీ చరిత్ర అందుబాటులో లేదు. ఇప్పటివరకు స్వీకరించిన చరిత్ర చూపబడుతోంది.';
 
   @override
   String get undo => 'మరలుచేయండి';
@@ -9966,7 +9966,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get transcriptionNoAudio => 'ట్రాన్స్‌క్రిప్షన్ ఆడియో స్వీకరించడం లేదు';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'రికార్డింగ్ ప్రారంభించడానికి + నొక్కండి';
 
   @override
   String get couldNotLoadMemories => 'జ్ఞాపకాలను లోడ్ చేయలేకపోయాం';

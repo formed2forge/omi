@@ -10811,5 +10811,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "ممکن است مشکلی در طرح اشتراک شما وجود داشته باشد. لطفاً با پشتیبانی تماس بگیرید تا در سرویس شما وقفه‌ای ایجاد نشود."
+    "planIssueContactSupport": "ممکن است مشکلی در طرح اشتراک شما وجود داشته باشد. لطفاً با پشتیبانی تماس بگیرید تا در سرویس شما وقفه‌ای ایجاد نشود.",
+    "memoryHistoryPartial": "بخشی از تاریخچه خاطرات در دسترس نیست. تاریخچه دریافت‌شده تاکنون نمایش داده می‌شود.",
+    "tapPlusToStartRecording": "برای شروع ضبط روی + ضربه بزنید"
 }

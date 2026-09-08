@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Det kan være et problem med abonnementet ditt. Kontakt support for å sikre at tjenesten din ikke blir avbrutt."
+    "planIssueContactSupport": "Det kan være et problem med abonnementet ditt. Kontakt support for å sikre at tjenesten din ikke blir avbrutt.",
+    "memoryHistoryPartial": "Noe av minnehistorikken er ikke tilgjengelig. Viser historikken mottatt så langt.",
+    "tapPlusToStartRecording": "Trykk på + for å starte opptak"
 }

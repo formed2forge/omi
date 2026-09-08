@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Ενδέχεται να υπάρχει πρόβλημα με το πρόγραμμά σας. Επικοινωνήστε με την υποστήριξη ώστε να μη διακοπεί η υπηρεσία σας."
+    "planIssueContactSupport": "Ενδέχεται να υπάρχει πρόβλημα με το πρόγραμμά σας. Επικοινωνήστε με την υποστήριξη ώστε να μη διακοπεί η υπηρεσία σας.",
+    "memoryHistoryPartial": "Μέρος του ιστορικού αναμνήσεων δεν είναι διαθέσιμο. Εμφανίζεται το ιστορικό που έχει ληφθεί μέχρι στιγμής.",
+    "tapPlusToStartRecording": "Πατήστε + για να ξεκινήσετε την ηχογράφηση"
 }

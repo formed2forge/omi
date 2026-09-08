@@ -2018,7 +2018,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get memoryDeleted => 'Memória apagada.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Parte do histórico de memórias não está disponível. Mostrando o histórico recebido até agora.';
 
   @override
   String get undo => 'Desfazer';
@@ -9926,7 +9927,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get transcriptionNoAudio => 'A transcrição não está recebendo áudio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Toque em + para começar a gravar';
 
   @override
   String get couldNotLoadMemories => 'Não foi possível carregar as memórias';

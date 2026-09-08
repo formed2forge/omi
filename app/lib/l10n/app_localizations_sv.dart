@@ -2044,7 +2044,8 @@ class AppLocalizationsSv extends AppLocalizations {
   String get memoryDeleted => 'Minne borttaget.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'En del av minneshistoriken är inte tillgänglig. Visar historiken som mottagits hittills.';
 
   @override
   String get undo => 'Ångra';
@@ -9921,7 +9922,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkrieringen tar inte emot ljud';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Tryck på + för att starta inspelning';
 
   @override
   String get couldNotLoadMemories => 'Kunde inte läsa in minnen';

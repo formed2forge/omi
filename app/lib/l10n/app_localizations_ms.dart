@@ -2049,7 +2049,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get memoryDeleted => 'Ingatan Dipadam.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Sebahagian sejarah memori tidak tersedia. Memaparkan sejarah yang diterima setakat ini.';
 
   @override
   String get undo => 'Buat Asal';
@@ -9943,7 +9944,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripsi tidak menerima audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Ketik + untuk mula merakam';
 
   @override
   String get couldNotLoadMemories => 'Tidak dapat memuatkan kenangan';

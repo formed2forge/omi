@@ -2004,7 +2004,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memoryDeleted => '기억이 삭제되었습니다.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => '일부 메모리 기록을 사용할 수 없습니다. 지금까지 수신된 기록을 표시합니다.';
 
   @override
   String get undo => '실행 취소';
@@ -9751,7 +9751,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get transcriptionNoAudio => '전사가 오디오를 받지 못하고 있습니다';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => '녹음을 시작하려면 +를 탭하세요';
 
   @override
   String get couldNotLoadMemories => '추억을 불러올 수 없습니다';

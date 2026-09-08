@@ -3267,5 +3267,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "您的套餐可能存在问题，请联系客服，以确保您的服务不会中断。"
+    "planIssueContactSupport": "您的套餐可能存在问题，请联系客服，以确保您的服务不会中断。",
+    "memoryHistoryPartial": "部分记忆历史不可用。显示的是目前已收到的历史记录。",
+    "tapPlusToStartRecording": "点击 + 开始录音"
 }

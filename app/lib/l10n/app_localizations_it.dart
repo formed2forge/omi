@@ -2050,7 +2050,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String get memoryDeleted => 'Ricordo Eliminato.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Parte della cronologia dei ricordi non è disponibile. Viene mostrata la cronologia ricevuta finora.';
 
   @override
   String get undo => 'Annulla';
@@ -9974,7 +9975,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get transcriptionNoAudio => 'La trascrizione non riceve audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Tocca + per iniziare la registrazione';
 
   @override
   String get couldNotLoadMemories => 'Impossibile caricare i ricordi';

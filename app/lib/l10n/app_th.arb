@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "อาจมีปัญหากับแพ็กเกจของคุณ โปรดติดต่อฝ่ายสนับสนุนเพื่อให้แน่ใจว่าบริการของคุณจะไม่หยุดชะงัก"
+    "planIssueContactSupport": "อาจมีปัญหากับแพ็กเกจของคุณ โปรดติดต่อฝ่ายสนับสนุนเพื่อให้แน่ใจว่าบริการของคุณจะไม่หยุดชะงัก",
+    "memoryHistoryPartial": "ประวัติความทรงจำบางส่วนไม่พร้อมใช้งาน กำลังแสดงประวัติที่ได้รับมาจนถึงตอนนี้",
+    "tapPlusToStartRecording": "แตะ + เพื่อเริ่มบันทึก"
 }

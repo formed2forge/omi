@@ -2026,7 +2026,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get memoryDeleted => 'تم حذف الذكرى.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'بعض سجل الذكريات غير متوفر. يتم عرض السجل الذي تم استلامه حتى الآن.';
 
   @override
   String get undo => 'تراجع';
@@ -9859,7 +9859,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get transcriptionNoAudio => 'النسخ لا يستلم الصوت';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'اضغط على + لبدء التسجيل';
 
   @override
   String get couldNotLoadMemories => 'تعذر تحميل الذكريات';

@@ -3341,5 +3341,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Lehet, hogy probléma van a csomagoddal. Kérjük, lépj kapcsolatba az ügyfélszolgálattal, hogy a szolgáltatásod ne szakadjon meg."
+    "planIssueContactSupport": "Lehet, hogy probléma van a csomagoddal. Kérjük, lépj kapcsolatba az ügyfélszolgálattal, hogy a szolgáltatásod ne szakadjon meg.",
+    "memoryHistoryPartial": "Az emlékek előzményeinek egy része nem érhető el. A mostanáig kapott előzmények láthatók.",
+    "tapPlusToStartRecording": "Koppintson a + gombra a felvétel indításához"
 }

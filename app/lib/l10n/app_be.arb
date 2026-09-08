@@ -10811,5 +10811,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Магчыма, узнікла праблема з вашым тарыфным планам. Калі ласка, звярніцеся ў службу падтрымкі, каб пазбегнуць перапынку ў абслугоўванні."
+    "planIssueContactSupport": "Магчыма, узнікла праблема з вашым тарыфным планам. Калі ласка, звярніцеся ў службу падтрымкі, каб пазбегнуць перапынку ў абслугоўванні.",
+    "memoryHistoryPartial": "Частка гісторыі ўспамінаў недаступная. Паказана гісторыя, атрыманая дагэтуль.",
+    "tapPlusToStartRecording": "Націсніце +, каб пачаць запіс"
 }

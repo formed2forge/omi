@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Tilauksessasi saattaa olla ongelma. Ota yhteyttä tukeen, jotta palvelusi ei keskeydy."
+    "planIssueContactSupport": "Tilauksessasi saattaa olla ongelma. Ota yhteyttä tukeen, jotta palvelusi ei keskeydy.",
+    "memoryHistoryPartial": "Osa muistihistoriasta ei ole saatavilla. Näytetään toistaiseksi vastaanotettu historia.",
+    "tapPlusToStartRecording": "Aloita tallennus napauttamalla +"
 }

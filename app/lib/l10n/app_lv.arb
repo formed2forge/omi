@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Iespējams, ar jūsu plānu ir radusies problēma. Lūdzu, sazinieties ar atbalsta dienestu, lai jūsu pakalpojumā nerastos pārtraukumi."
+    "planIssueContactSupport": "Iespējams, ar jūsu plānu ir radusies problēma. Lūdzu, sazinieties ar atbalsta dienestu, lai jūsu pakalpojumā nerastos pārtraukumi.",
+    "memoryHistoryPartial": "Daļa atmiņu vēstures nav pieejama. Tiek rādīta līdz šim saņemtā vēsture.",
+    "tapPlusToStartRecording": "Pieskarieties +, lai sāktu ierakstīšanu"
 }

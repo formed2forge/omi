@@ -2047,7 +2047,7 @@ class AppLocalizationsLv extends AppLocalizations {
   String get memoryDeleted => 'Atmiņa izdzēsta.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Daļa atmiņu vēstures nav pieejama. Tiek rādīta līdz šim saņemtā vēsture.';
 
   @override
   String get undo => 'Atsaukt';
@@ -9941,7 +9941,7 @@ class AppLocalizationsLv extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripcija nesaņem audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Pieskarieties +, lai sāktu ierakstīšanu';
 
   @override
   String get couldNotLoadMemories => 'Neizdevās ielādēt atmiņas';

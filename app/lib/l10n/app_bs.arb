@@ -10811,5 +10811,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Možda postoji problem s vašim planom. Molimo kontaktirajte podršku kako ne bi došlo do prekida u vašoj usluzi."
+    "planIssueContactSupport": "Možda postoji problem s vašim planom. Molimo kontaktirajte podršku kako ne bi došlo do prekida u vašoj usluzi.",
+    "memoryHistoryPartial": "Dio historije sjećanja nije dostupan. Prikazuje se historija primljena do sada.",
+    "tapPlusToStartRecording": "Dodirnite + da započnete snimanje"
 }

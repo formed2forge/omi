@@ -2025,7 +2025,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get memoryDeleted => 'זכרון מחוק.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'חלק מהיסטוריית הזיכרונות אינו זמין. מוצגת ההיסטוריה שהתקבלה עד כה.';
 
   @override
   String get undo => 'בטל';
@@ -9838,7 +9838,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get transcriptionNoAudio => 'התמליל אינו מקבל שמע';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'הקש על + כדי להתחיל בהקלטה';
 
   @override
   String get couldNotLoadMemories => 'לא ניתן לטעון את הזיכרונות';

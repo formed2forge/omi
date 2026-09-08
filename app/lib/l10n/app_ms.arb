@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Mungkin terdapat masalah dengan pelan anda. Sila hubungi sokongan bagi memastikan tiada gangguan pada perkhidmatan anda."
+    "planIssueContactSupport": "Mungkin terdapat masalah dengan pelan anda. Sila hubungi sokongan bagi memastikan tiada gangguan pada perkhidmatan anda.",
+    "memoryHistoryPartial": "Sebahagian sejarah memori tidak tersedia. Memaparkan sejarah yang diterima setakat ini.",
+    "tapPlusToStartRecording": "Ketik + untuk mula merakam"
 }

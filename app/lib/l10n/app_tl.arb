@@ -10811,5 +10811,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Maaaring may problema sa iyong plan. Mangyaring makipag-ugnayan sa suporta upang matiyak na walang maantala sa iyong serbisyo."
+    "planIssueContactSupport": "Maaaring may problema sa iyong plan. Mangyaring makipag-ugnayan sa suporta upang matiyak na walang maantala sa iyong serbisyo.",
+    "memoryHistoryPartial": "May bahagi ng history ng memorya na hindi available. Ipinapakita ang history na natanggap sa ngayon.",
+    "tapPlusToStartRecording": "I-tap ang + upang simulan ang pag-record"
 }

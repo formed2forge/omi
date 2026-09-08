@@ -3280,5 +3280,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Возможно, с вашим тарифным планом возникла проблема. Пожалуйста, свяжитесь со службой поддержки, чтобы избежать перерыва в обслуживании."
+    "planIssueContactSupport": "Возможно, с вашим тарифным планом возникла проблема. Пожалуйста, свяжитесь со службой поддержки, чтобы избежать перерыва в обслуживании.",
+    "memoryHistoryPartial": "Часть истории воспоминаний недоступна. Отображается история, полученная на данный момент.",
+    "tapPlusToStartRecording": "Нажмите +, чтобы начать запись"
 }

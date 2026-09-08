@@ -2041,7 +2041,7 @@ class AppLocalizationsSr extends AppLocalizations {
   String get memoryDeleted => 'Сећање је избрисано.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Део историје сећања није доступан. Приказана је историја примљена до сада.';
 
   @override
   String get undo => 'Врати';
@@ -9933,7 +9933,7 @@ class AppLocalizationsSr extends AppLocalizations {
   String get transcriptionNoAudio => 'Транскрипција не прима аудио';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Додирните + да бисте започели снимање';
 
   @override
   String get couldNotLoadMemories => 'Није могуће учитати успомене';

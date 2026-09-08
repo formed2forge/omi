@@ -2058,7 +2058,8 @@ class AppLocalizationsEl extends AppLocalizations {
   String get memoryDeleted => 'Η ανάμνηση διαγράφηκε.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Μέρος του ιστορικού αναμνήσεων δεν είναι διαθέσιμο. Εμφανίζεται το ιστορικό που έχει ληφθεί μέχρι στιγμής.';
 
   @override
   String get undo => 'Αναίρεση';
@@ -9987,7 +9988,7 @@ class AppLocalizationsEl extends AppLocalizations {
   String get transcriptionNoAudio => 'Η μεταγραφή δεν λαμβάνει ήχο';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Πατήστε + για να ξεκινήσετε την ηχογράφηση';
 
   @override
   String get couldNotLoadMemories => 'Δεν ήταν δυνατή η φόρτωση των αναμνήσεων';

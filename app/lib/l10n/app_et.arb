@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Teie paketiga võib olla probleem. Palun võtke ühendust toega, et teenuses ei tekiks katkestusi."
+    "planIssueContactSupport": "Teie paketiga võib olla probleem. Palun võtke ühendust toega, et teenuses ei tekiks katkestusi.",
+    "memoryHistoryPartial": "Osa mälestuste ajaloost pole saadaval. Kuvatakse seni saadud ajalugu.",
+    "tapPlusToStartRecording": "Puuduta salvestamise alustamiseks +"
 }

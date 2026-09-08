@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Potrebbe esserci un problema con il tuo piano. Contatta l'assistenza per evitare interruzioni del servizio."
+    "planIssueContactSupport": "Potrebbe esserci un problema con il tuo piano. Contatta l'assistenza per evitare interruzioni del servizio.",
+    "memoryHistoryPartial": "Parte della cronologia dei ricordi non è disponibile. Viene mostrata la cronologia ricevuta finora.",
+    "tapPlusToStartRecording": "Tocca + per iniziare la registrazione"
 }

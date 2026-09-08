@@ -2025,7 +2025,8 @@ class AppLocalizationsDa extends AppLocalizations {
   String get memoryDeleted => 'Hukommelse slettet';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Noget af hukommelseshistorikken er ikke tilgængelig. Viser historikken modtaget indtil videre.';
 
   @override
   String get undo => 'Fortryd';
@@ -9901,7 +9902,7 @@ class AppLocalizationsDa extends AppLocalizations {
   String get transcriptionNoAudio => 'Transskription modtager ikke lyd';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Tryk på + for at starte optagelse';
 
   @override
   String get couldNotLoadMemories => 'Kunne ikke indlæse minder';

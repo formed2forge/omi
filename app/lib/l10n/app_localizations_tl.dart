@@ -2054,7 +2054,8 @@ class AppLocalizationsTl extends AppLocalizations {
   String get memoryDeleted => 'Ang Alaala ay Natanggal.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'May bahagi ng history ng memorya na hindi available. Ipinapakita ang history na natanggap sa ngayon.';
 
   @override
   String get undo => 'Undo';
@@ -10008,7 +10009,7 @@ class AppLocalizationsTl extends AppLocalizations {
   String get transcriptionNoAudio => 'Hindi tumatanggap ng audio ang transkripsyon';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'I-tap ang + upang simulan ang pag-record';
 
   @override
   String get couldNotLoadMemories => 'Hindi ma-load ang mga alaala';

@@ -3280,5 +3280,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Il se peut qu'il y ait un problème avec votre forfait. Veuillez contacter le support afin d'éviter toute interruption de votre service."
+    "planIssueContactSupport": "Il se peut qu'il y ait un problème avec votre forfait. Veuillez contacter le support afin d'éviter toute interruption de votre service.",
+    "memoryHistoryPartial": "Une partie de l'historique des souvenirs n'est pas disponible. L'historique reçu jusqu'à présent est affiché.",
+    "tapPlusToStartRecording": "Appuyez sur + pour commencer l'enregistrement"
 }

@@ -3221,5 +3221,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "ご利用のプランに問題がある可能性があります。サービスが中断しないよう、サポートまでお問い合わせください。"
+    "planIssueContactSupport": "ご利用のプランに問題がある可能性があります。サービスが中断しないよう、サポートまでお問い合わせください。",
+    "memoryHistoryPartial": "一部の記憶履歴は利用できません。これまでに受信した履歴を表示しています。",
+    "tapPlusToStartRecording": "+をタップして録音を開始"
 }

@@ -2055,7 +2055,8 @@ class AppLocalizationsCa extends AppLocalizations {
   String get memoryDeleted => 'Record eliminat.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Part de l\'historial de records no està disponible. Es mostra l\'historial rebut fins ara.';
 
   @override
   String get undo => 'Desfer';
@@ -9974,7 +9975,7 @@ class AppLocalizationsCa extends AppLocalizations {
   String get transcriptionNoAudio => 'La transcripció no rep àudio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Toca + per començar a gravar';
 
   @override
   String get couldNotLoadMemories => 'No s\'han pogut carregar els records';

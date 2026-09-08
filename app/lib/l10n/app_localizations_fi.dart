@@ -2040,7 +2040,8 @@ class AppLocalizationsFi extends AppLocalizations {
   String get memoryDeleted => 'Muisto poistettu.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Osa muistihistoriasta ei ole saatavilla. Näytetään toistaiseksi vastaanotettu historia.';
 
   @override
   String get undo => 'Kumoa';
@@ -9918,7 +9919,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkriptio ei vastaanota ääntä';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Aloita tallennus napauttamalla +';
 
   @override
   String get couldNotLoadMemories => 'Muistoja ei voitu ladata';

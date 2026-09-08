@@ -2060,7 +2060,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get memoryDeleted => 'Mémoire supprimée.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Une partie de l\'historique des souvenirs n\'est pas disponible. L\'historique reçu jusqu\'à présent est affiché.';
 
   @override
   String get undo => 'Annuler';
@@ -10004,7 +10005,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get transcriptionNoAudio => 'La transcription ne reçoit pas d\'audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Appuyez sur + pour commencer l\'enregistrement';
 
   @override
   String get couldNotLoadMemories => 'Impossible de charger les souvenirs';

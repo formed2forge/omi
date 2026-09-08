@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Er is mogelijk een probleem met je abonnement. Neem contact op met de support om onderbreking van je service te voorkomen."
+    "planIssueContactSupport": "Er is mogelijk een probleem met je abonnement. Neem contact op met de support om onderbreking van je service te voorkomen.",
+    "memoryHistoryPartial": "Een deel van de geheugengeschiedenis is niet beschikbaar. De tot nu toe ontvangen geschiedenis wordt weergegeven.",
+    "tapPlusToStartRecording": "Tik op + om te beginnen met opnemen"
 }

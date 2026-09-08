@@ -2004,7 +2004,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get memoryDeleted => '記憶を削除しました';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => '一部の記憶履歴は利用できません。これまでに受信した履歴を表示しています。';
 
   @override
   String get undo => '元に戻す';
@@ -9748,7 +9748,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get transcriptionNoAudio => '文字起こしが音声を受信していません';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => '+をタップして録音を開始';
 
   @override
   String get couldNotLoadMemories => '記憶を読み込めませんでした';
