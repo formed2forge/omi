@@ -1590,7 +1590,7 @@ def _is_entitled_paid_subscription(subscription: Optional[Subscription], now: in
         return False
     if subscription.status != SubscriptionStatus.active:
         return False
-    return bool(subscription.current_period_end) and cast(int, subscription.current_period_end) >= now
+    return bool(subscription.current_period_end) and subscription.current_period_end >= now
 
 
 def resolve_subscription_lapse(
