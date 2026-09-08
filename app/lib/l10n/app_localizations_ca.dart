@@ -9992,4 +9992,12 @@ class AppLocalizationsCa extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'És possible que hi hagi un problema amb el teu pla. Contacta amb el suport per assegurar que no hi hagi cap interrupció del servei.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'El teu pla acabarà el $date. Mantindràs accés complet fins llavors.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'El teu accés de pagament ha finalitzat.';
 }

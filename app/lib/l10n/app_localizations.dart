@@ -16683,7 +16683,7 @@ abstract class AppLocalizations {
   /// **'Plan Update'**
   String get planUpdate;
 
-  /// Deprecation notice for legacy Unlimited subscribers
+  /// Deprecation notice for legacy Unlimited subscribers. Dead as of 2026-08: no confirmed Dart call site references this key. The $49/mo Operator price is a hardcoded duplicate of the same fallback constant maintained separately per-platform in macOS/Windows (SettingsContentView+AccountBilling.swift operatorDeprecationFallbackPrice / billing.ts OPERATOR_DEPRECATION_FALLBACK_PRICE) -- kept here as a single literal rather than interpolated because ARB is static per-locale prose with no runtime price lookup, and rewriting would touch ~49 untranslated locale files for dead code. Update or remove this key together with the platform constants if Operator pricing changes and this message is ever wired up.
   ///
   /// In en, this message translates to:
   /// **'Your Unlimited plan is being retired. Switch to the Operator plan — same great features at \$49/mo. Your current plan will continue to work in the meantime.'**
@@ -18494,6 +18494,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There may be an issue with your plan, please contact support to ensure there is no interruption in your service.'**
   String get planIssueContactSupport;
+
+  /// Shown on the main Plan & Usage card when a subscription cancellation is scheduled but access is still active.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan will end on {date}. You\'ll keep full access until then.'**
+  String planLapseCancellationScheduled(String date);
+
+  /// Shown on the main Plan & Usage card when paid access has ended. Deliberately neutral about cause (backend cannot honestly attribute a specific reason).
+  ///
+  /// In en, this message translates to:
+  /// **'Your paid access has ended.'**
+  String get planLapseAccessEnded;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

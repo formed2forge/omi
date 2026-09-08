@@ -9961,4 +9961,12 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Mungkin terdapat masalah dengan pelan anda. Sila hubungi sokongan bagi memastikan tiada gangguan pada perkhidmatan anda.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Pelan anda akan tamat pada $date. Anda akan mengekalkan akses penuh sehingga itu.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Akses berbayar anda telah tamat.';
 }

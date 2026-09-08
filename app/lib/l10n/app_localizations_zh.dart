@@ -9745,4 +9745,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planIssueContactSupport => '您的套餐可能存在问题，请联系客服，以确保您的服务不会中断。';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return '您的套餐将于$date到期。在此之前您仍可完整使用所有功能。';
+  }
+
+  @override
+  String get planLapseAccessEnded => '您的付费访问权限已结束。';
 }

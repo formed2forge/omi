@@ -9935,4 +9935,12 @@ class AppLocalizationsFa extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'ممکن است مشکلی در طرح اشتراک شما وجود داشته باشد. لطفاً با پشتیبانی تماس بگیرید تا در سرویس شما وقفه‌ای ایجاد نشود.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'طرح شما در $date پایان می‌یابد. تا آن زمان دسترسی کامل خواهید داشت.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'دسترسی پرداختی شما پایان یافته است.';
 }

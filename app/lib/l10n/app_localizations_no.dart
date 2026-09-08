@@ -9933,4 +9933,12 @@ class AppLocalizationsNo extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Det kan være et problem med abonnementet ditt. Kontakt support for å sikre at tjenesten din ikke blir avbrutt.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Abonnementet ditt utløper $date. Du beholder full tilgang frem til da.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Din betalte tilgang har utløpt.';
 }

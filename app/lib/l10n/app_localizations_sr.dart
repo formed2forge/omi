@@ -9951,4 +9951,12 @@ class AppLocalizationsSr extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Можда постоји проблем са вашим планом. Молимо контактирајте подршку како не би дошло до прекида услуге.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Ваш план ће се завршити $date. До тада задржавате пуни приступ.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Ваш плаћени приступ је истекао.';
 }

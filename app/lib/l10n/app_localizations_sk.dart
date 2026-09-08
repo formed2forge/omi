@@ -9928,4 +9928,12 @@ class AppLocalizationsSk extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'S vaším plánom môže byť problém. Kontaktujte prosím podporu, aby nedošlo k prerušeniu vašej služby.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Váš plán sa skončí $date. Do vtedy si zachováte plný prístup.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Váš platený prístup sa skončil.';
 }

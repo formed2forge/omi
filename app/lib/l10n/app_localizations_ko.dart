@@ -9768,4 +9768,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get planIssueContactSupport => '요금제에 문제가 있을 수 있습니다. 서비스가 중단되지 않도록 고객 지원팀에 문의해 주세요.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return '요금제는 $date에 종료됩니다. 그때까지는 전체 액세스 권한이 유지됩니다.';
+  }
+
+  @override
+  String get planLapseAccessEnded => '유료 액세스가 종료되었습니다.';
 }

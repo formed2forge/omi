@@ -3267,5 +3267,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "您的套餐可能存在问题，请联系客服，以确保您的服务不会中断。"
+    "planIssueContactSupport": "您的套餐可能存在问题，请联系客服，以确保您的服务不会中断。",
+    "planLapseCancellationScheduled": "您的套餐将于{date}到期。在此之前您仍可完整使用所有功能。",
+    "planLapseAccessEnded": "您的付费访问权限已结束。"
 }

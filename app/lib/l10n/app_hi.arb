@@ -3246,5 +3246,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "आपके प्लान में कोई समस्या हो सकती है। कृपया सहायता से संपर्क करें ताकि आपकी सेवा में कोई रुकावट न आए।"
+    "planIssueContactSupport": "आपके प्लान में कोई समस्या हो सकती है। कृपया सहायता से संपर्क करें ताकि आपकी सेवा में कोई रुकावट न आए।",
+    "planLapseCancellationScheduled": "आपकी योजना {date} को समाप्त हो जाएगी। तब तक आपको पूर्ण पहुँच मिलती रहेगी।",
+    "planLapseAccessEnded": "आपकी सशुल्क पहुँच समाप्त हो गई है।"
 }

@@ -11764,5 +11764,18 @@
     "planIssueContactSupport": "There may be an issue with your plan, please contact support to ensure there is no interruption in your service.",
     "@planIssueContactSupport": {
         "description": "Shown when the app cannot resolve the user's subscription plan. Must not imply cancellation or suggest re-subscribing — the account may still be actively paying."
+    },
+    "planLapseCancellationScheduled": "Your plan will end on {date}. You'll keep full access until then.",
+    "@planLapseCancellationScheduled": {
+        "description": "Shown on the main Plan & Usage card when a subscription cancellation is scheduled but access is still active.",
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
+    "planLapseAccessEnded": "Your paid access has ended.",
+    "@planLapseAccessEnded": {
+        "description": "Shown on the main Plan & Usage card when paid access has ended. Deliberately neutral about cause (backend cannot honestly attribute a specific reason)."
     }
 }

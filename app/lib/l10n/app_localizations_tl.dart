@@ -10026,4 +10026,12 @@ class AppLocalizationsTl extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Maaaring may problema sa iyong plan. Mangyaring makipag-ugnayan sa suporta upang matiyak na walang maantala sa iyong serbisyo.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Magtatapos ang iyong plano sa $date. Mananatili ang buong access mo hanggang doon.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Natapos na ang iyong bayad na access.';
 }

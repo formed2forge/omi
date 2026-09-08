@@ -10022,4 +10022,12 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Il se peut qu\'il y ait un problème avec votre forfait. Veuillez contacter le support afin d\'éviter toute interruption de votre service.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Votre forfait se terminera le $date. Vous conserverez un accès complet jusque-là.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Votre accès payant a pris fin.';
 }

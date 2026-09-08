@@ -9940,4 +9940,12 @@ class AppLocalizationsBn extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'আপনার প্ল্যানে একটি সমস্যা থাকতে পারে। আপনার পরিষেবায় যাতে কোনো বিঘ্ন না ঘটে তা নিশ্চিত করতে অনুগ্রহ করে সহায়তার সঙ্গে যোগাযোগ করুন।';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'আপনার প্ল্যান $date তারিখে শেষ হবে। ততক্ষণ পর্যন্ত আপনি সম্পূর্ণ অ্যাক্সেস বজায় রাখবেন।';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'আপনার পেইড অ্যাক্সেসের মেয়াদ শেষ হয়ে গেছে।';
 }

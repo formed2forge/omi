@@ -9765,4 +9765,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get planIssueContactSupport => 'ご利用のプランに問題がある可能性があります。サービスが中断しないよう、サポートまでお問い合わせください。';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'プランは$dateに終了します。それまでは引き続きすべての機能をご利用いただけます。';
+  }
+
+  @override
+  String get planLapseAccessEnded => '有料アクセスが終了しました。';
 }

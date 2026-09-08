@@ -9967,4 +9967,12 @@ class AppLocalizationsBe extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Магчыма, узнікла праблема з вашым тарыфным планам. Калі ласка, звярніцеся ў службу падтрымкі, каб пазбегнуць перапынку ў абслугоўванні.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Ваш план скончыцца $date. Вы захаваеце поўны доступ да гэтага часу.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Ваш платны доступ скончыўся.';
 }

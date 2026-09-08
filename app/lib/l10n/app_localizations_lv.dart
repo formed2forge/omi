@@ -9959,4 +9959,12 @@ class AppLocalizationsLv extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Iespējams, ar jūsu plānu ir radusies problēma. Lūdzu, sazinieties ar atbalsta dienestu, lai jūsu pakalpojumā nerastos pārtraukumi.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Jūsu plāns beigsies $date. Līdz tam saglabāsiet pilnu piekļuvi.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Jūsu apmaksātā piekļuve ir beigusies.';
 }

@@ -10811,5 +10811,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Можда постоји проблем са вашим планом. Молимо контактирајте подршку како не би дошло до прекида услуге."
+    "planIssueContactSupport": "Можда постоји проблем са вашим планом. Молимо контактирајте подршку како не би дошло до прекида услуге.",
+    "planLapseCancellationScheduled": "Ваш план ће се завршити {date}. До тада задржавате пуни приступ.",
+    "planLapseAccessEnded": "Ваш плаћени приступ је истекао."
 }

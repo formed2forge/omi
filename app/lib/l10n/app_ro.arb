@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Este posibil să existe o problemă cu planul tău. Te rugăm să contactezi asistența pentru a evita orice întrerupere a serviciului."
+    "planIssueContactSupport": "Este posibil să existe o problemă cu planul tău. Te rugăm să contactezi asistența pentru a evita orice întrerupere a serviciului.",
+    "planLapseCancellationScheduled": "Planul tău se va încheia pe {date}. Vei păstra acces complet până atunci.",
+    "planLapseAccessEnded": "Accesul tău plătit a expirat."
 }

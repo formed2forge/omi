@@ -9930,4 +9930,12 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Có thể có sự cố với gói dịch vụ của bạn. Vui lòng liên hệ bộ phận hỗ trợ để đảm bảo dịch vụ của bạn không bị gián đoạn.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Gói của bạn sẽ kết thúc vào $date. Bạn vẫn có toàn quyền truy cập cho đến lúc đó.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Quyền truy cập trả phí của bạn đã kết thúc.';
 }

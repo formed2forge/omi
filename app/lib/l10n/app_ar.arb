@@ -3221,5 +3221,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "قد تكون هناك مشكلة في خطتك، يرجى التواصل مع الدعم لضمان عدم انقطاع خدمتك."
+    "planIssueContactSupport": "قد تكون هناك مشكلة في خطتك، يرجى التواصل مع الدعم لضمان عدم انقطاع خدمتك.",
+    "planLapseCancellationScheduled": "ستنتهي خطتك في {date}. ستحتفظ بكامل الوصول حتى ذلك الحين.",
+    "planLapseAccessEnded": "لقد انتهى وصولك المدفوع."
 }

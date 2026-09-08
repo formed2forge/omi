@@ -3223,5 +3223,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "És possible que hi hagi un problema amb el teu pla. Contacta amb el suport per assegurar que no hi hagi cap interrupció del servei."
+    "planIssueContactSupport": "És possible que hi hagi un problema amb el teu pla. Contacta amb el suport per assegurar que no hi hagi cap interrupció del servei.",
+    "planLapseCancellationScheduled": "El teu pla acabarà el {date}. Mantindràs accés complet fins llavors.",
+    "planLapseAccessEnded": "El teu accés de pagament ha finalitzat."
 }

@@ -9929,4 +9929,12 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Teie paketiga võib olla probleem. Palun võtke ühendust toega, et teenuses ei tekiks katkestusi.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Sinu pakett lõpeb $date. Kuni selle ajani säilib sul täielik juurdepääs.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Sinu tasuline juurdepääs on lõppenud.';
 }

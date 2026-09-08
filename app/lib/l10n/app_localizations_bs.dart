@@ -9964,4 +9964,12 @@ class AppLocalizationsBs extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Možda postoji problem s vašim planom. Molimo kontaktirajte podršku kako ne bi došlo do prekida u vašoj usluzi.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Vaš plan će isteći $date. Zadržat ćete puni pristup do tada.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Vaš plaćeni pristup je istekao.';
 }

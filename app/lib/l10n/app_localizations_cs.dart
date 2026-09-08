@@ -9936,4 +9936,12 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'S vaším tarifem může být problém. Kontaktujte prosím podporu, aby nedošlo k přerušení vaší služby.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Váš plán skončí $date. Do té doby si zachováte plný přístup.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Váš placený přístup skončil.';
 }

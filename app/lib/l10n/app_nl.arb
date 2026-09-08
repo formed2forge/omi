@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Er is mogelijk een probleem met je abonnement. Neem contact op met de support om onderbreking van je service te voorkomen."
+    "planIssueContactSupport": "Er is mogelijk een probleem met je abonnement. Neem contact op met de support om onderbreking van je service te voorkomen.",
+    "planLapseCancellationScheduled": "Je abonnement eindigt op {date}. Tot die tijd behoud je volledige toegang.",
+    "planLapseAccessEnded": "Je betaalde toegang is beëindigd."
 }

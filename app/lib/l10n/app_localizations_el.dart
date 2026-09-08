@@ -10005,4 +10005,12 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Ενδέχεται να υπάρχει πρόβλημα με το πρόγραμμά σας. Επικοινωνήστε με την υποστήριξη ώστε να μη διακοπεί η υπηρεσία σας.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Το πλάνο σας θα λήξει στις $date. Θα διατηρήσετε πλήρη πρόσβαση μέχρι τότε.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Η επί πληρωμή πρόσβασή σας έχει λήξει.';
 }
