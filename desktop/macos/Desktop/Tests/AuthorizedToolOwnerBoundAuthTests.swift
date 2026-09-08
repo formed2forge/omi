@@ -214,10 +214,19 @@ private actor PermissionCallbackBox<Value: Sendable> {
     }
 
     _ = await AuthorizedToolOwnerURLProtocol.gate.waitForRequest(path: "/v1/tools/memories")
+    // `sources` must be present (even empty) so `ChatToolExecutor.annotated` takes the
+    // typed-sources branch. Omitting it makes `response.sources` decode to `nil`, which
+    // falls back to `legacyListToolSources` -> `APIClient.getMemories` -> a second,
+    // unmocked GET to "v3/memories" that this harness never fulfills. That request was
+    // silently timing out against `URLRequest`'s default 60s `timeoutInterval` and being
+    // swallowed by `legacyListToolSources`'s blanket `catch { return [] }`, so the test
+    // only ever passed by accident after burning a real minute per run — and was one
+    // scheduling nudge away from asserting the wrong thing (see the CI failure this
+    // regression-tests: the same 60s stall, but landing on the owner-changed envelope).
     await AuthorizedToolOwnerURLProtocol.gate.succeed(
       path: "/v1/tools/memories",
       with:
-        #"{"tool_name":"get_memories","result_text":"owner-a-memory","is_error":false}"#)
+        #"{"tool_name":"get_memories","result_text":"owner-a-memory","is_error":false,"sources":[]}"#)
 
     let result = await operation.value
     let object = try XCTUnwrap(
