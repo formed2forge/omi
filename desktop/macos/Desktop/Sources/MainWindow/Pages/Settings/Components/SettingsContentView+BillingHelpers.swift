@@ -314,13 +314,13 @@ extension SettingsContentView {
 
   var currentPlanFeatureList: [String] {
     guard let subscription = userSubscription?.subscription else {
-      return fallbackFeatures(for: "basic")
+      return Self.fallbackFeatures(for: "basic")
     }
     return SubscriptionPlanPresentation.currentPlanFeatures(
       plan: subscription.plan,
       currentPriceId: subscription.currentPriceId,
       catalog: mergedPlanCatalog,
-      fallback: fallbackFeatures(for:)
+      fallback: Self.fallbackFeatures(for:)
     )
   }
 
@@ -642,7 +642,7 @@ extension SettingsContentView {
         .fixedSize(horizontal: true, vertical: false)
       }
 
-      Text(plan.description ?? Self.planDescription(for: plan.id))
+      Text(plan.description ?? planDescription(for: plan.id))
         .scaledFont(size: OmiType.body)
         .foregroundColor(Ink.secondary)
 
