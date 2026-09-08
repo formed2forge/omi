@@ -1,0 +1,5 @@
+{
+  "changes": [
+    "The Plan & Usage card now shows a notice when your plan is scheduled to end (with a Keep My Plan action) or your paid access has already ended (with a Resubscribe action)."
+  ]
+}

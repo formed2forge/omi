@@ -3,6 +3,7 @@ import type {
   UserSubscriptionResponse,
   Subscription,
   SubscriptionPlan,
+  SubscriptionLapse,
   PricingOption,
   ChatUsageQuota,
   TrialMetadata,
@@ -303,6 +304,43 @@ export function formatMediumDate(epochSeconds: number | null | undefined): strin
     month: 'short',
     day: 'numeric'
   })
+}
+
+// ── Subscription lapse notice (main Plan & Usage card) ──────────────────────
+// The backend only reports `lapse` when the account's stored data proves a
+// real paid period actually ended or is ending (see
+// backend/utils/subscription.py's resolve_subscription_lapse docstring) — it
+// is never inferred client-side from a Free label. Copy is deliberately
+// identical to the Flutter app's (same feature, same platform-agnostic
+// product decision).
+export type LapseNoticeCopy = {
+  /** Short label for the notice card's title slot. */
+  title: string
+  /** Full sentence — what must match the Flutter copy verbatim. */
+  subtitle: string
+  /** Label for the single recovery action button. */
+  actionLabel: string
+}
+
+/**
+ * Copy for the cancellation/access-ended notice. `access_ended` is
+ * deliberately neutral — the backend's `reason` is always `unknown` for that
+ * state (the terminal Stripe status is collapsed into an indistinguishable
+ * row before the contract sees it) — never claim a specific cause here.
+ */
+export function lapseNoticeCopy(lapse: SubscriptionLapse): LapseNoticeCopy {
+  if (lapse.state === 'cancellation_scheduled') {
+    return {
+      title: 'Plan Ending',
+      subtitle: `Your plan will end on ${formatMediumDate(lapse.effective_at)}. You'll keep full access until then.`,
+      actionLabel: 'Keep My Plan'
+    }
+  }
+  return {
+    title: 'Access Ended',
+    subtitle: 'Your paid access has ended.',
+    actionLabel: 'Resubscribe'
+  }
 }
 
 // ── Chat usage / quota (AccountBilling chat-usage card) ─────────────────────

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Clock, RefreshCw } from 'lucide-react'
 import { useSearchableRow } from '../searchContext'
 import { toast } from '../../../lib/toast'
 import { BillingCard } from '../billing/BillingCard'
@@ -19,6 +19,7 @@ import {
   createCheckoutSession,
   upgradeSubscription,
   openCustomerPortal,
+  lapseNoticeCopy,
   OPERATOR_DEPRECATION_FALLBACK_PRICE
 } from '../../../lib/billing'
 import type {
@@ -233,6 +234,33 @@ export function PlanUsageTab(): React.JSX.Element {
                 Try Plus
               </button>
             ) : undefined
+          }
+        />
+      ) : null}
+
+      {sub.lapse ? (
+        <BillingCard
+          icon={sub.lapse.state === 'cancellation_scheduled' ? Clock : AlertTriangle}
+          iconTone="amber"
+          className="border border-amber-400/25"
+          title={lapseNoticeCopy(sub.lapse).title}
+          subtitle={lapseNoticeCopy(sub.lapse).subtitle}
+          trailing={
+            sub.lapse.recovery_action === 'keep_subscription' ? (
+              subscription.current_price_id ? (
+                <button
+                  onClick={() => onBuy(subscription.current_price_id as string)}
+                  disabled={activePriceId !== null}
+                  className="btn-ghost"
+                >
+                  {lapseNoticeCopy(sub.lapse).actionLabel}
+                </button>
+              ) : undefined
+            ) : (
+              <button onClick={jumpToPlus} className="btn-ghost">
+                {lapseNoticeCopy(sub.lapse).actionLabel}
+              </button>
+            )
           }
         />
       ) : null}
