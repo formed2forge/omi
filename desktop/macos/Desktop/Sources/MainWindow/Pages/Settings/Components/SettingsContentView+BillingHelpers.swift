@@ -12,6 +12,12 @@ enum SubscriptionPlanPresentation {
   static let legacyPlanTitleSuffix = " (Legacy Plan)"
   static let legacySupporterNote =
     "Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan."
+  /// Shown when the plan identity cannot be resolved — a plan newer than this
+  /// build, or the backend's `unknown` sentinel for a stored plan it could not
+  /// resolve either. The account may still be actively paying, so this must
+  /// never imply cancellation or invite a second purchase.
+  static let unknownPlanSupportNote =
+    "There may be an issue with your plan, please contact support to ensure there is no interruption in your service."
 
   static func isPurchasablePlan(id: String) -> Bool {
     purchaseOrder[id] != nil
@@ -133,6 +139,9 @@ enum SubscriptionPlanPresentation {
   ) -> String {
     if features.contains("byok") {
       return "Your own API keys. Cloud transcription and chat still follow the Free plan."
+    }
+    if case .unknown = plan {
+      return unknownPlanSupportNote
     }
     if let owning = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog) {
       if let description = owning.description?.trimmingCharacters(in: .whitespacesAndNewlines),

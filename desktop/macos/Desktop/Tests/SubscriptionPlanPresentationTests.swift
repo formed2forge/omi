@@ -25,6 +25,22 @@ final class SubscriptionPlanPresentationTests: XCTestCase {
     XCTAssertFalse(plan.hasPaidCapability)
   }
 
+  func testUnknownPlanDescriptionPointsAtSupportWithoutImplyingCancellation() {
+    // The account may still be actively paying, so the copy must not suggest
+    // re-subscribing: that risks a double charge.
+    let description = SubscriptionPlanPresentation.currentPlanDescription(
+      plan: SubscriptionPlanType(rawValue: "unknown"),
+      features: [],
+      currentPriceId: nil,
+      catalog: []
+    )
+
+    XCTAssertEqual(
+      description,
+      "There may be an issue with your plan, please contact support to ensure there is no interruption in your service."
+    )
+  }
+
   func testPurchasablePlansArePlusAndPro() {
     XCTAssertTrue(SubscriptionPlanPresentation.isPurchasablePlan(id: "plus"))
     XCTAssertTrue(SubscriptionPlanPresentation.isPurchasablePlan(id: "pro_v2"))
