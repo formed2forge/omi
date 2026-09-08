@@ -221,7 +221,12 @@ final class ChatDiscoverabilityTests: XCTestCase {
         declaredTools.insert(name)
       }
     }
-    let localApiOnlyTools: Set<String> = ["get_local_status", "get_screenshot"]
+    // look_at_frame is a local-only alias of get_screenshot: its adapters entry
+    // in the generated fixture advertises only "local-agent-api" (never
+    // pi-mono/omi-tools-stdio), matching get_screenshot/get_local_status. See
+    // agent/src/runtime/omi-tool-manifest.ts get_screenshot.aliasCapabilityDocs
+    // (bullet: "Use only after search_screen_history ... Local API only.").
+    let localApiOnlyTools: Set<String> = ["get_local_status", "get_screenshot", "look_at_frame"]
 
     for toolName in DesktopCapabilityRegistry.desktopToolNames where !localApiOnlyTools.contains(toolName) {
       XCTAssertTrue(declaredTools.contains(toolName), "Missing agent tool declaration for \(toolName)")
