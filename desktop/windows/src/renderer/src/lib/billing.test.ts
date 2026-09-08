@@ -28,6 +28,7 @@ import {
   trialProgress,
   trialTimeTone,
   startCheckout,
+  lapseNoticeCopy,
   type CheckoutDeps
 } from './billing'
 import {
@@ -656,5 +657,37 @@ describe('reportLegacyCatalog', () => {
     expect(reportLegacyCatalog(LEGACY_CATALOG)).toBe(true)
     expect(err).toHaveBeenCalledTimes(1)
     expect(err.mock.calls[0][0]).toContain('[billing:legacy-catalog]')
+  })
+})
+
+describe('lapseNoticeCopy', () => {
+  it('cancellation_scheduled: keep-my-plan copy names the effective date', () => {
+    const copy = lapseNoticeCopy({
+      state: 'cancellation_scheduled',
+      reason: 'user_requested',
+      recovery_action: 'keep_subscription',
+      // Midday UTC avoids day-shift flakiness across the runner's local timezone.
+      effective_at: Math.floor(new Date('2026-10-15T12:00:00Z').getTime() / 1000)
+    })
+    expect(copy.subtitle).toMatch(
+      /^Your plan will end on .*2026\. You'll keep full access until then\.$/
+    )
+    expect(copy.subtitle).toContain('2026')
+    expect(copy.actionLabel).toBe('Keep My Plan')
+  })
+
+  it('access_ended: neutral copy never names a cause', () => {
+    const copy = lapseNoticeCopy({
+      state: 'access_ended',
+      reason: 'unknown',
+      recovery_action: 'resubscribe',
+      effective_at: null
+    })
+    expect(copy.subtitle).toBe('Your paid access has ended.')
+    expect(copy.actionLabel).toBe('Resubscribe')
+    const lower = copy.subtitle.toLowerCase()
+    expect(lower).not.toContain('cancel')
+    expect(lower).not.toContain('payment failed')
+    expect(lower).not.toContain('expired')
   })
 })
