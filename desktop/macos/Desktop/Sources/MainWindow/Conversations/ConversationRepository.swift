@@ -1,5 +1,6 @@
 import Foundation
 @preconcurrency import ObjectiveC
+import OmiSupport
 
 /// Synchronous session fence for conversation cache transaction admission.
 ///
@@ -275,12 +276,10 @@ final class ConversationRepository {
     // previous owner's conversations keep rendering for the next account and
     // ConversationsPage.onAppear skips its reload because the array is
     // non-empty. Mirrors TasksStore.resetSessionState's subscription.
-    ownerChangeObserver = NotificationCenter.default.addObserver(
-      forName: .runtimeOwnerDidChange, object: nil, queue: nil
-    ) { [weak self] _ in
-      MainActor.assumeIsolated {
-        self?.reset()
-      }
+    ownerChangeObserver = NotificationCenter.default.addMainActorObserver(
+      forName: .runtimeOwnerDidChange
+    ) { [weak self] in
+      self?.reset()
     }
   }
 

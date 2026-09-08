@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import OmiSupport
 
 /// Chat-first navigation deliberately does not reuse the legacy sidebar's raw
 /// integer values. The legacy adapter below is the only compatibility boundary
@@ -241,12 +242,10 @@ final class ChatFirstShellNavigation: ObservableObject {
     lastAcknowledgedFocusKind = nil
     focusedEntityID = nil
     isFocusedEntityAcknowledged = false
-    ownerChangeObserver = NotificationCenter.default.addObserver(
-      forName: .runtimeOwnerDidChange, object: nil, queue: nil
-    ) { [weak self] _ in
-      MainActor.assumeIsolated {
-        self?.resetOwnerScopedTransientState()
-      }
+    ownerChangeObserver = NotificationCenter.default.addMainActorObserver(
+      forName: .runtimeOwnerDidChange
+    ) { [weak self] in
+      self?.resetOwnerScopedTransientState()
     }
   }
 

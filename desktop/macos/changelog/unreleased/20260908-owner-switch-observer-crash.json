@@ -1,0 +1,3 @@
+{
+  "change": "Fixed a crash that could end the app when account-switch cleanup was signalled from a background task"
+}

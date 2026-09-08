@@ -677,12 +677,10 @@ class AppState: ObservableObject {
     ShortcutSettings.migratePTTMicrophoneChoiceIfNeeded()
     // Register as the current instance so background services can check recording state
     AppState.current = self
-    ownerChangeObserver = NotificationCenter.default.addObserver(
-      forName: .runtimeOwnerDidChange, object: nil, queue: nil
-    ) { [weak self] _ in
-      MainActor.assumeIsolated {
-        self?.resetOwnerScopedContent()
-      }
+    ownerChangeObserver = NotificationCenter.default.addMainActorObserver(
+      forName: .runtimeOwnerDidChange
+    ) { [weak self] in
+      self?.resetOwnerScopedContent()
     }
     conversationRepository.onSnapshot = { [weak self] snapshot in
       guard let self else { return }
