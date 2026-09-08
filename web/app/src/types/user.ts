@@ -160,9 +160,26 @@ export interface Subscription {
   cancel_at_period_end: boolean;
 }
 
+export type SubscriptionLapseState = 'cancellation_scheduled' | 'access_ended';
+export type SubscriptionLapseReason = 'user_requested' | 'unknown';
+export type SubscriptionLapseRecovery = 'keep_subscription' | 'resubscribe';
+
+// Read-only projection of "this account's paid access is ending or over".
+// Null means there is no evidence of a real paid subscription ending — see
+// backend/models/users.py's SubscriptionLapse and
+// backend/utils/subscription.py's resolve_subscription_lapse for the
+// evidence rules. Mutually exclusive with the unknown-plan sentinel.
+export interface SubscriptionLapse {
+  state: SubscriptionLapseState;
+  reason: SubscriptionLapseReason;
+  recovery_action: SubscriptionLapseRecovery;
+  effective_at?: number | null;
+}
+
 // Full subscription response from API
 export interface UserSubscriptionResponse {
   subscription: Subscription;
+  lapse?: SubscriptionLapse | null;
   transcription_seconds_used: number;
   transcription_seconds_limit: number;
   words_transcribed_used: number;
@@ -223,6 +240,7 @@ export interface UserSubscription {
   cancel_at_period_end?: boolean;
   current_price_id?: string;
   features?: string[];
+  lapse?: SubscriptionLapse | null;
 }
 
 // Pricing option for a plan (matches backend PricingOption)
