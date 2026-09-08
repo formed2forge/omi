@@ -9876,4 +9876,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get planIssueContactSupport => 'قد تكون هناك مشكلة في خطتك، يرجى التواصل مع الدعم لضمان عدم انقطاع خدمتك.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'ستنتهي خطتك في $date. ستحتفظ بكامل الوصول حتى ذلك الحين.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'لقد انتهى وصولك المدفوع.';
 }

@@ -255,6 +255,134 @@ class GeneratedTranscriptionAllowanceSnapshot {
   }
 }
 
+class GeneratedSubscriptionLapseState {
+  final String value;
+
+  const GeneratedSubscriptionLapseState._(this.value);
+  static const cancellationScheduled = GeneratedSubscriptionLapseState._("cancellation_scheduled");
+  static const accessEnded = GeneratedSubscriptionLapseState._("access_ended");
+
+  factory GeneratedSubscriptionLapseState.fromJson(dynamic value) {
+    if (value is! String) {
+      throw const FormatException('Invalid SubscriptionLapseState: expected string');
+    }
+    switch (value) {
+      case "cancellation_scheduled": return cancellationScheduled;
+      case "access_ended": return accessEnded;
+      default:
+        throw FormatException('Invalid SubscriptionLapseState: $value');
+    }
+  }
+
+  String toJson() => value;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is GeneratedSubscriptionLapseState && other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  String toString() => value;
+}
+
+class GeneratedSubscriptionLapseReason {
+  final String value;
+
+  const GeneratedSubscriptionLapseReason._(this.value);
+  static const userRequested = GeneratedSubscriptionLapseReason._("user_requested");
+  static const unknown = GeneratedSubscriptionLapseReason._("unknown");
+
+  factory GeneratedSubscriptionLapseReason.fromJson(dynamic value) {
+    if (value is! String) {
+      throw const FormatException('Invalid SubscriptionLapseReason: expected string');
+    }
+    switch (value) {
+      case "user_requested": return userRequested;
+      case "unknown": return unknown;
+      default:
+        throw FormatException('Invalid SubscriptionLapseReason: $value');
+    }
+  }
+
+  String toJson() => value;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is GeneratedSubscriptionLapseReason && other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  String toString() => value;
+}
+
+class GeneratedSubscriptionLapseRecovery {
+  final String value;
+
+  const GeneratedSubscriptionLapseRecovery._(this.value);
+  static const keepSubscription = GeneratedSubscriptionLapseRecovery._("keep_subscription");
+  static const resubscribe = GeneratedSubscriptionLapseRecovery._("resubscribe");
+
+  factory GeneratedSubscriptionLapseRecovery.fromJson(dynamic value) {
+    if (value is! String) {
+      throw const FormatException('Invalid SubscriptionLapseRecovery: expected string');
+    }
+    switch (value) {
+      case "keep_subscription": return keepSubscription;
+      case "resubscribe": return resubscribe;
+      default:
+        throw FormatException('Invalid SubscriptionLapseRecovery: $value');
+    }
+  }
+
+  String toJson() => value;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is GeneratedSubscriptionLapseRecovery && other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  String toString() => value;
+}
+
+class GeneratedSubscriptionLapse {
+  final int? effectiveAt;
+  final GeneratedSubscriptionLapseReason reason;
+  final GeneratedSubscriptionLapseRecovery recoveryAction;
+  final GeneratedSubscriptionLapseState state;
+
+  const GeneratedSubscriptionLapse({
+    this.effectiveAt,
+    required this.reason,
+    required this.recoveryAction,
+    required this.state,
+  });
+
+  factory GeneratedSubscriptionLapse.fromJson(Map<String, dynamic> json) {
+    return GeneratedSubscriptionLapse(
+      effectiveAt: _readFieldValue<int>(_readField(json, const ["effective_at"]), "effective_at", _readInt, requiredField: false, nullable: true),
+      reason: _required(_readFieldValue<GeneratedSubscriptionLapseReason>(_readField(json, const ["reason"]), "reason", GeneratedSubscriptionLapseReason.fromJson, requiredField: true, nullable: false), "reason"),
+      recoveryAction: _required(_readFieldValue<GeneratedSubscriptionLapseRecovery>(_readField(json, const ["recovery_action"]), "recovery_action", GeneratedSubscriptionLapseRecovery.fromJson, requiredField: true, nullable: false), "recovery_action"),
+      state: _required(_readFieldValue<GeneratedSubscriptionLapseState>(_readField(json, const ["state"]), "state", GeneratedSubscriptionLapseState.fromJson, requiredField: true, nullable: false), "state"),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'effective_at': effectiveAt,
+      'reason': reason.toJson(),
+      'recovery_action': recoveryAction.toJson(),
+      'state': state.toJson(),
+    };
+  }
+}
+
 class GeneratedUserSubscriptionResponse {
   final List<GeneratedSubscriptionPlan> availablePlans;
   final bool chatQuotaAllowed;
@@ -265,6 +393,7 @@ class GeneratedUserSubscriptionResponse {
   final int? desktopGrandfatherUntil;
   final int insightsGainedLimit;
   final int insightsGainedUsed;
+  final GeneratedSubscriptionLapse? lapse;
   final GeneratedPhoneCallQuota? phoneCallQuota;
   final bool showSubscriptionUi;
   final GeneratedSubscription subscription;
@@ -284,6 +413,7 @@ class GeneratedUserSubscriptionResponse {
     this.desktopGrandfatherUntil,
     required this.insightsGainedLimit,
     required this.insightsGainedUsed,
+    this.lapse,
     this.phoneCallQuota,
     this.showSubscriptionUi = true,
     required this.subscription,
@@ -305,6 +435,7 @@ class GeneratedUserSubscriptionResponse {
       desktopGrandfatherUntil: _readFieldValue<int>(_readField(json, const ["desktop_grandfather_until"]), "desktop_grandfather_until", _readInt, requiredField: false, nullable: true),
       insightsGainedLimit: _required(_readFieldValue<int>(_readField(json, const ["insights_gained_limit"]), "insights_gained_limit", _readInt, requiredField: true, nullable: false), "insights_gained_limit"),
       insightsGainedUsed: _required(_readFieldValue<int>(_readField(json, const ["insights_gained_used"]), "insights_gained_used", _readInt, requiredField: true, nullable: false), "insights_gained_used"),
+      lapse: _readFieldValue<GeneratedSubscriptionLapse>(_readField(json, const ["lapse"]), "lapse", (value) => _readObject(value, GeneratedSubscriptionLapse.fromJson), requiredField: false, nullable: true),
       phoneCallQuota: _readFieldValue<GeneratedPhoneCallQuota>(_readField(json, const ["phone_call_quota"]), "phone_call_quota", (value) => _readObject(value, GeneratedPhoneCallQuota.fromJson), requiredField: false, nullable: true),
       showSubscriptionUi: _required(_readFieldValue<bool>(_readField(json, const ["show_subscription_ui"]), "show_subscription_ui", _readBool, requiredField: false, nullable: false, defaultValue: true), "show_subscription_ui"),
       subscription: _required(_readFieldValue<GeneratedSubscription>(_readField(json, const ["subscription"]), "subscription", (value) => _readObject(value, GeneratedSubscription.fromJson), requiredField: true, nullable: false), "subscription"),
@@ -327,6 +458,7 @@ class GeneratedUserSubscriptionResponse {
       'desktop_grandfather_until': desktopGrandfatherUntil,
       'insights_gained_limit': insightsGainedLimit,
       'insights_gained_used': insightsGainedUsed,
+      'lapse': lapse?.toJson(),
       'phone_call_quota': phoneCallQuota?.toJson(),
       'show_subscription_ui': showSubscriptionUi,
       'subscription': subscription.toJson(),
@@ -545,6 +677,11 @@ List<T>? _readObjectList<T>(dynamic value, T Function(Map<String, dynamic>) from
   return [
     for (final item in value) fromJson(_required(_readMap(item), 'list item'))
   ];
+}
+
+List<T>? _readValueList<T>(dynamic value, T Function(dynamic) fromJson) {
+  if (value is! List) return null;
+  return [for (final item in value) fromJson(item)];
 }
 
 List<String>? _readStringList(dynamic value) {

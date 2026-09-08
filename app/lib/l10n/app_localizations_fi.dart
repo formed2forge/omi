@@ -9936,4 +9936,12 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Tilauksessasi saattaa olla ongelma. Ota yhteyttä tukeen, jotta palvelusi ei keskeydy.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Tilauksesi päättyy $date. Säilytät täyden käyttöoikeuden siihen asti.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Maksullinen käyttöoikeutesi on päättynyt.';
 }

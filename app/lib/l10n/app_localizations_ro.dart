@@ -9982,4 +9982,12 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Este posibil să existe o problemă cu planul tău. Te rugăm să contactezi asistența pentru a evita orice întrerupere a serviciului.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Planul tău se va încheia pe $date. Vei păstra acces complet până atunci.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Accesul tău plătit a expirat.';
 }

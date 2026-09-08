@@ -10005,4 +10005,12 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'உங்கள் திட்டத்தில் சிக்கல் இருக்கக்கூடும். உங்கள் சேவையில் இடையூறு ஏற்படாமல் இருக்க தயவுசெய்து ஆதரவைத் தொடர்பு கொள்ளவும்.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'உங்கள் திட்டம் $date அன்று முடிவடையும். அதுவரை முழு அணுகலையும் தக்கவைத்திருப்பீர்கள்.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'உங்கள் கட்டண அணுகல் முடிந்துவிட்டது.';
 }

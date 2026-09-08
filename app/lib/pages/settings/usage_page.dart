@@ -21,8 +21,10 @@ import 'package:omi/pages/settings/fair_use_page.dart';
 import 'package:omi/pages/settings/transcription_settings_page.dart';
 import 'package:omi/pages/settings/widgets/plan_error_card.dart';
 import 'package:omi/pages/settings/widgets/plans_sheet.dart';
+import 'package:omi/pages/settings/widgets/subscription_lapse_notice_card.dart';
 import 'package:omi/providers/usage_provider.dart';
 import 'package:omi/services/wals/sync_rate_limit_reconciliation.dart';
+import 'package:omi/utils/alerts/app_snackbar.dart';
 import 'package:omi/utils/l10n_extensions.dart';
 import 'package:omi/utils/subscription_plan_presentation.dart';
 
@@ -463,6 +465,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
     final planLabel = view.titled(legacySuffix: context.l10n.legacyPlanTitleSuffix);
     final planDescription =
         view.description.isNotEmpty ? view.description : (!isPaid ? context.l10n.basicPlanDescription : '');
+    final lapse = response.lapse;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -502,7 +505,19 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
             const SizedBox(height: 8),
             Text(context.l10n.legacyPlanSupporterNote, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
           ],
-          if (!isPaid) ...[
+          if (lapse != null) ...[
+            const SizedBox(height: 12),
+            SubscriptionLapseNoticeCard(
+              lapse: lapse,
+              busy: _isUpgrading,
+              onKeepSubscription: () => _keepSubscription(response.subscription.currentPriceId),
+              onResubscribe: _showPlansSheet,
+            ),
+          ],
+          // The generic Upgrade CTA is redundant with the lapse notice's own
+          // "Resubscribe" action once access has actually ended — showing both
+          // would stack two near-identical calls to action.
+          if (!isPaid && lapse?.recoveryAction != SubscriptionLapseRecovery.resubscribe) ...[
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -543,6 +558,37 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
   /// render a blank card with no way to recover. See [PlanErrorCard].
   Widget _buildPlanErrorCard(BuildContext context, {required bool unknownPlan}) {
     return PlanErrorCard(unknownPlan: unknownPlan, onRetry: () => context.read<UsageProvider>().fetchSubscription());
+  }
+
+  /// Reverses a scheduled cancellation by reusing the existing reactivation
+  /// path: `POST /v1/payments/checkout-session` with the account's current
+  /// price_id resolves server-side to `_try_reactivate_subscription` and
+  /// clears `cancel_at_period_end` with no new checkout/charge — the exact
+  /// flow `PlansSheet` already uses when it schedules an upgrade onto a
+  /// canceled subscription. No new endpoint.
+  Future<void> _keepSubscription(String? currentPriceId) async {
+    final l10n = context.l10n;
+    if (currentPriceId == null) {
+      AppSnackbar.showSnackbarError(l10n.couldNotProcessSubscription);
+      return;
+    }
+    setState(() => _isUpgrading = true);
+    try {
+      final provider = context.read<UsageProvider>();
+      final result = await provider.createUserCheckoutSession(priceId: currentPriceId);
+      if (!mounted) return;
+      if (result != null && result['status'] == 'reactivated') {
+        final message = result['message'] as String? ?? l10n.subscriptionReactivatedDefault;
+        AppSnackbar.showSnackbar(message);
+        await provider.fetchSubscription();
+      } else {
+        AppSnackbar.showSnackbarError(l10n.couldNotProcessSubscription);
+      }
+    } catch (_) {
+      if (mounted) AppSnackbar.showSnackbarError(l10n.anErrorOccurredTryAgain);
+    } finally {
+      if (mounted) setState(() => _isUpgrading = false);
+    }
   }
 
   void _showPlansSheet() {

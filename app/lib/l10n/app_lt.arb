@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Gali būti, kad su jūsų planu iškilo problema. Susisiekite su palaikymo komanda, kad jūsų paslauga nebūtų nutraukta."
+    "planIssueContactSupport": "Gali būti, kad su jūsų planu iškilo problema. Susisiekite su palaikymo komanda, kad jūsų paslauga nebūtų nutraukta.",
+    "planLapseCancellationScheduled": "Jūsų planas baigsis {date}. Iki tol išlaikysite visišką prieigą.",
+    "planLapseAccessEnded": "Jūsų mokama prieiga baigėsi."
 }

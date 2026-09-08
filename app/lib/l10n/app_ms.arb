@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Mungkin terdapat masalah dengan pelan anda. Sila hubungi sokongan bagi memastikan tiada gangguan pada perkhidmatan anda."
+    "planIssueContactSupport": "Mungkin terdapat masalah dengan pelan anda. Sila hubungi sokongan bagi memastikan tiada gangguan pada perkhidmatan anda.",
+    "planLapseCancellationScheduled": "Pelan anda akan tamat pada {date}. Anda akan mengekalkan akses penuh sehingga itu.",
+    "planLapseAccessEnded": "Akses berbayar anda telah tamat."
 }

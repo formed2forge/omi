@@ -3223,5 +3223,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "S vaším tarifem může být problém. Kontaktujte prosím podporu, aby nedošlo k přerušení vaší služby."
+    "planIssueContactSupport": "S vaším tarifem může být problém. Kontaktujte prosím podporu, aby nedošlo k přerušení vaší služby.",
+    "planLapseCancellationScheduled": "Váš plán skončí {date}. Do té doby si zachováte plný přístup.",
+    "planLapseAccessEnded": "Váš placený přístup skončil."
 }

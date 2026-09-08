@@ -9957,4 +9957,12 @@ class AppLocalizationsUk extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Можливо, з вашим тарифним планом виникла проблема. Будь ласка, зверніться до служби підтримки, щоб не було перерви в обслуговуванні.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Ваш план завершиться $date. До того часу ви збережете повний доступ.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Ваш платний доступ завершився.';
 }

@@ -3245,5 +3245,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Ενδέχεται να υπάρχει πρόβλημα με το πρόγραμμά σας. Επικοινωνήστε με την υποστήριξη ώστε να μη διακοπεί η υπηρεσία σας."
+    "planIssueContactSupport": "Ενδέχεται να υπάρχει πρόβλημα με το πρόγραμμά σας. Επικοινωνήστε με την υποστήριξη ώστε να μη διακοπεί η υπηρεσία σας.",
+    "planLapseCancellationScheduled": "Το πλάνο σας θα λήξει στις {date}. Θα διατηρήσετε πλήρη πρόσβαση μέχρι τότε.",
+    "planLapseAccessEnded": "Η επί πληρωμή πρόσβασή σας έχει λήξει."
 }

@@ -3341,5 +3341,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Lehet, hogy probléma van a csomagoddal. Kérjük, lépj kapcsolatba az ügyfélszolgálattal, hogy a szolgáltatásod ne szakadjon meg."
+    "planIssueContactSupport": "Lehet, hogy probléma van a csomagoddal. Kérjük, lépj kapcsolatba az ügyfélszolgálattal, hogy a szolgáltatásod ne szakadjon meg.",
+    "planLapseCancellationScheduled": "Az előfizetésed {date}-n ér véget. Addig teljes hozzáférésed megmarad.",
+    "planLapseAccessEnded": "A fizetős hozzáférésed lejárt."
 }

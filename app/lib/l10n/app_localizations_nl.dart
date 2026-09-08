@@ -9962,4 +9962,12 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Er is mogelijk een probleem met je abonnement. Neem contact op met de support om onderbreking van je service te voorkomen.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Je abonnement eindigt op $date. Tot die tijd behoud je volledige toegang.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Je betaalde toegang is beëindigd.';
 }

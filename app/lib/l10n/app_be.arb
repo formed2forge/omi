@@ -10811,5 +10811,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Магчыма, узнікла праблема з вашым тарыфным планам. Калі ласка, звярніцеся ў службу падтрымкі, каб пазбегнуць перапынку ў абслугоўванні."
+    "planIssueContactSupport": "Магчыма, узнікла праблема з вашым тарыфным планам. Калі ласка, звярніцеся ў службу падтрымкі, каб пазбегнуць перапынку ў абслугоўванні.",
+    "planLapseCancellationScheduled": "Ваш план скончыцца {date}. Вы захаваеце поўны доступ да гэтага часу.",
+    "planLapseAccessEnded": "Ваш платны доступ скончыўся."
 }

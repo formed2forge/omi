@@ -18494,6 +18494,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There may be an issue with your plan, please contact support to ensure there is no interruption in your service.'**
   String get planIssueContactSupport;
+
+  /// Shown on the main Plan & Usage card when a subscription cancellation is scheduled but access is still active.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan will end on {date}. You\'ll keep full access until then.'**
+  String planLapseCancellationScheduled(String date);
+
+  /// Shown on the main Plan & Usage card when paid access has ended. Deliberately neutral about cause (backend cannot honestly attribute a specific reason).
+  ///
+  /// In en, this message translates to:
+  /// **'Your paid access has ended.'**
+  String get planLapseAccessEnded;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

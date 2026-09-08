@@ -10811,5 +10811,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "ممکن است مشکلی در طرح اشتراک شما وجود داشته باشد. لطفاً با پشتیبانی تماس بگیرید تا در سرویس شما وقفه‌ای ایجاد نشود."
+    "planIssueContactSupport": "ممکن است مشکلی در طرح اشتراک شما وجود داشته باشد. لطفاً با پشتیبانی تماس بگیرید تا در سرویس شما وقفه‌ای ایجاد نشود.",
+    "planLapseCancellationScheduled": "طرح شما در {date} پایان می‌یابد. تا آن زمان دسترسی کامل خواهید داشت.",
+    "planLapseAccessEnded": "دسترسی پرداختی شما پایان یافته است."
 }

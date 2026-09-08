@@ -10811,5 +10811,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "మీ ప్లాన్‌లో సమస్య ఉండవచ్చు. మీ సేవలో అంతరాయం కలగకుండా ఉండేందుకు దయచేసి సపోర్ట్‌ను సంప్రదించండి."
+    "planIssueContactSupport": "మీ ప్లాన్‌లో సమస్య ఉండవచ్చు. మీ సేవలో అంతరాయం కలగకుండా ఉండేందుకు దయచేసి సపోర్ట్‌ను సంప్రదించండి.",
+    "planLapseCancellationScheduled": "మీ ప్లాన్ {date} న ముగుస్తుంది. అప్పటి వరకు మీకు పూర్తి యాక్సెస్ ఉంటుంది.",
+    "planLapseAccessEnded": "మీ చెల్లింపు యాక్సెస్ ముగిసింది."
 }

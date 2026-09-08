@@ -10018,4 +10018,12 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Möglicherweise liegt ein Problem mit deinem Tarif vor. Bitte wende dich an den Support, damit dein Dienst nicht unterbrochen wird.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Dein Plan endet am $date. Bis dahin behältst du vollen Zugriff.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Dein bezahlter Zugriff ist beendet.';
 }

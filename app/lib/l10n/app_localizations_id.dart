@@ -9946,4 +9946,12 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Mungkin ada masalah dengan paket Anda. Silakan hubungi dukungan agar tidak terjadi gangguan pada layanan Anda.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Paket Anda akan berakhir pada $date. Anda tetap memiliki akses penuh hingga saat itu.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Akses berbayar Anda telah berakhir.';
 }

@@ -9976,4 +9976,12 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Lehet, hogy probléma van a csomagoddal. Kérjük, lépj kapcsolatba az ügyfélszolgálattal, hogy a szolgáltatásod ne szakadjon meg.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Az előfizetésed $date-n ér véget. Addig teljes hozzáférésed megmarad.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'A fizetős hozzáférésed lejárt.';
 }

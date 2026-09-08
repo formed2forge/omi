@@ -136,6 +136,62 @@ class Subscription(BaseModel):
     deprecation_message: Optional[str] = None
 
 
+class SubscriptionLapseState(str, Enum):
+    """Where an account stands relative to the end of a *real* paid subscription.
+
+    Derived per-request from the stored subscription row; never persisted and
+    never an entitlement input. A Free plan on its own is not a lapse — see
+    ``utils.subscription.resolve_subscription_lapse`` for the evidence rules.
+    """
+
+    # Still entitled: the user asked Stripe to cancel and the paid period is
+    # running out. `effective_at` is when access is scheduled to end.
+    cancellation_scheduled = 'cancellation_scheduled'
+    # No longer entitled: a paid period this account really had has passed.
+    access_ended = 'access_ended'
+
+
+class SubscriptionLapseReason(str, Enum):
+    """Why access is ending — only ever a value the stored data actually proves.
+
+    ``cancel_at_period_end`` is written only by a cancellation request, so
+    ``cancellation_scheduled`` can honestly claim ``user_requested``.
+
+    ``access_ended`` is always ``unknown``: the terminal Stripe status
+    (``canceled`` / ``unpaid`` / ``past_due`` / ``incomplete_expired``) and
+    ``cancellation_details.reason`` are collapsed by
+    ``routers.payment._build_subscription_from_stripe_object`` into an
+    indistinguishable Free row, and the reason survives only as an
+    aggregate, uid-less Prometheus label in
+    ``utils.observability.subscription_events``. Reporting a specific reason
+    here would be a guess, so this enum deliberately has no
+    ``payment_failed`` / ``expired`` member to guess with.
+    """
+
+    user_requested = 'user_requested'
+    unknown = 'unknown'
+
+
+class SubscriptionLapseRecovery(str, Enum):
+    """The one action that resolves this state. Server-owned, not styling."""
+
+    # Access has not lapsed yet: the cancellation can be reverted in place.
+    keep_subscription = 'keep_subscription'
+    # Access is over: a new checkout is required.
+    resubscribe = 'resubscribe'
+
+
+class SubscriptionLapse(BaseModel):
+    state: SubscriptionLapseState
+    reason: SubscriptionLapseReason
+    recovery_action: SubscriptionLapseRecovery
+    # Unix seconds — the stored `current_period_end` this state was derived
+    # from: when access ends (`cancellation_scheduled`) or ended
+    # (`access_ended`). Null only when the stored row proves the state without
+    # proving its date.
+    effective_at: Optional[int] = None
+
+
 class PricingOption(BaseModel):
     id: str  # price_id
     title: str
@@ -219,6 +275,13 @@ class UserSubscriptionResponse(BaseModel):
     # Resolved once per request by `resolve_transcription_allowance`; the same
     # answer the listen socket enforces. Null only on servers that predate it.
     transcription_allowance: Optional[TranscriptionAllowanceSnapshot] = None
+    # Read-only projection of "this account's paid access is ending or over".
+    # Null means there is no evidence of a real paid subscription ending —
+    # which is the case for every always-Free account, every legacy row with no
+    # period data, and every currently-active plan. It reports state; it never
+    # grants or withdraws entitlement, and the plan/limits/allowance fields in
+    # this same response are computed without reading it.
+    lapse: Optional[SubscriptionLapse] = None
 
     @field_validator("subscription", mode="before")
     @classmethod

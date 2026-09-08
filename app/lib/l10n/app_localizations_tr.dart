@@ -9947,4 +9947,12 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Planınızla ilgili bir sorun olabilir. Hizmetinizde kesinti yaşanmaması için lütfen destek ekibiyle iletişime geçin.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Planınız $date tarihinde sona erecek. O zamana kadar tam erişiminiz devam edecek.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Ücretli erişiminiz sona erdi.';
 }

@@ -3280,5 +3280,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Il se peut qu'il y ait un problème avec votre forfait. Veuillez contacter le support afin d'éviter toute interruption de votre service."
+    "planIssueContactSupport": "Il se peut qu'il y ait un problème avec votre forfait. Veuillez contacter le support afin d'éviter toute interruption de votre service.",
+    "planLapseCancellationScheduled": "Votre forfait se terminera le {date}. Vous conserverez un accès complet jusque-là.",
+    "planLapseAccessEnded": "Votre accès payant a pris fin."
 }

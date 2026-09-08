@@ -9919,4 +9919,12 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Der kan være et problem med dit abonnement. Kontakt venligst support for at sikre, at der ikke sker afbrydelser i din service.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Din plan udløber den $date. Du beholder fuld adgang indtil da.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Din betalte adgang er udløbet.';
 }

@@ -9967,4 +9967,12 @@ class AppLocalizationsKn extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'ನಿಮ್ಮ ಯೋಜನೆಯಲ್ಲಿ ಸಮಸ್ಯೆ ಇರಬಹುದು. ನಿಮ್ಮ ಸೇವೆಯಲ್ಲಿ ಯಾವುದೇ ಅಡಚಣೆ ಆಗದಂತೆ ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ದಯವಿಟ್ಟು ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'ನಿಮ್ಮ ಯೋಜನೆ $date ರಂದು ಕೊನೆಗೊಳ್ಳುತ್ತದೆ. ಅಲ್ಲಿಯವರೆಗೆ ನೀವು ಪೂರ್ಣ ಪ್ರವೇಶವನ್ನು ಉಳಿಸಿಕೊಳ್ಳುತ್ತೀರಿ.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'ನಿಮ್ಮ ಪಾವತಿಸಿದ ಪ್ರವೇಶ ಮುಗಿದಿದೆ.';
 }

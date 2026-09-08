@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 import types
 from unittest.mock import MagicMock, patch
 
@@ -944,3 +945,168 @@ def test_multi_field_corruption_including_plan_still_fails_closed():
     ), patch.dict(users_router.os.environ, {'MARKETPLACE_APP_REVIEWERS': ''}):
         with pytest.raises(MalformedDocError):
             users_router.get_user_subscription_endpoint(uid='uid-corrupt', x_app_platform='ios', x_app_version='1.0.0')
+
+
+def _subscription_snapshot(uid: str, stored, resolved):
+    """GET /v1/users/me/subscription with only the external services stubbed.
+
+    ``get_user_subscription`` is the stored Firestore row and
+    ``get_user_valid_subscription`` is the entitlement the request resolves to —
+    the two real inputs the lapse projection reads. Everything else stubbed here
+    is a network or Firestore dependency, not part of the behavior asserted.
+    """
+    with patch.object(users_router.users_db, 'is_byok_active', MagicMock(return_value=False)), patch.object(
+        users_router, 'get_user_subscription', MagicMock(return_value=stored)
+    ), patch.object(users_router, 'reconcile_basic_plan_with_stripe', MagicMock()), patch.object(
+        users_router, 'get_user_valid_subscription', MagicMock(return_value=resolved)
+    ), patch.object(
+        users_router, 'get_monthly_usage_for_subscription', MagicMock(return_value={})
+    ), patch.object(
+        users_router, 'get_paid_plan_definitions', MagicMock(return_value=[])
+    ), patch.object(
+        users_router, 'should_hide_subscription_ui', MagicMock(return_value=False)
+    ), patch.object(
+        users_router,
+        'get_phone_call_quota_snapshot',
+        MagicMock(return_value=MagicMock(to_client_dict=lambda: {'has_access': False, 'is_paid': False})),
+    ), patch.object(
+        users_router,
+        'get_chat_quota_snapshot',
+        MagicMock(return_value={'used': 0.0, 'limit': None, 'unit': 'questions', 'allowed': True, 'reset_at': None}),
+    ), patch.object(
+        users_router,
+        'resolve_transcription_allowance',
+        MagicMock(
+            return_value=MagicMock(
+                as_dict=lambda: {'mode': 'on_device', 'remaining_seconds': 0, 'reason': 'allowance_unavailable'}
+            )
+        ),
+    ), patch.dict(
+        users_router.os.environ, {'MARKETPLACE_APP_REVIEWERS': ''}
+    ):
+        return users_router.get_user_subscription_endpoint(uid=uid, x_app_platform='ios', x_app_version='1.0.600')
+
+
+def test_legacy_subscription_row_gets_no_lapse_state_from_the_endpoint():
+    """An unmigrated account with no lapse-relevant fields must be unaffected.
+
+    The stored row is only {plan, status} — the shape that predates every
+    period/Stripe field — so the response must look exactly as it does today,
+    with the new field null rather than a fabricated lapse.
+    """
+    legacy = users_router.Subscription(plan=users_router.PlanType.basic, status=users_router.SubscriptionStatus.active)
+
+    response = _subscription_snapshot('uid-legacy-row', legacy, legacy)
+
+    assert response.lapse is None
+    assert response.subscription.plan is users_router.PlanType.basic
+    assert response.transcription_seconds_limit > 0
+
+
+def test_ended_paid_subscription_is_reported_as_lapsed_without_changing_entitlement():
+    """A webhook-downgraded row (paid period over, Stripe subscription id kept).
+
+    The account is genuinely Free now and must stay Free: the lapse field only
+    reports that access ended and what recovers it. Its Free limits must be
+    byte-identical to an always-Free account's.
+    """
+    ended = users_router.Subscription(
+        plan=users_router.PlanType.basic,
+        status=users_router.SubscriptionStatus.active,
+        current_period_end=int(time.time()) - 3_600,
+        stripe_subscription_id='sub_ended_1',
+    )
+    always_free = users_router.Subscription(
+        plan=users_router.PlanType.basic, status=users_router.SubscriptionStatus.active
+    )
+
+    lapsed = _subscription_snapshot('uid-lapsed', ended, None)
+    never_paid = _subscription_snapshot('uid-always-free', always_free, None)
+
+    assert never_paid.lapse is None
+    assert lapsed.lapse is not None
+    assert lapsed.lapse.state.value == 'access_ended'
+    assert lapsed.lapse.reason.value == 'unknown'
+    assert lapsed.lapse.recovery_action.value == 'resubscribe'
+    assert lapsed.lapse.effective_at == ended.current_period_end
+
+    # Entitlement is identical to the never-paid account's, field for field.
+    assert lapsed.subscription.plan is never_paid.subscription.plan
+    assert lapsed.subscription.limits == never_paid.subscription.limits
+    assert lapsed.subscription.features == never_paid.subscription.features
+    assert lapsed.transcription_seconds_limit == never_paid.transcription_seconds_limit
+    assert lapsed.words_transcribed_limit == never_paid.words_transcribed_limit
+    assert lapsed.insights_gained_limit == never_paid.insights_gained_limit
+    assert lapsed.chat_quota_allowed == never_paid.chat_quota_allowed
+
+
+def test_unknown_plan_snapshot_reports_no_lapse():
+    """The unknown-plan sentinel body must not also claim access ended.
+
+    That branch reads no period data and resolves no entitlement, so it has no
+    lapse evidence to report — and inventing one would tell a possibly-paying
+    user their subscription is over.
+    """
+    payload = users_router.unknown_plan_subscription_payload()
+
+    assert payload['lapse'] is None
+
+
+def test_lapse_state_reaches_the_wire_over_real_http():
+    """GET /v1/users/me/subscription over HTTP, through response_model serialization.
+
+    Calling the handler directly skips `UserSubscriptionResponse` validation and
+    JSON encoding, which is where a wire contract actually breaks. This drives
+    the mounted route so the emitted body is the one clients decode.
+    """
+    ended = users_router.Subscription(
+        plan=users_router.PlanType.basic,
+        status=users_router.SubscriptionStatus.active,
+        current_period_end=int(time.time()) - 3_600,
+        stripe_subscription_id='sub_ended_http',
+    )
+    app = FastAPI()
+    app.include_router(users_router.router)
+    app.dependency_overrides[users_router.auth.get_current_user_uid_no_byok_validation] = lambda: 'uid-lapsed-http'
+
+    with patch.object(users_router.users_db, 'is_byok_active', MagicMock(return_value=False)), patch.object(
+        users_router, 'get_user_subscription', MagicMock(return_value=ended)
+    ), patch.object(users_router, 'reconcile_basic_plan_with_stripe', MagicMock()), patch.object(
+        users_router, 'get_user_valid_subscription', MagicMock(return_value=None)
+    ), patch.object(
+        users_router, 'get_monthly_usage_for_subscription', MagicMock(return_value={})
+    ), patch.object(
+        users_router, 'get_paid_plan_definitions', MagicMock(return_value=[])
+    ), patch.object(
+        users_router, 'should_hide_subscription_ui', MagicMock(return_value=False)
+    ), patch.object(
+        users_router,
+        'get_phone_call_quota_snapshot',
+        MagicMock(return_value=MagicMock(to_client_dict=lambda: {'has_access': False, 'is_paid': False})),
+    ), patch.object(
+        users_router,
+        'get_chat_quota_snapshot',
+        MagicMock(return_value={'used': 0.0, 'limit': None, 'unit': 'questions', 'allowed': True, 'reset_at': None}),
+    ), patch.object(
+        users_router,
+        'resolve_transcription_allowance',
+        MagicMock(
+            return_value=MagicMock(
+                as_dict=lambda: {'mode': 'on_device', 'remaining_seconds': 0, 'reason': 'allowance_unavailable'}
+            )
+        ),
+    ), patch.dict(
+        users_router.os.environ, {'MARKETPLACE_APP_REVIEWERS': ''}
+    ):
+        response = TestClient(app, raise_server_exceptions=False).get('/v1/users/me/subscription')
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body['lapse'] == {
+        'state': 'access_ended',
+        'reason': 'unknown',
+        'recovery_action': 'resubscribe',
+        'effective_at': ended.current_period_end,
+    }
+    # Reported, not granted: the plan on the wire is still Free.
+    assert body['subscription']['plan'] == 'basic'

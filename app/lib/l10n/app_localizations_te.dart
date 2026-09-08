@@ -9984,4 +9984,12 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'మీ ప్లాన్‌లో సమస్య ఉండవచ్చు. మీ సేవలో అంతరాయం కలగకుండా ఉండేందుకు దయచేసి సపోర్ట్‌ను సంప్రదించండి.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'మీ ప్లాన్ $date న ముగుస్తుంది. అప్పటి వరకు మీకు పూర్తి యాక్సెస్ ఉంటుంది.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'మీ చెల్లింపు యాక్సెస్ ముగిసింది.';
 }

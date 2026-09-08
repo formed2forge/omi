@@ -3280,5 +3280,7 @@
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
     },
-    "planIssueContactSupport": "Planınızla ilgili bir sorun olabilir. Hizmetinizde kesinti yaşanmaması için lütfen destek ekibiyle iletişime geçin."
+    "planIssueContactSupport": "Planınızla ilgili bir sorun olabilir. Hizmetinizde kesinti yaşanmaması için lütfen destek ekibiyle iletişime geçin.",
+    "planLapseCancellationScheduled": "Planınız {date} tarihinde sona erecek. O zamana kadar tam erişiminiz devam edecek.",
+    "planLapseAccessEnded": "Ücretli erişiminiz sona erdi."
 }

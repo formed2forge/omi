@@ -9955,4 +9955,12 @@ class AppLocalizationsLt extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'Gali būti, kad su jūsų planu iškilo problema. Susisiekite su palaikymo komanda, kad jūsų paslauga nebūtų nutraukta.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Jūsų planas baigsis $date. Iki tol išlaikysite visišką prieigą.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Jūsų mokama prieiga baigėsi.';
 }

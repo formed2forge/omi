@@ -9878,4 +9878,12 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get planIssueContactSupport =>
       'อาจมีปัญหากับแพ็กเกจของคุณ โปรดติดต่อฝ่ายสนับสนุนเพื่อให้แน่ใจว่าบริการของคุณจะไม่หยุดชะงัก';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'แผนของคุณจะสิ้นสุดในวันที่ $date คุณจะยังคงเข้าถึงได้เต็มรูปแบบจนถึงตอนนั้น';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'การเข้าถึงแบบชำระเงินของคุณสิ้นสุดลงแล้ว';
 }
