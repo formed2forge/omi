@@ -369,6 +369,125 @@ class PhoneCallQuota {
   Map<String, dynamic> toJson() => toGenerated().toJson();
 }
 
+/// Where an account stands relative to the end of a *real* paid subscription.
+///
+/// Mirrors `models.users.SubscriptionLapseState`. Never persisted client-side
+/// and never an entitlement input — it is read-only projection data for the
+/// Plan & Usage notice.
+enum SubscriptionLapseState { cancellationScheduled, accessEnded }
+
+SubscriptionLapseState? _lapseStateFromWire(String? value) {
+  switch (value) {
+    case 'cancellation_scheduled':
+      return SubscriptionLapseState.cancellationScheduled;
+    case 'access_ended':
+      return SubscriptionLapseState.accessEnded;
+    default:
+      return null;
+  }
+}
+
+String _lapseStateToWire(SubscriptionLapseState state) {
+  switch (state) {
+    case SubscriptionLapseState.cancellationScheduled:
+      return 'cancellation_scheduled';
+    case SubscriptionLapseState.accessEnded:
+      return 'access_ended';
+  }
+}
+
+/// Mirrors `models.users.SubscriptionLapseReason`. `unknown` is the honest
+/// default for any reason this client doesn't recognize, matching the
+/// backend's deliberate refusal to guess a specific cause for `accessEnded`.
+enum SubscriptionLapseReason { userRequested, unknown }
+
+SubscriptionLapseReason _lapseReasonFromWire(String? value) {
+  switch (value) {
+    case 'user_requested':
+      return SubscriptionLapseReason.userRequested;
+    default:
+      return SubscriptionLapseReason.unknown;
+  }
+}
+
+String _lapseReasonToWire(SubscriptionLapseReason reason) {
+  switch (reason) {
+    case SubscriptionLapseReason.userRequested:
+      return 'user_requested';
+    case SubscriptionLapseReason.unknown:
+      return 'unknown';
+  }
+}
+
+/// Mirrors `models.users.SubscriptionLapseRecovery` — the one action that
+/// resolves this state.
+enum SubscriptionLapseRecovery { keepSubscription, resubscribe }
+
+SubscriptionLapseRecovery? _lapseRecoveryFromWire(String? value) {
+  switch (value) {
+    case 'keep_subscription':
+      return SubscriptionLapseRecovery.keepSubscription;
+    case 'resubscribe':
+      return SubscriptionLapseRecovery.resubscribe;
+    default:
+      return null;
+  }
+}
+
+String _lapseRecoveryToWire(SubscriptionLapseRecovery recovery) {
+  switch (recovery) {
+    case SubscriptionLapseRecovery.keepSubscription:
+      return 'keep_subscription';
+    case SubscriptionLapseRecovery.resubscribe:
+      return 'resubscribe';
+  }
+}
+
+class SubscriptionLapse {
+  final SubscriptionLapseState state;
+  final SubscriptionLapseReason reason;
+  final SubscriptionLapseRecovery recoveryAction;
+  final int? effectiveAt;
+
+  SubscriptionLapse({
+    required this.state,
+    required this.reason,
+    required this.recoveryAction,
+    this.effectiveAt,
+  });
+
+  static SubscriptionLapse? fromJson(Map<String, dynamic> json) {
+    return SubscriptionLapse.fromGenerated(wire.GeneratedSubscriptionLapse.fromJson(json));
+  }
+
+  /// Returns null when the wire `state`/`recovery_action` is not one this
+  /// client recognizes. This is read-only projection data (never an
+  /// entitlement input), so an unrecognized future value degrades to "no
+  /// notice" rather than crashing or guessing at unfamiliar UI.
+  static SubscriptionLapse? fromGenerated(wire.GeneratedSubscriptionLapse generated) {
+    final state = _lapseStateFromWire(generated.state.value);
+    final recovery = _lapseRecoveryFromWire(generated.recoveryAction.value);
+    if (state == null || recovery == null) return null;
+    return SubscriptionLapse(
+      state: state,
+      reason: _lapseReasonFromWire(generated.reason.value),
+      recoveryAction: recovery,
+      effectiveAt: generated.effectiveAt,
+    );
+  }
+
+  wire.GeneratedSubscriptionLapse toGenerated() {
+    return wire.GeneratedSubscriptionLapse(
+      state: wire.GeneratedSubscriptionLapseState.fromJson(_lapseStateToWire(state)),
+      reason: wire.GeneratedSubscriptionLapseReason.fromJson(_lapseReasonToWire(reason)),
+      recoveryAction: wire.GeneratedSubscriptionLapseRecovery.fromJson(_lapseRecoveryToWire(recoveryAction)),
+      effectiveAt: effectiveAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => toGenerated().toJson();
+}
+
 class UserSubscriptionResponse {
   final Subscription subscription;
   final int transcriptionSecondsUsed;
@@ -386,6 +505,11 @@ class UserSubscriptionResponse {
   final bool chatQuotaAllowed;
   final int? chatQuotaResetAt;
   final PhoneCallQuota? phoneCallQuota;
+  // Read-only projection of "this account's paid access is ending or over".
+  // Null means there is no evidence of a real paid subscription ending: every
+  // always-Free account, every legacy row with no period data, and every
+  // currently-active plan. Never used to compute entitlement client-side.
+  final SubscriptionLapse? lapse;
 
   UserSubscriptionResponse({
     required this.subscription,
@@ -403,6 +527,7 @@ class UserSubscriptionResponse {
     this.chatQuotaAllowed = true,
     this.chatQuotaResetAt,
     this.phoneCallQuota,
+    this.lapse,
   });
 
   factory UserSubscriptionResponse.fromJson(Map<String, dynamic> json) {
@@ -426,6 +551,7 @@ class UserSubscriptionResponse {
       chatQuotaAllowed: generated.chatQuotaAllowed,
       chatQuotaResetAt: generated.chatQuotaResetAt,
       phoneCallQuota: generated.phoneCallQuota == null ? null : PhoneCallQuota.fromGenerated(generated.phoneCallQuota!),
+      lapse: generated.lapse == null ? null : SubscriptionLapse.fromGenerated(generated.lapse!),
     );
   }
 
@@ -446,6 +572,7 @@ class UserSubscriptionResponse {
       chatQuotaAllowed: chatQuotaAllowed,
       chatQuotaResetAt: chatQuotaResetAt,
       phoneCallQuota: phoneCallQuota?.toGenerated(),
+      lapse: lapse?.toGenerated(),
     );
   }
 
