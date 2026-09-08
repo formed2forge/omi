@@ -11,6 +11,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:omi/backend/preferences.dart';
 import 'package:omi/pages/settings/widgets/cancel_subscription_sheet.dart';
+import 'package:omi/pages/settings/widgets/plans_sheet_close_button.dart';
 import 'package:omi/gen/assets.gen.dart';
 import 'package:omi/models/subscription.dart';
 import 'package:omi/pages/settings/transcription_settings_page.dart';
@@ -644,7 +645,9 @@ class _PlansSheetState extends State<PlansSheet> {
                 ),
                 borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
               ),
-              child: ListView(
+              child: Stack(
+                children: [
+                  ListView(
                 controller: scrollController,
                 children: [
                   Center(
@@ -1489,6 +1492,9 @@ class _PlansSheetState extends State<PlansSheet> {
                       ],
                     ),
                   ),
+                ],
+                  ),
+                  const PlansSheetCloseButton(),
                 ],
               ),
             );
