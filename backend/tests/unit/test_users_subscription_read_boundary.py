@@ -7,6 +7,12 @@ import pytest
 import database.read_boundary as read_boundary
 import database.users as users_db
 
+# `get_user_subscription` defers `from utils.subscription import
+# get_default_basic_subscription` to break an import cycle. Importing it here
+# keeps that one-time cost out of the call phase, which the fast-unit duration
+# guard measures.
+import utils.subscription  # noqa: F401
+
 
 class _Snapshot:
     exists = True
