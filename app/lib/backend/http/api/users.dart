@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:omi/backend/http/shared.dart';
 import 'package:omi/backend/schema/daily_summary.dart';
@@ -476,21 +477,59 @@ Future<bool> setTranscriptionPreferences({bool? singleLanguageMode, List<String>
   return data.status == 'ok';
 }
 
-Future<UserSubscriptionResponse?> getUserSubscription() async {
-  var response = await makeApiCall(
-    url: '${Env.apiBaseUrl}v1/users/me/subscription',
-    headers: {},
-    method: 'GET',
-    body: '',
-  );
-  if (response == null) return null;
+/// The subscription snapshot could not be obtained.
+///
+/// [statusCode] is null when the request never produced a response at all
+/// (auth unavailable, transport failure) — `makeApiCall` reports that as null.
+class SubscriptionFetchException implements Exception {
+  final int? statusCode;
+
+  const SubscriptionFetchException(this.statusCode);
+
+  @override
+  String toString() => 'SubscriptionFetchException(statusCode: $statusCode)';
+}
+
+/// Fetches the subscription snapshot, throwing when there is no usable one.
+///
+/// [httpCall] is a test seam for the response this function branches on; the
+/// production path always goes through [makeApiCall].
+Future<UserSubscriptionResponse> getUserSubscription({Future<http.Response?> Function()? httpCall}) async {
+  final response = await (httpCall ??
+      () => makeApiCall(
+            url: '${Env.apiBaseUrl}v1/users/me/subscription',
+            headers: {},
+            method: 'GET',
+            body: '',
+          ))();
+  return decodeUserSubscriptionResponse(response);
+}
+
+/// Status/body handling for `GET /v1/users/me/subscription`.
+///
+/// A non-200 (or an absent response) must throw rather than resolve to null:
+/// a silent null left `UsageProvider` with no subscription AND no error, which
+/// rendered a blank plan card with no way for the user to recover.
+UserSubscriptionResponse decodeUserSubscriptionResponse(http.Response? response) {
+  if (response == null) {
+    throw const SubscriptionFetchException(null);
+  }
   Logger.debug('getUserSubscription response: ${response.body}');
-  if (response.statusCode == 200) {
+  if (response.statusCode != 200) {
+    throw SubscriptionFetchException(response.statusCode);
+  }
+  try {
+    // A 200 can still carry a plan ID this build does not know (including the
+    // backend's `unknown` sentinel for an unresolvable stored plan). That is a
+    // successful response: `PlanType.fromWire` keeps it losslessly and the UI
+    // routes it to the unknown-plan state instead of a silent Free.
     return UserSubscriptionResponse.fromGenerated(
       subscription_wire.GeneratedUserSubscriptionResponse.fromJson(jsonDecode(response.body) as Map<String, dynamic>),
     );
+  } catch (e) {
+    Logger.debug('getUserSubscription decode failed: $e');
+    throw SubscriptionFetchException(response.statusCode);
   }
-  return null;
 }
 
 // Daily Summary Settings
