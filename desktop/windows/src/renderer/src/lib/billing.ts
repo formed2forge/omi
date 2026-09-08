@@ -328,17 +328,25 @@ export type LapseNoticeCopy = {
  * state (the terminal Stripe status is collapsed into an indistinguishable
  * row before the contract sees it) — never claim a specific cause here.
  */
+const LAPSE_ACCESS_ENDED_MESSAGE = 'Your paid access has ended.'
+
 export function lapseNoticeCopy(lapse: SubscriptionLapse): LapseNoticeCopy {
   if (lapse.state === 'cancellation_scheduled') {
+    // No date proof — fall back to the neutral copy rather than guess one.
+    // Matches Flutter (subscription_lapse_notice_card.dart) and macOS
+    // (BillingHelpers.lapseNoticeMessage): this is one product decision
+    // shared across platforms, not per-platform wording.
     return {
       title: 'Plan Ending',
-      subtitle: `Your plan will end on ${formatMediumDate(lapse.effective_at)}. You'll keep full access until then.`,
+      subtitle: lapse.effective_at
+        ? `Your plan will end on ${formatMediumDate(lapse.effective_at)}. You'll keep full access until then.`
+        : LAPSE_ACCESS_ENDED_MESSAGE,
       actionLabel: 'Keep My Plan'
     }
   }
   return {
     title: 'Access Ended',
-    subtitle: 'Your paid access has ended.',
+    subtitle: LAPSE_ACCESS_ENDED_MESSAGE,
     actionLabel: 'Resubscribe'
   }
 }

@@ -676,6 +676,22 @@ describe('lapseNoticeCopy', () => {
     expect(copy.actionLabel).toBe('Keep My Plan')
   })
 
+  it('cancellation_scheduled with no effective_at: falls back to the neutral access-ended copy', () => {
+    // State proven (backend says the cancellation is scheduled), date not
+    // (effective_at is null). Must not render a dangling/blank date, and
+    // must not claim the user "keeps full access" without proof of when
+    // that access ends. Matches the Flutter/macOS/web fallback contract.
+    const copy = lapseNoticeCopy({
+      state: 'cancellation_scheduled',
+      reason: 'user_requested',
+      recovery_action: 'keep_subscription',
+      effective_at: null
+    })
+    expect(copy.subtitle).toBe('Your paid access has ended.')
+    expect(copy.subtitle).not.toContain('undefined')
+    expect(copy.subtitle).not.toMatch(/end on \s*\./)
+  })
+
   it('access_ended: neutral copy never names a cause', () => {
     const copy = lapseNoticeCopy({
       state: 'access_ended',
