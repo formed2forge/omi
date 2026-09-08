@@ -253,6 +253,112 @@ final class SubscriptionPlanPresentationTests: XCTestCase {
       "Neo (Legacy Plan)")
   }
 
+  /// Decodes a real `AvailablePlanPriceOption` from JSON shaped exactly like
+  /// the live harness/production backend's `/v1/payments/available-plans`
+  /// response (`backend/routers/payment.py`'s `PricingOption`), not a
+  /// fabricated title. Unlimited-v2's actual catalog display name is
+  /// "Unlimited" (`get_paid_plan_definitions()`), so its real price title is
+  /// "Unlimited Monthly" / "Unlimited Annual" — no price a real backend
+  /// sends ever contains the substring "v2".
+  private static func decodedPrice(title: String, planId: String, priceId: String) throws
+    -> AvailablePlanPriceOption
+  {
+    let json = """
+      {
+        "id": "\(priceId)",
+        "plan_id": "\(planId)",
+        "title": "\(title)",
+        "price_string": "$0.00/month",
+        "interval": "month",
+        "unit_amount": 0,
+        "is_active": false
+      }
+      """
+    return try JSONDecoder().decode(AvailablePlanPriceOption.self, from: Data(json.utf8))
+  }
+
+  func testCatalogGroupingKeyUsesWirePlanIdNotAmbiguousTitle() throws {
+    // Regression for the real (not fabricated) Defect 3 root cause: with the
+    // backend's actual price title ("Unlimited Monthly", no "v2" substring
+    // anywhere), title-only parsing (`normalizedPlanId`) returns "unlimited"
+    // (Neo's bucket) because that function intentionally maps both "neo" and
+    // "unlimited" substrings to the same legacy bucket. Reading the wire's
+    // own plan_id must resolve this instead of relying on title text.
+    let unlimitedV2Price = try Self.decodedPrice(
+      title: "Unlimited Monthly", planId: "unlimited_v2", priceId: "price_local_unlimited_v2_month")
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.normalizedPlanId(from: unlimitedV2Price.title), "unlimited",
+      "sanity check: title-only parsing is genuinely ambiguous for this real title")
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.catalogGroupingKey(for: unlimitedV2Price), "unlimited_v2")
+
+    let neoPrice = try Self.decodedPrice(
+      title: "Neo Monthly", planId: "unlimited", priceId: "price_local_unlimited_month")
+    XCTAssertEqual(SubscriptionPlanPresentation.catalogGroupingKey(for: neoPrice), "unlimited")
+  }
+
+  func testCatalogGroupingKeyDegradesToTitleParsingWhenPlanIdMissing() throws {
+    // A backend that omits plan_id (schema drift / older deploy) must not
+    // crash the decode; grouping degrades to the old title-parsing path,
+    // which only distinguishes Unlimited-v2 when the title itself says so.
+    let json = """
+      {
+        "id": "price_x",
+        "title": "Unlimited-v2 Monthly",
+        "price_string": "$19.00/month",
+        "interval": "month",
+        "unit_amount": 1900,
+        "is_active": false
+      }
+      """
+    let price = try JSONDecoder().decode(AvailablePlanPriceOption.self, from: Data(json.utf8))
+    XCTAssertEqual(price.planId, "")
+    XCTAssertEqual(SubscriptionPlanPresentation.catalogGroupingKey(for: price), "unlimited_v2")
+  }
+
+  func testPlanCatalogGroupingKeepsUnlimitedV2AndNeoDistinctWithRealisticAmbiguousTitles() throws {
+    // Full pipeline regression, mirroring SettingsContentView.planCatalog(from:)
+    // exactly (group by catalogGroupingKey, one SubscriptionPlanOption per
+    // bucket), using the real ambiguous title text this time. Before reading
+    // plan_id, this collapsed Unlimited-v2's own price into Neo's "unlimited"
+    // bucket — a Neo-titled entry sharing Unlimited-v2's own price id with
+    // whatever primary-catalog entry the server also sent, so
+    // `owningCatalogPlan`'s `catalog.first` resolved to whichever of the two
+    // same-price-id entries the merged dictionary happened to iterate first.
+    let prices = [
+      try Self.decodedPrice(
+        title: "Unlimited Monthly", planId: "unlimited_v2", priceId: "price_local_unlimited_v2_month"),
+      try Self.decodedPrice(
+        title: "Unlimited Annual", planId: "unlimited_v2", priceId: "price_local_unlimited_v2_year"),
+    ]
+
+    let grouped = Dictionary(grouping: prices) {
+      SubscriptionPlanPresentation.catalogGroupingKey(for: $0)
+    }
+
+    XCTAssertEqual(
+      Set(grouped.keys), ["unlimited_v2"],
+      "Unlimited-v2's own prices must not land in Neo's 'unlimited' bucket")
+    XCTAssertEqual(grouped["unlimited_v2"]?.count, 2)
+
+    let catalog = [
+      SubscriptionPlanOption(
+        id: "unlimited_v2", title: "Unlimited", features: [],
+        prices: prices.map {
+          SubscriptionPriceOption(id: $0.id, title: "Monthly", description: nil, priceString: "$19.00/month")
+        })
+    ]
+
+    let owner = SubscriptionPlanPresentation.owningCatalogPlan(
+      currentPriceId: "price_local_unlimited_v2_month", catalog: catalog)
+    XCTAssertEqual(owner?.title, "Unlimited")
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanTitle(
+        plan: .unlimited, features: [], currentPriceId: "price_local_unlimited_v2_month",
+        catalog: catalog),
+      "Unlimited (Legacy Plan)")
+  }
+
   func testIsCurrentSubscriptionPlanMatchesPlusByPriceIdWhenWireSaysUnlimited() {
     let plus = Self.catalogPlan(id: "plus", title: "Plus", priceId: "price_local_plus_month")
     let pro = Self.catalogPlan(id: "pro_v2", title: "Pro", priceId: "price_local_pro_v2_month")

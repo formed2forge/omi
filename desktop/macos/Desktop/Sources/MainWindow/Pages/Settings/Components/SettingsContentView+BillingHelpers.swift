@@ -218,6 +218,31 @@ enum SubscriptionPlanPresentation {
     }
     return nil
   }
+
+  /// The fallback-catalog bucket key for one backend price entry
+  /// (`SettingsContentView.planCatalog(from:)`). Prefers the backend's own
+  /// `plan_id` — always present on real responses (`PricingOption.plan_id` in
+  /// `backend/routers/payment.py`) — over parsing `title`.
+  ///
+  /// Title text is not a reliable discriminator between Neo and Unlimited-v2:
+  /// Unlimited-v2's own price title is literally "Unlimited Monthly" (its
+  /// catalog display name is "Unlimited", not "Unlimited v2" — see
+  /// `get_paid_plan_definitions()` — so no price title a real backend sends
+  /// ever contains the substring "v2"). `normalizedPlanId` maps both "Neo
+  /// Monthly" and "Unlimited Monthly" to the same "unlimited" bucket by
+  /// design (that's the legacy/keep-until-cancel Neo identity), which
+  /// silently collapsed Unlimited-v2's own prices into a "Neo"-titled
+  /// fallback entry sharing the same price ids as the correctly-labeled
+  /// "unlimited_v2" entry the primary (per-user) catalog already provides.
+  /// `owningCatalogPlan`'s `catalog.first` then resolved to whichever
+  /// same-price-id entry the merged dictionary happened to iterate first —
+  /// title, description, and features flip between Neo's and Unlimited-v2's
+  /// depending on that undefined order. Reading `plan_id` off the wire
+  /// removes the ambiguity at its source: only degrade to title parsing for
+  /// a backend that omits the field entirely.
+  static func catalogGroupingKey(for price: AvailablePlanPriceOption) -> String {
+    price.planId.isEmpty ? (normalizedPlanId(from: price.title) ?? "unknown") : price.planId
+  }
 }
 
 extension SettingsContentView {
@@ -508,8 +533,8 @@ extension SettingsContentView {
   }
 
   func planCatalog(from prices: [AvailablePlanPriceOption]) -> [SubscriptionPlanOption] {
-    let groupedPrices = Dictionary(grouping: prices) { price in
-      SubscriptionPlanPresentation.normalizedPlanId(from: price.title) ?? "unknown"
+    let groupedPrices = Dictionary(grouping: prices) {
+      SubscriptionPlanPresentation.catalogGroupingKey(for: $0)
     }
 
     return groupedPrices.compactMap { planId, options in

@@ -593,6 +593,15 @@ struct UpgradeSubscriptionResponse: Codable {
 
 struct AvailablePlanPriceOption: Codable, Identifiable {
   let id: String
+  /// Authoritative plan identity for this price, e.g. "unlimited_v2" vs
+  /// "unlimited" (Neo). The backend always sets this (`PricingOption.plan_id`
+  /// in `backend/routers/payment.py`); prefer it over parsing `title`, whose
+  /// human-readable text is not unique per plan id — Unlimited-v2's own price
+  /// title is literally "Unlimited Monthly", indistinguishable by substring
+  /// matching from a hypothetical Neo title, and collapsing them into one
+  /// `normalizedPlanId` bucket produced two catalog entries that both claimed
+  /// the same price id (Defect: Unlimited-v2 vs Neo ambiguous fallback bucket).
+  let planId: String
   let title: String
   let priceString: String
   let description: String?
@@ -602,9 +611,24 @@ struct AvailablePlanPriceOption: Codable, Identifiable {
 
   enum CodingKeys: String, CodingKey {
     case id, title, description, interval
+    case planId = "plan_id"
     case priceString = "price_string"
     case unitAmount = "unit_amount"
     case isActive = "is_active"
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    id = try c.decode(String.self, forKey: .id)
+    // Older/dry-run backends may omit plan_id; degrade to title parsing rather
+    // than failing the whole decode.
+    planId = try c.decodeIfPresent(String.self, forKey: .planId) ?? ""
+    title = try c.decode(String.self, forKey: .title)
+    priceString = try c.decode(String.self, forKey: .priceString)
+    description = try c.decodeIfPresent(String.self, forKey: .description)
+    interval = try c.decode(String.self, forKey: .interval)
+    unitAmount = try c.decode(Int.self, forKey: .unitAmount)
+    isActive = try c.decodeIfPresent(Bool.self, forKey: .isActive) ?? false
   }
 }
 
