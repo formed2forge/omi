@@ -3298,7 +3298,7 @@ export interface PlanLimits {
   words_transcribed?: number | null;
 }
 
-export type PlanType = "basic" | "unlimited" | "architect" | "operator" | "plus" | "unlimited_v2";
+export type PlanType = "basic" | "unlimited" | "architect" | "operator" | "plus" | "pro_v2" | "unlimited_v2";
 
 export interface PlatformMinimumBuild {
   minimum_supported_build: number;
