@@ -3244,5 +3244,6 @@
     "legacyPlanSupporterNote": "Paldies, ka esi omi agrīnais atbalstītājs! Savā iepriekšējā plānā vari palikt nenoteiktu laiku. Ņem vērā, ka šie iepriekšējie plāni vairs netiek pārdoti un tos nevar izvēlēties, ja pārej uz citu plānu.",
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
-    }
+    },
+    "planIssueContactSupport": "Iespējams, ar jūsu plānu ir radusies problēma. Lūdzu, sazinieties ar atbalsta dienestu, lai jūsu pakalpojumā nerastos pārtraukumi."
 }

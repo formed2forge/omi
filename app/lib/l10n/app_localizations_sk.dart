@@ -9924,4 +9924,8 @@ class AppLocalizationsSk extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Ďakujeme, že ste raným podporovateľom omi! Na staršom tarife môžete zostať neobmedzene dlho. Upozorňujeme však, že tieto staršie tarify sa už nepredávajú a po prechode na iný tarif ich nemožno znova vybrať.';
+
+  @override
+  String get planIssueContactSupport =>
+      'S vaším plánom môže byť problém. Kontaktujte prosím podporu, aby nedošlo k prerušeniu vašej služby.';
 }

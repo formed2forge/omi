@@ -9978,4 +9978,8 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Mulțumim că ești un susținător timpuriu al omi! Poți rămâne pe planul vechi pe termen nelimitat. Reține totuși că aceste planuri vechi nu se mai vând și nu pot fi alese dacă treci la un alt plan.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Este posibil să existe o problemă cu planul tău. Te rugăm să contactezi asistența pentru a evita orice întrerupere a serviciului.';
 }

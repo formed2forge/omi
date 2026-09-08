@@ -9972,4 +9972,8 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Köszönjük, hogy az omi korai támogatója vagy! A korábbi csomagodon korlátlan ideig maradhatsz. Vedd figyelembe azonban, hogy ezeket a korábbi csomagokat már nem áruljuk, és másik csomagra váltás után nem választhatók újra.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Lehet, hogy probléma van a csomagoddal. Kérjük, lépj kapcsolatba az ügyfélszolgálattal, hogy a szolgáltatásod ne szakadjon meg.';
 }

@@ -9873,4 +9873,7 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'شكرًا لكونك من أوائل داعمِي omi! يمكنك البقاء على خطتك القديمة إلى أجل غير مسمى. يرجى ملاحظة أن هذه الخطط القديمة لم تعد تُباع ولا يمكن اختيارها إذا انتقلت إلى خطة أخرى.';
+
+  @override
+  String get planIssueContactSupport => 'قد تكون هناك مشكلة في خطتك، يرجى التواصل مع الدعم لضمان عدم انقطاع خدمتك.';
 }

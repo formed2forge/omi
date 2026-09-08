@@ -3244,5 +3244,6 @@
     "legacyPlanSupporterNote": "Kiitos, että olet omi:n varhainen tukija! Voit pysyä vanhalla tilauksellasi toistaiseksi. Huomaa kuitenkin, että näitä vanhoja tilauksia ei enää myydä, eikä niitä voi valita, jos vaihdat toiseen tilaukseen.",
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
-    }
+    },
+    "planIssueContactSupport": "Tilauksessasi saattaa olla ongelma. Ota yhteyttä tukeen, jotta palvelusi ei keskeydy."
 }

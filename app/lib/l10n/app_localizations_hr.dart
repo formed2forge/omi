@@ -9967,4 +9967,8 @@ class AppLocalizationsHr extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Hvala što ste rani poklonik omi! Možete ostati na svom naslijeđenom planu neograničeno. Imajte na umu da se ti naslijeđeni planovi više ne prodaju i ne mogu se odabrati ako prijeđete na drugi plan.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Možda postoji problem s vašim planom. Molimo kontaktirajte podršku kako ne bi došlo do prekida usluge.';
 }

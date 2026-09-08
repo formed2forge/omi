@@ -9940,4 +9940,8 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Obrigado por ser um dos primeiros a apoiar o omi! Pode permanecer no seu plano antigo indefinidamente. Note, contudo, que estes planos antigos já não são vendidos e não podem ser escolhidos se mudar para outro plano.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Pode haver um problema com o seu plano. Entre em contato com o suporte para garantir que não haja interrupção no seu serviço.';
 }

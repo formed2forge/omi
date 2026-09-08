@@ -9942,4 +9942,8 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Terima kasih telah menjadi pendukung awal omi! Anda dapat tetap di paket lama tanpa batas waktu. Perlu diketahui, paket lama ini tidak lagi dijual dan tidak dapat dipilih jika Anda beralih ke paket lain.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Mungkin ada masalah dengan paket Anda. Silakan hubungi dukungan agar tidak terjadi gangguan pada layanan Anda.';
 }

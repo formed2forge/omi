@@ -9943,4 +9943,8 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'omi\'nin erken destekçilerinden olduğunuz için teşekkürler! Eski planınızda süresiz kalabilirsiniz. Ancak bu eski planlar artık satılmıyor ve başka bir plana geçerseniz yeniden seçilemez.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Planınızla ilgili bir sorun olabilir. Hizmetinizde kesinti yaşanmaması için lütfen destek ekibiyle iletişime geçin.';
 }

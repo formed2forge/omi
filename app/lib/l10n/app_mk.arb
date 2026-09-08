@@ -10810,5 +10810,6 @@
     "legacyPlanSupporterNote": "Ви благодариме што сте ран поддржувач на omi! Можете да останете на стариот план неодредено. Имајте предвид дека овие стари планови повеќе не се продаваат и не можат да се изберат ако преминете на друг план.",
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
-    }
+    },
+    "planIssueContactSupport": "Можеби има проблем со вашиот план. Ве молиме контактирајте ја поддршката за да нема прекин во вашата услуга."
 }

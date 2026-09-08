@@ -9926,4 +9926,8 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Cảm ơn bạn đã là người ủng hộ sớm của omi! Bạn có thể ở lại gói cũ vô thời hạn. Lưu ý rằng các gói cũ này không còn được bán và không thể chọn lại nếu bạn chuyển sang gói khác.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Có thể có sự cố với gói dịch vụ của bạn. Vui lòng liên hệ bộ phận hỗ trợ để đảm bảo dịch vụ của bạn không bị gián đoạn.';
 }

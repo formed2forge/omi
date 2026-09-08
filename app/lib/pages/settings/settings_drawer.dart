@@ -26,6 +26,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:omi/utils/l10n_extensions.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'package:omi/utils/constants.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:omi/backend/http/api/announcements.dart';
 import 'package:omi/pages/announcements/changelog_sheet.dart';
@@ -373,7 +375,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           title: context.l10n.helpCenter,
           icon: const FaIcon(FontAwesomeIcons.book, color: Color(0xFF8E8E93), size: 20),
           onTap: () async {
-            final Uri url = Uri.parse('https://help.omi.me/en/');
+            final Uri url = Uri.parse(supportHelpCenterUrl);
             if (await canLaunchUrl(url)) {
               try {
                 await launchUrl(url, mode: LaunchMode.inAppBrowserView);
@@ -617,7 +619,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                     title: context.l10n.helpCenter,
                     icon: const FaIcon(FontAwesomeIcons.book, color: Color(0xFF8E8E93), size: 20),
                     onTap: () async {
-                      final Uri url = Uri.parse('https://help.omi.me/en/');
+                      final Uri url = Uri.parse(supportHelpCenterUrl);
                       if (await canLaunchUrl(url)) {
                         try {
                           await launchUrl(url, mode: LaunchMode.inAppBrowserView);

@@ -3222,5 +3222,6 @@
     "legacyPlanSupporterNote": "Děkujeme, že jste raným podporovatelem omi! Na svém starším tarifu můžete zůstat neomezeně dlouho. Upozorňujeme však, že tyto starší tarify se již neprodávají a po přechodu na jiný tarif je nelze znovu vybrat.",
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
-    }
+    },
+    "planIssueContactSupport": "S vaším tarifem může být problém. Kontaktujte prosím podporu, aby nedošlo k přerušení vaší služby."
 }

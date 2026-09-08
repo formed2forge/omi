@@ -9762,4 +9762,7 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'omiの初期サポーターになっていただきありがとうございます。旧プランは無期限で継続できます。ただし、これらの旧プランは販売終了しており、別のプランに切り替えたあとに選び直すことはできません。';
+
+  @override
+  String get planIssueContactSupport => 'ご利用のプランに問題がある可能性があります。サービスが中断しないよう、サポートまでお問い合わせください。';
 }

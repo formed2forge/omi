@@ -9958,4 +9958,8 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Dank je dat je omi vanaf het begin steunt! Je mag onbeperkt op je oude abonnement blijven. Let wel: deze oude abonnementen worden niet meer verkocht en kun je niet opnieuw kiezen als je naar een ander abonnement overstapt.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Er is mogelijk een probleem met je abonnement. Neem contact op met de support om onderbreking van je service te voorkomen.';
 }

@@ -9988,4 +9988,8 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Grazie per essere stato tra i primi a sostenere omi! Puoi restare sul tuo piano precedente a tempo indeterminato. Tieni presente però che questi piani precedenti non sono più in vendita e non possono essere scelti se passi a un altro piano.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Potrebbe esserci un problema con il tuo piano. Contatta l\'assistenza per evitare interruzioni del servizio.';
 }

@@ -9947,4 +9947,8 @@ class AppLocalizationsSr extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Хвала што сте рани подржавалац omi! Можете остати на старом плану неодређено. Имајте на уму да се ти стари планови више не продају и не могу се изабрати ако пређете на други план.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Можда постоји проблем са вашим планом. Молимо контактирајте подршку како не би дошло до прекида услуге.';
 }

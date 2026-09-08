@@ -9943,4 +9943,8 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'omi کے ابتدائی حامی ہونے کا شکریہ! آپ اپنے پرانے پلان پر غیر معینہ مدت تک رہ سکتے ہیں۔ یاد رہے کہ یہ پرانے پلان اب فروخت نہیں کیے جاتے اور دوسرے پلان پر جانے کے بعد انہیں دوبارہ منتخب نہیں کیا جا سکتا۔';
+
+  @override
+  String get planIssueContactSupport =>
+      'ممکن ہے آپ کے پلان میں کوئی مسئلہ ہو۔ براہ کرم سپورٹ سے رابطہ کریں تاکہ آپ کی سروس میں کوئی تعطل نہ آئے۔';
 }

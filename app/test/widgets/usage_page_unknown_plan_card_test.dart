@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:omi/l10n/app_localizations.dart';
-import 'package:omi/utils/l10n_extensions.dart';
+import 'package:omi/pages/settings/widgets/plan_error_card.dart';
 
 /// Wraps [child] in a MaterialApp with l10n delegates so context.l10n works.
 Widget buildTestApp(Widget child) {
@@ -20,93 +20,71 @@ Widget buildTestApp(Widget child) {
 }
 
 // ---------------------------------------------------------------------------
-// Harness replicating the unknown-plan branch of
-// UsagePage._buildSubscriptionInfo (app/lib/pages/settings/usage_page.dart).
+// Rendering coverage for the unknown-plan branch of
+// UsagePage._buildSubscriptionInfo (app/lib/pages/settings/usage_page.dart),
+// which delegates to the real PlanErrorCard pumped below.
+//
 // Defect 2 regression: an unrecognized/future plan id used to render nothing
-// at all above the usage-insights section. The fix shows this explicit
-// error+retry card instead of silently returning SizedBox.shrink().
+// at all above the usage-insights section.
+//
+// This file covers rendering only. The fetch path that produces this state is
+// covered by test/providers/usage_provider_fetch_error_test.dart.
 // ---------------------------------------------------------------------------
-
-class UnknownPlanCardHarness extends StatelessWidget {
-  const UnknownPlanCardHarness({super.key, required this.isUnknownPlan, required this.onRetry});
-  final bool isUnknownPlan;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(body: Column(children: [_buildSubscriptionInfo(context)]));
-  }
-
-  Widget _buildSubscriptionInfo(BuildContext context) {
-    if (!isUnknownPlan) {
-      return const SizedBox.shrink();
-    }
-    return Container(
-      key: const Key('unknown_plan_card'),
-      margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F25),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(context.l10n.unableToLoadPlans, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(context.l10n.somethingWentWrongTryAgain, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: OutlinedButton(
-              key: const Key('unknown_plan_retry'),
-              onPressed: onRetry,
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Colors.grey.shade400),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(context.l10n.retry),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 void main() {
   group('Unknown plan card (Defect 2 regression)', () {
-    testWidgets('shows an explicit error card with a retry action, not a blank space', (tester) async {
+    testWidgets('shows the contact-support message, not a blank space', (tester) async {
       await tester.pumpWidget(
-        buildTestApp(UnknownPlanCardHarness(isUnknownPlan: true, onRetry: () {})),
+        buildTestApp(Scaffold(body: PlanErrorCard(unknownPlan: true, onRetry: () {}))),
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('unknown_plan_card')), findsOneWidget);
+      expect(find.byKey(const Key('plan_usage_error_card')), findsOneWidget);
       expect(find.text('Unable to load plans'), findsOneWidget);
-      expect(find.text('Something went wrong! Please try again later.'), findsOneWidget);
-      expect(find.byKey(const Key('unknown_plan_retry')), findsOneWidget);
+      expect(
+        find.text(
+          'There may be an issue with your plan, please contact support to '
+          'ensure there is no interruption in your service.',
+        ),
+        findsOneWidget,
+      );
+      // Must not imply cancellation or invite a second purchase: the account
+      // may still be actively paying.
+      expect(find.text('Something went wrong! Please try again later.'), findsNothing);
     });
 
-    testWidgets('renders nothing for a recognized plan', (tester) async {
+    testWidgets('always offers the support action, not retry alone', (tester) async {
+      // A persistently unresolvable plan never resolves itself by retrying, so
+      // the support action is the real recovery and must always be present.
+      var contacted = false;
       await tester.pumpWidget(
-        buildTestApp(UnknownPlanCardHarness(isUnknownPlan: false, onRetry: () {})),
+        buildTestApp(Scaffold(
+          body: PlanErrorCard(
+            unknownPlan: true,
+            onRetry: () {},
+            onContactSupport: () async => contacted = true,
+          ),
+        )),
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('unknown_plan_card')), findsNothing);
+      expect(find.byKey(const Key('plan_usage_error_support_button')), findsOneWidget);
+      expect(find.text('Help Center'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('plan_usage_error_support_button')));
+      await tester.pump();
+
+      expect(contacted, isTrue);
     });
 
     testWidgets('tapping retry invokes the retry callback so a later valid plan can recover', (tester) async {
       var retried = false;
       await tester.pumpWidget(
-        buildTestApp(UnknownPlanCardHarness(isUnknownPlan: true, onRetry: () => retried = true)),
+        buildTestApp(Scaffold(body: PlanErrorCard(unknownPlan: true, onRetry: () => retried = true))),
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('unknown_plan_retry')));
+      await tester.tap(find.byKey(const Key('plan_usage_error_retry_button')));
       await tester.pump();
 
       expect(retried, isTrue);
