@@ -24269,6 +24269,64 @@
         "title": "Subscription",
         "type": "object"
       },
+      "SubscriptionLapse": {
+        "properties": {
+          "effective_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SubscriptionLapseReason"
+          },
+          "recovery_action": {
+            "$ref": "#/components/schemas/SubscriptionLapseRecovery"
+          },
+          "state": {
+            "$ref": "#/components/schemas/SubscriptionLapseState"
+          }
+        },
+        "required": [
+          "state",
+          "reason",
+          "recovery_action"
+        ],
+        "title": "SubscriptionLapse",
+        "type": "object"
+      },
+      "SubscriptionLapseReason": {
+        "description": "Why access is ending — only ever a value the stored data actually proves.\n\n``cancel_at_period_end`` is written only by a cancellation request, so\n``cancellation_scheduled`` can honestly claim ``user_requested``.\n\n``access_ended`` is always ``unknown``: the terminal Stripe status\n(``canceled`` / ``unpaid`` / ``past_due`` / ``incomplete_expired``) and\n``cancellation_details.reason`` are collapsed by\n``routers.payment._build_subscription_from_stripe_object`` into an\nindistinguishable Free row, and the reason survives only as an\naggregate, uid-less Prometheus label in\n``utils.observability.subscription_events``. Reporting a specific reason\nhere would be a guess, so this enum deliberately has no\n``payment_failed`` / ``expired`` member to guess with.",
+        "enum": [
+          "user_requested",
+          "unknown"
+        ],
+        "title": "SubscriptionLapseReason",
+        "type": "string"
+      },
+      "SubscriptionLapseRecovery": {
+        "description": "The one action that resolves this state. Server-owned, not styling.",
+        "enum": [
+          "keep_subscription",
+          "resubscribe"
+        ],
+        "title": "SubscriptionLapseRecovery",
+        "type": "string"
+      },
+      "SubscriptionLapseState": {
+        "description": "Where an account stands relative to the end of a *real* paid subscription.\n\nDerived per-request from the stored subscription row; never persisted and\nnever an entitlement input. A Free plan on its own is not a lapse — see\n``utils.subscription.resolve_subscription_lapse`` for the evidence rules.",
+        "enum": [
+          "cancellation_scheduled",
+          "access_ended"
+        ],
+        "title": "SubscriptionLapseState",
+        "type": "string"
+      },
       "SubscriptionPlan": {
         "properties": {
           "description": {
@@ -28263,6 +28321,16 @@
           "insights_gained_used": {
             "title": "Insights Gained Used",
             "type": "integer"
+          },
+          "lapse": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubscriptionLapse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "phone_call_quota": {
             "anyOf": [
