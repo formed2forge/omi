@@ -42,16 +42,34 @@ bash "$GENERATOR" "$work/Info.plist" "$work/Info-Dev.plist" >/dev/null 2>&1
 
 echo "generate_ios_dev_info_plist.sh ATS output:"
 
-if /usr/libexec/PlistBuddy -c 'Print :NSAppTransportSecurity:NSAllowsArbitraryLoads' "$work/Info-Dev.plist" 2>/dev/null | grep -qi true; then
+# The generator itself is implemented with Python's stdlib plistlib rather
+# than PlistBuddy/plutil (both macOS-only), so this test reads the output the
+# same cross-platform way instead of shelling out to PlistBuddy — that keeps
+# real behavioral coverage on the Linux CI runner instead of skipping it.
+read_ats_key() {
+  python3 - "$1" "$2" <<'PY'
+import plistlib
+import sys
+
+path, key = sys.argv[1], sys.argv[2]
+with open(path, "rb") as f:
+    data = plistlib.load(f)
+value = data.get("NSAppTransportSecurity", {}).get(key)
+if value is not None:
+    print(value)
+PY
+}
+
+if [ "$(read_ats_key "$work/Info-Dev.plist" NSAllowsArbitraryLoads)" = "True" ]; then
   pass "output declares NSAllowsArbitraryLoads=true"
 else
   fail "output is missing NSAllowsArbitraryLoads=true — CGNAT dev hosts (Tailscale) would be ATS-blocked"
 fi
 
-if /usr/libexec/PlistBuddy -c 'Print :NSAppTransportSecurity:NSAllowsLocalNetworking' "$work/Info-Dev.plist" 2>/dev/null; then
-  fail "output declares NSAllowsLocalNetworking — combined with NSAllowsArbitraryLoads this is a documented no-op that silently re-blocks CGNAT hosts"
-else
+if [ -z "$(read_ats_key "$work/Info-Dev.plist" NSAllowsLocalNetworking)" ]; then
   pass "output does not declare NSAllowsLocalNetworking"
+else
+  fail "output declares NSAllowsLocalNetworking — combined with NSAllowsArbitraryLoads this is a documented no-op that silently re-blocks CGNAT hosts"
 fi
 
 rm -rf "$work"
