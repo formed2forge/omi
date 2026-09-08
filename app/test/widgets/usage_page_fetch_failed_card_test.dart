@@ -39,9 +39,7 @@ void main() {
     testWidgets('shows the retryable error card, not the contact-support copy', (tester) async {
       // A transient fetch failure IS retryable, so it must not tell the user
       // their plan is broken and send them to support.
-      await tester.pumpWidget(
-        buildTestApp(Scaffold(body: PlanErrorCard(unknownPlan: false, onRetry: () {}))),
-      );
+      await tester.pumpWidget(buildTestApp(Scaffold(body: PlanErrorCard(unknownPlan: false, onRetry: () {}))));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('plan_usage_error_card')), findsOneWidget);

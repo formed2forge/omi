@@ -20,12 +20,7 @@ import 'package:omi/utils/l10n_extensions.dart';
 /// cancelled and never invites the user to subscribe again: the account may
 /// still be actively paying, and re-subscribing would double-charge them.
 class PlanErrorCard extends StatelessWidget {
-  const PlanErrorCard({
-    super.key,
-    required this.unknownPlan,
-    required this.onRetry,
-    this.onContactSupport,
-  });
+  const PlanErrorCard({super.key, required this.unknownPlan, required this.onRetry, this.onContactSupport});
 
   final bool unknownPlan;
   final VoidCallback onRetry;
@@ -59,10 +54,7 @@ class PlanErrorCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.unableToLoadPlans,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
+          Text(context.l10n.unableToLoadPlans, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(
             unknownPlan ? context.l10n.planIssueContactSupport : context.l10n.somethingWentWrongTryAgain,
@@ -82,10 +74,7 @@ class PlanErrorCard extends StatelessWidget {
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text(
-                  context.l10n.helpCenter,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
+                child: Text(context.l10n.helpCenter, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               ),
             ),
             const SizedBox(height: 8),

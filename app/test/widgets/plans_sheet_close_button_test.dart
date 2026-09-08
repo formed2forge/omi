@@ -64,8 +64,11 @@ void main() {
       await tester.tap(find.byKey(const Key('open_sheet')));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('sheet_content_marker')), findsOneWidget,
-          reason: 'sheet must actually be open before we can test dismissing it');
+      expect(
+        find.byKey(const Key('sheet_content_marker')),
+        findsOneWidget,
+        reason: 'sheet must actually be open before we can test dismissing it',
+      );
 
       final closeButton = find.byKey(PlansSheetCloseButton.buttonKey);
       expect(closeButton, findsOneWidget);

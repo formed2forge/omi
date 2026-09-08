@@ -542,10 +542,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
   /// outright (`subscription` stayed null). Both must fail loud rather than
   /// render a blank card with no way to recover. See [PlanErrorCard].
   Widget _buildPlanErrorCard(BuildContext context, {required bool unknownPlan}) {
-    return PlanErrorCard(
-      unknownPlan: unknownPlan,
-      onRetry: () => context.read<UsageProvider>().fetchSubscription(),
-    );
+    return PlanErrorCard(unknownPlan: unknownPlan, onRetry: () => context.read<UsageProvider>().fetchSubscription());
   }
 
   void _showPlansSheet() {
