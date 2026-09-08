@@ -102,6 +102,7 @@ from utils.subscription import (
     is_trial_paywalled,
     neo_grandfather_until,
     reconcile_basic_plan_with_stripe,
+    resolve_subscription_lapse,
     filter_plans_for_user,
     should_show_new_plans,
     adapt_plans_for_legacy_client,
@@ -1409,6 +1410,13 @@ def _user_subscription_response(
         # Return default basic plan if no valid subscription
         subscription = get_default_basic_subscription()
 
+    # Read-only projection of "paid access is ending or over", derived from the
+    # stored row's own evidence of a real paid period. Computed here, from the
+    # reconciled stored row and the entitlement that was actually resolved, and
+    # deliberately not fed back into anything below: every limit, feature, and
+    # allowance in this response is computed as if this call did not happen.
+    lapse = resolve_subscription_lapse(raw_subscription, subscription)
+
     # Get current price ID from Stripe if subscription exists
     if subscription.stripe_subscription_id:
         try:
@@ -1570,6 +1578,7 @@ def _user_subscription_response(
         chat_quota_reset_at=chat_snapshot['reset_at'],
         phone_call_quota=phone_call_quota,
         desktop_grandfather_until=desktop_grandfather_until,
+        lapse=lapse,
     )
 
 

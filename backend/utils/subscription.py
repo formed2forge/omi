@@ -27,7 +27,17 @@ from config.plan_catalog import (
     plan_uses_overage,
     resolve_stripe_price_plan,
 )
-from models.users import PlanType, SubscriptionStatus, Subscription, PlanLimits, TrialMetadata
+from models.users import (
+    PlanType,
+    SubscriptionStatus,
+    Subscription,
+    SubscriptionLapse,
+    SubscriptionLapseReason,
+    SubscriptionLapseRecovery,
+    SubscriptionLapseState,
+    PlanLimits,
+    TrialMetadata,
+)
 from utils.byok import get_byok_key, get_byok_uid, get_cached_byok_state, has_validated_byok_keys
 from utils.log_sanitizer import sanitize
 from utils.observability.fallback import record_fallback
@@ -1567,6 +1577,77 @@ def is_pending_cancellation(subscription: Optional[Subscription], now: Optional[
     if not subscription.current_period_end:
         return True
     return subscription.current_period_end > (now or int(time.time()))
+
+
+def _is_entitled_paid_subscription(subscription: Optional[Subscription], now: int) -> bool:
+    """The same paid-plan validity rule ``get_user_valid_subscription`` applies.
+
+    A paid plan with no ``current_period_end``, or one already past, is not
+    provably entitled — ``database.users.get_user_valid_subscription`` hands
+    such a row back as a fresh basic subscription rather than paid access.
+    """
+    if subscription is None or not is_paid_plan(subscription.plan):
+        return False
+    if subscription.status != SubscriptionStatus.active:
+        return False
+    return bool(subscription.current_period_end) and cast(int, subscription.current_period_end) >= now
+
+
+def resolve_subscription_lapse(
+    stored: Optional[Subscription],
+    resolved: Optional[Subscription],
+    *,
+    now: Optional[int] = None,
+) -> Optional[SubscriptionLapse]:
+    """Report whether this account's *real* paid access is ending or over.
+
+    Pure and read-only: it reads no Firestore, calls no Stripe, writes nothing,
+    and its result is never consulted when computing plan, limits, features, or
+    the transcription allowance. ``now`` is injectable so the boundary between
+    "ending" and "ended" is testable.
+
+    ``stored`` is the account's persisted subscription row (post-reconciliation)
+    and is the only source of lapse *evidence*. ``resolved`` is the entitlement
+    the request actually resolved to (``database.users.get_user_valid_subscription``,
+    or the default Free plan when there is none) and is what decides whether
+    access is still live.
+
+    A lapse is never inferred from a Free plan or label. ``access_ended``
+    requires the stored row to prove a paid period that this account really had
+    and that has since passed:
+
+    * ``current_period_end`` present and in the past, **and**
+    * a paid ``plan`` (the webhook never landed; the paid row simply aged out)
+      **or** a ``stripe_subscription_id`` (the webhook downgraded the row to
+      Free but kept the subscription id it downgraded from).
+
+    An account that was always Free has neither, so it can never reach this
+    state. See ``models.users.SubscriptionLapseReason`` for why ``access_ended``
+    cannot honestly carry a more specific reason than ``unknown``.
+    """
+    current_time = now if now is not None else int(time.time())
+
+    if _is_entitled_paid_subscription(resolved, current_time):
+        if is_pending_cancellation(resolved, now=current_time):
+            return SubscriptionLapse(
+                state=SubscriptionLapseState.cancellation_scheduled,
+                reason=SubscriptionLapseReason.user_requested,
+                recovery_action=SubscriptionLapseRecovery.keep_subscription,
+                effective_at=cast(Subscription, resolved).current_period_end,
+            )
+        return None
+
+    if stored is None or not stored.current_period_end or stored.current_period_end >= current_time:
+        return None
+    if not is_paid_plan(stored.plan) and not stored.stripe_subscription_id:
+        return None
+
+    return SubscriptionLapse(
+        state=SubscriptionLapseState.access_ended,
+        reason=SubscriptionLapseReason.unknown,
+        recovery_action=SubscriptionLapseRecovery.resubscribe,
+        effective_at=stored.current_period_end,
+    )
 
 
 def can_user_make_payment(uid: str, target_price_id: Optional[str] = None) -> Tuple[bool, str]:
