@@ -10813,5 +10813,7 @@
     },
     "planIssueContactSupport": "Morda je prišlo do težave z vašim paketom. Obrnite se na podporo, da ne pride do prekinitve storitve.",
     "planLapseCancellationScheduled": "Vaš načrt se bo končal {date}. Do takrat boste ohranili popoln dostop.",
-    "planLapseAccessEnded": "Vaš plačani dostop je potekel."
+    "planLapseAccessEnded": "Vaš plačani dostop je potekel.",
+    "memoryHistoryPartial": "Del zgodovine spominov ni na voljo. Prikazana je zgodovina, prejeta do zdaj.",
+    "tapPlusToStartRecording": "Dotaknite se +, da začnete snemanje"
 }

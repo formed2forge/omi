@@ -3223,5 +3223,7 @@
     },
     "planIssueContactSupport": "ご利用のプランに問題がある可能性があります。サービスが中断しないよう、サポートまでお問い合わせください。",
     "planLapseCancellationScheduled": "プランは{date}に終了します。それまでは引き続きすべての機能をご利用いただけます。",
-    "planLapseAccessEnded": "有料アクセスが終了しました。"
+    "planLapseAccessEnded": "有料アクセスが終了しました。",
+    "memoryHistoryPartial": "一部の記憶履歴は利用できません。これまでに受信した履歴を表示しています。",
+    "tapPlusToStartRecording": "+をタップして録音を開始"
 }

@@ -2041,7 +2041,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get memoryDeleted => 'Mälestus kustutatud.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Osa mälestuste ajaloost pole saadaval. Kuvatakse seni saadud ajalugu.';
 
   @override
   String get undo => 'Tühista';
@@ -9911,7 +9911,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkriptsioon ei saa heli';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Puuduta salvestamise alustamiseks +';
 
   @override
   String get couldNotLoadMemories => 'Mälestusi ei õnnestunud laadida';

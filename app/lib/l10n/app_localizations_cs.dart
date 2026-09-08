@@ -2044,7 +2044,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get memoryDeleted => 'Vzpomínka smazána.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Část historie vzpomínek není k dispozici. Zobrazuje se historie přijatá doposud.';
 
   @override
   String get undo => 'Vrátit zpět';
@@ -9918,7 +9918,7 @@ class AppLocalizationsCs extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripce nepřijímá zvuk';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Klepnutím na + zahájíte nahrávání';
 
   @override
   String get couldNotLoadMemories => 'Nepodařilo se načíst vzpomínky';

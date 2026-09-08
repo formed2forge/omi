@@ -2031,7 +2031,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get memoryDeleted => 'ลบความทรงจำแล้ว';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'ประวัติความทรงจำบางส่วนไม่พร้อมใช้งาน กำลังแสดงประวัติที่ได้รับมาจนถึงตอนนี้';
 
   @override
   String get undo => 'เลิกทำ';
@@ -9860,7 +9860,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get transcriptionNoAudio => 'การถอดเสียงไม่ได้รับเสียง';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'แตะ + เพื่อเริ่มบันทึก';
 
   @override
   String get couldNotLoadMemories => 'ไม่สามารถโหลดความทรงจำได้';

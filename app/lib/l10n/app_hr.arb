@@ -10813,5 +10813,7 @@
     },
     "planIssueContactSupport": "Možda postoji problem s vašim planom. Molimo kontaktirajte podršku kako ne bi došlo do prekida usluge.",
     "planLapseCancellationScheduled": "Vaš plan istječe {date}. Do tada zadržavate potpuni pristup.",
-    "planLapseAccessEnded": "Vaš plaćeni pristup je istekao."
+    "planLapseAccessEnded": "Vaš plaćeni pristup je istekao.",
+    "memoryHistoryPartial": "Dio povijesti sjećanja nije dostupan. Prikazuje se povijest primljena do sada.",
+    "tapPlusToStartRecording": "Dodirnite + za početak snimanja"
 }

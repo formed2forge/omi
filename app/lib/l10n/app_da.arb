@@ -3265,5 +3265,7 @@
     },
     "planIssueContactSupport": "Der kan være et problem med dit abonnement. Kontakt venligst support for at sikre, at der ikke sker afbrydelser i din service.",
     "planLapseCancellationScheduled": "Din plan udløber den {date}. Du beholder fuld adgang indtil da.",
-    "planLapseAccessEnded": "Din betalte adgang er udløbet."
+    "planLapseAccessEnded": "Din betalte adgang er udløbet.",
+    "memoryHistoryPartial": "Noget af hukommelseshistorikken er ikke tilgængelig. Viser historikken modtaget indtil videre.",
+    "tapPlusToStartRecording": "Tryk på + for at starte optagelse"
 }

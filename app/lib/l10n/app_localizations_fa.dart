@@ -2040,7 +2040,8 @@ class AppLocalizationsFa extends AppLocalizations {
   String get memoryDeleted => 'خاطره حذف شد.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'بخشی از تاریخچه خاطرات در دسترس نیست. تاریخچه دریافت‌شده تاکنون نمایش داده می‌شود.';
 
   @override
   String get undo => 'بازگشت';
@@ -9917,7 +9918,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get transcriptionNoAudio => 'رونویسی صدا دریافت نمی‌کند';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'برای شروع ضبط روی + ضربه بزنید';
 
   @override
   String get couldNotLoadMemories => 'بارگذاری خاطرات ممکن نشد';

@@ -2042,7 +2042,7 @@ class AppLocalizationsLt extends AppLocalizations {
   String get memoryDeleted => 'Prisiminimas ištrintas.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Dalis atsiminimų istorijos nepasiekiama. Rodoma iki šiol gauta istorija.';
 
   @override
   String get undo => 'Atšaukti';
@@ -9937,7 +9937,7 @@ class AppLocalizationsLt extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripcija negauna garso';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Palieskite +, kad pradėtumėte įrašymą';
 
   @override
   String get couldNotLoadMemories => 'Nepavyko įkelti prisiminimų';

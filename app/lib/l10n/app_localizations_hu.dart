@@ -2056,7 +2056,8 @@ class AppLocalizationsHu extends AppLocalizations {
   String get memoryDeleted => 'Emlék törölve.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Az emlékek előzményeinek egy része nem érhető el. A mostanáig kapott előzmények láthatók.';
 
   @override
   String get undo => 'Visszavonás';
@@ -9958,7 +9959,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get transcriptionNoAudio => 'Az átírás nem kap hangot';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Koppintson a + gombra a felvétel indításához';
 
   @override
   String get couldNotLoadMemories => 'Nem sikerült betölteni az emlékeket';

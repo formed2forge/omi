@@ -2054,7 +2054,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get memoryDeleted => 'பதிவு நீக்கப்பட்டுள்ளது.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'சில நினைவக வரலாறு கிடைக்கவில்லை. இதுவரை பெறப்பட்ட வரலாறு காட்டப்படுகிறது.';
 
   @override
   String get undo => 'மறுசெய்க';
@@ -9987,7 +9987,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get transcriptionNoAudio => 'நகலெடுப்பு ஆடியோவைப் பெறவில்லை';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'பதிவைத் தொடங்க + ஐ தட்டவும்';
 
   @override
   String get couldNotLoadMemories => 'நினைவுகளை ஏற்ற முடியவில்லை';

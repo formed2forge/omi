@@ -3225,5 +3225,7 @@
     },
     "planIssueContactSupport": "És possible que hi hagi un problema amb el teu pla. Contacta amb el suport per assegurar que no hi hagi cap interrupció del servei.",
     "planLapseCancellationScheduled": "El teu pla acabarà el {date}. Mantindràs accés complet fins llavors.",
-    "planLapseAccessEnded": "El teu accés de pagament ha finalitzat."
+    "planLapseAccessEnded": "El teu accés de pagament ha finalitzat.",
+    "memoryHistoryPartial": "Part de l'historial de records no està disponible. Es mostra l'historial rebut fins ara.",
+    "tapPlusToStartRecording": "Toca + per començar a gravar"
 }

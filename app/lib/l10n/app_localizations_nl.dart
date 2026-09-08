@@ -2047,7 +2047,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get memoryDeleted => 'Herinnering verwijderd.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Een deel van de geheugengeschiedenis is niet beschikbaar. De tot nu toe ontvangen geschiedenis wordt weergegeven.';
 
   @override
   String get undo => 'Ongedaan maken';
@@ -9944,7 +9945,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get transcriptionNoAudio => 'Transcriptie ontvangt geen audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Tik op + om te beginnen met opnemen';
 
   @override
   String get couldNotLoadMemories => 'Herinneringen konden niet worden geladen';

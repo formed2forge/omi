@@ -2045,7 +2045,8 @@ class AppLocalizationsBg extends AppLocalizations {
   String get memoryDeleted => 'Споменът е изтрит.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Част от историята на спомените не е налична. Показва се историята, получена дотук.';
 
   @override
   String get undo => 'Отмени';
@@ -9954,7 +9955,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get transcriptionNoAudio => 'Транскрипцията не получава аудио';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Докоснете +, за да започнете запис';
 
   @override
   String get couldNotLoadMemories => 'Неуспешно зареждане на спомените';

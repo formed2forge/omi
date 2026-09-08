@@ -3247,5 +3247,7 @@
     },
     "planIssueContactSupport": "Er is mogelijk een probleem met je abonnement. Neem contact op met de support om onderbreking van je service te voorkomen.",
     "planLapseCancellationScheduled": "Je abonnement eindigt op {date}. Tot die tijd behoud je volledige toegang.",
-    "planLapseAccessEnded": "Je betaalde toegang is beëindigd."
+    "planLapseAccessEnded": "Je betaalde toegang is beëindigd.",
+    "memoryHistoryPartial": "Een deel van de geheugengeschiedenis is niet beschikbaar. De tot nu toe ontvangen geschiedenis wordt weergegeven.",
+    "tapPlusToStartRecording": "Tik op + om te beginnen met opnemen"
 }

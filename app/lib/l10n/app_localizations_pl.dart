@@ -2045,7 +2045,8 @@ class AppLocalizationsPl extends AppLocalizations {
   String get memoryDeleted => 'Wspomnienie usunięte.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Część historii wspomnień jest niedostępna. Wyświetlana jest historia otrzymana do tej pory.';
 
   @override
   String get undo => 'Cofnij';
@@ -9947,7 +9948,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkrypcja nie odbiera dźwięku';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Stuknij +, aby rozpocząć nagrywanie';
 
   @override
   String get couldNotLoadMemories => 'Nie udało się wczytać wspomnień';

@@ -3248,5 +3248,7 @@
     },
     "planIssueContactSupport": "Puede que haya un problema con tu plan. Ponte en contacto con el soporte para asegurarte de que no haya interrupciones en tu servicio.",
     "planLapseCancellationScheduled": "Tu plan finalizará el {date}. Mantendrás acceso completo hasta entonces.",
-    "planLapseAccessEnded": "Tu acceso de pago ha finalizado."
+    "planLapseAccessEnded": "Tu acceso de pago ha finalizado.",
+    "memoryHistoryPartial": "Parte del historial de recuerdos no está disponible. Se muestra el historial recibido hasta ahora.",
+    "tapPlusToStartRecording": "Toca + para empezar a grabar"
 }

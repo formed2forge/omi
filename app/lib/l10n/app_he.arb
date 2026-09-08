@@ -10813,5 +10813,7 @@
     },
     "planIssueContactSupport": "ייתכן שיש בעיה בתוכנית שלך. אנא פנה לתמיכה כדי לוודא שלא תהיה הפרעה בשירות שלך.",
     "planLapseCancellationScheduled": "התוכנית שלך תסתיים בתאריך {date}. תשמור על גישה מלאה עד אז.",
-    "planLapseAccessEnded": "הגישה בתשלום שלך הסתיימה."
+    "planLapseAccessEnded": "הגישה בתשלום שלך הסתיימה.",
+    "memoryHistoryPartial": "חלק מהיסטוריית הזיכרונות אינו זמין. מוצגת ההיסטוריה שהתקבלה עד כה.",
+    "tapPlusToStartRecording": "הקש על + כדי להתחיל בהקלטה"
 }

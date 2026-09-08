@@ -10813,5 +10813,7 @@
     },
     "planIssueContactSupport": "Maaaring may problema sa iyong plan. Mangyaring makipag-ugnayan sa suporta upang matiyak na walang maantala sa iyong serbisyo.",
     "planLapseCancellationScheduled": "Magtatapos ang iyong plano sa {date}. Mananatili ang buong access mo hanggang doon.",
-    "planLapseAccessEnded": "Natapos na ang iyong bayad na access."
+    "planLapseAccessEnded": "Natapos na ang iyong bayad na access.",
+    "memoryHistoryPartial": "May bahagi ng history ng memorya na hindi available. Ipinapakita ang history na natanggap sa ngayon.",
+    "tapPlusToStartRecording": "I-tap ang + upang simulan ang pag-record"
 }

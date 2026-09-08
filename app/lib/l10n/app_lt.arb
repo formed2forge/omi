@@ -3247,5 +3247,7 @@
     },
     "planIssueContactSupport": "Gali būti, kad su jūsų planu iškilo problema. Susisiekite su palaikymo komanda, kad jūsų paslauga nebūtų nutraukta.",
     "planLapseCancellationScheduled": "Jūsų planas baigsis {date}. Iki tol išlaikysite visišką prieigą.",
-    "planLapseAccessEnded": "Jūsų mokama prieiga baigėsi."
+    "planLapseAccessEnded": "Jūsų mokama prieiga baigėsi.",
+    "memoryHistoryPartial": "Dalis atsiminimų istorijos nepasiekiama. Rodoma iki šiol gauta istorija.",
+    "tapPlusToStartRecording": "Palieskite +, kad pradėtumėte įrašymą"
 }

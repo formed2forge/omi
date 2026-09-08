@@ -2047,7 +2047,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get memoryDeleted => 'Anı Silindi.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Bazı anı geçmişi kullanılamıyor. Şimdiye kadar alınan geçmiş gösteriliyor.';
 
   @override
   String get undo => 'Geri Al';
@@ -9929,7 +9929,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripsiyon ses almıyor';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Kayda başlamak için + öğesine dokunun';
 
   @override
   String get couldNotLoadMemories => 'Anılar yüklenemedi';

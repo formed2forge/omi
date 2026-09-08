@@ -2000,7 +2000,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryDeleted => '记忆已删除。';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => '部分记忆历史不可用。显示的是目前已收到的历史记录。';
 
   @override
   String get undo => '撤销';
@@ -9729,7 +9729,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transcriptionNoAudio => '转录未接收到音频';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => '点击 + 开始录音';
 
   @override
   String get couldNotLoadMemories => '无法加载回忆';

@@ -2041,7 +2041,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get memoryDeleted => 'یاد حذف ہو گئی۔';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'کچھ میموری کی تاریخ دستیاب نہیں ہے۔ اب تک موصول ہونے والی تاریخ دکھائی جا رہی ہے۔';
 
   @override
   String get undo => 'واپس لیں';
@@ -9929,7 +9930,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get transcriptionNoAudio => 'ٹرانسکرپشن آڈیو وصول نہیں کر رہی';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'ریکارڈنگ شروع کرنے کے لیے + پر ٹیپ کریں';
 
   @override
   String get couldNotLoadMemories => 'یادیں لوڈ نہیں ہو سکیں';

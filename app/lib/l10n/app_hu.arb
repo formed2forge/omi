@@ -3343,5 +3343,7 @@
     },
     "planIssueContactSupport": "Lehet, hogy probléma van a csomagoddal. Kérjük, lépj kapcsolatba az ügyfélszolgálattal, hogy a szolgáltatásod ne szakadjon meg.",
     "planLapseCancellationScheduled": "Az előfizetésed {date}-n ér véget. Addig teljes hozzáférésed megmarad.",
-    "planLapseAccessEnded": "A fizetős hozzáférésed lejárt."
+    "planLapseAccessEnded": "A fizetős hozzáférésed lejárt.",
+    "memoryHistoryPartial": "Az emlékek előzményeinek egy része nem érhető el. A mostanáig kapott előzmények láthatók.",
+    "tapPlusToStartRecording": "Koppintson a + gombra a felvétel indításához"
 }

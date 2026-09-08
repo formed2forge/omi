@@ -3282,5 +3282,7 @@
     },
     "planIssueContactSupport": "Planınızla ilgili bir sorun olabilir. Hizmetinizde kesinti yaşanmaması için lütfen destek ekibiyle iletişime geçin.",
     "planLapseCancellationScheduled": "Planınız {date} tarihinde sona erecek. O zamana kadar tam erişiminiz devam edecek.",
-    "planLapseAccessEnded": "Ücretli erişiminiz sona erdi."
+    "planLapseAccessEnded": "Ücretli erişiminiz sona erdi.",
+    "memoryHistoryPartial": "Bazı anı geçmişi kullanılamıyor. Şimdiye kadar alınan geçmiş gösteriliyor.",
+    "tapPlusToStartRecording": "Kayda başlamak için + öğesine dokunun"
 }

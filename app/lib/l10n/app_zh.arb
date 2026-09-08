@@ -3269,5 +3269,7 @@
     },
     "planIssueContactSupport": "您的套餐可能存在问题，请联系客服，以确保您的服务不会中断。",
     "planLapseCancellationScheduled": "您的套餐将于{date}到期。在此之前您仍可完整使用所有功能。",
-    "planLapseAccessEnded": "您的付费访问权限已结束。"
+    "planLapseAccessEnded": "您的付费访问权限已结束。",
+    "memoryHistoryPartial": "部分记忆历史不可用。显示的是目前已收到的历史记录。",
+    "tapPlusToStartRecording": "点击 + 开始录音"
 }

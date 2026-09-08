@@ -3223,5 +3223,7 @@
     },
     "planIssueContactSupport": "قد تكون هناك مشكلة في خطتك، يرجى التواصل مع الدعم لضمان عدم انقطاع خدمتك.",
     "planLapseCancellationScheduled": "ستنتهي خطتك في {date}. ستحتفظ بكامل الوصول حتى ذلك الحين.",
-    "planLapseAccessEnded": "لقد انتهى وصولك المدفوع."
+    "planLapseAccessEnded": "لقد انتهى وصولك المدفوع.",
+    "memoryHistoryPartial": "بعض سجل الذكريات غير متوفر. يتم عرض السجل الذي تم استلامه حتى الآن.",
+    "tapPlusToStartRecording": "اضغط على + لبدء التسجيل"
 }

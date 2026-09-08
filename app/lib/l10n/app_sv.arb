@@ -3247,5 +3247,7 @@
     },
     "planIssueContactSupport": "Det kan finnas ett problem med ditt abonnemang. Kontakta supporten för att säkerställa att din tjänst inte avbryts.",
     "planLapseCancellationScheduled": "Din plan upphör {date}. Du behåller full åtkomst fram till dess.",
-    "planLapseAccessEnded": "Din betalda åtkomst har upphört."
+    "planLapseAccessEnded": "Din betalda åtkomst har upphört.",
+    "memoryHistoryPartial": "En del av minneshistoriken är inte tillgänglig. Visar historiken som mottagits hittills.",
+    "tapPlusToStartRecording": "Tryck på + för att starta inspelning"
 }

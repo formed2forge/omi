@@ -2045,7 +2045,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get memoryDeleted => 'Đã xóa ký ức.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Một số lịch sử ký ức không khả dụng. Đang hiển thị lịch sử đã nhận được cho đến nay.';
 
   @override
   String get undo => 'Hoàn tác';
@@ -9912,7 +9913,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get transcriptionNoAudio => 'Bản ghi âm không nhận được âm thanh';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Nhấn + để bắt đầu ghi âm';
 
   @override
   String get couldNotLoadMemories => 'Không thể tải ký ức';

@@ -3247,5 +3247,7 @@
     },
     "planIssueContactSupport": "요금제에 문제가 있을 수 있습니다. 서비스가 중단되지 않도록 고객 지원팀에 문의해 주세요.",
     "planLapseCancellationScheduled": "요금제는 {date}에 종료됩니다. 그때까지는 전체 액세스 권한이 유지됩니다.",
-    "planLapseAccessEnded": "유료 액세스가 종료되었습니다."
+    "planLapseAccessEnded": "유료 액세스가 종료되었습니다.",
+    "memoryHistoryPartial": "일부 메모리 기록을 사용할 수 없습니다. 지금까지 수신된 기록을 표시합니다.",
+    "tapPlusToStartRecording": "녹음을 시작하려면 +를 탭하세요"
 }

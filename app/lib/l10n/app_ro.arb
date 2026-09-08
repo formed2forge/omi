@@ -3247,5 +3247,7 @@
     },
     "planIssueContactSupport": "Este posibil să existe o problemă cu planul tău. Te rugăm să contactezi asistența pentru a evita orice întrerupere a serviciului.",
     "planLapseCancellationScheduled": "Planul tău se va încheia pe {date}. Vei păstra acces complet până atunci.",
-    "planLapseAccessEnded": "Accesul tău plătit a expirat."
+    "planLapseAccessEnded": "Accesul tău plătit a expirat.",
+    "memoryHistoryPartial": "O parte din istoricul amintirilor nu este disponibilă. Se afișează istoricul primit până acum.",
+    "tapPlusToStartRecording": "Atinge + pentru a începe înregistrarea"
 }

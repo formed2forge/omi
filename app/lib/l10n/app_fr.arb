@@ -3282,5 +3282,7 @@
     },
     "planIssueContactSupport": "Il se peut qu'il y ait un problème avec votre forfait. Veuillez contacter le support afin d'éviter toute interruption de votre service.",
     "planLapseCancellationScheduled": "Votre forfait se terminera le {date}. Vous conserverez un accès complet jusque-là.",
-    "planLapseAccessEnded": "Votre accès payant a pris fin."
+    "planLapseAccessEnded": "Votre accès payant a pris fin.",
+    "memoryHistoryPartial": "Une partie de l'historique des souvenirs n'est pas disponible. L'historique reçu jusqu'à présent est affiché.",
+    "tapPlusToStartRecording": "Appuyez sur + pour commencer l'enregistrement"
 }

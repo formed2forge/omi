@@ -3289,5 +3289,7 @@
     },
     "planIssueContactSupport": "Mungkin ada masalah dengan paket Anda. Silakan hubungi dukungan agar tidak terjadi gangguan pada layanan Anda.",
     "planLapseCancellationScheduled": "Paket Anda akan berakhir pada {date}. Anda tetap memiliki akses penuh hingga saat itu.",
-    "planLapseAccessEnded": "Akses berbayar Anda telah berakhir."
+    "planLapseAccessEnded": "Akses berbayar Anda telah berakhir.",
+    "memoryHistoryPartial": "Sebagian riwayat memori tidak tersedia. Menampilkan riwayat yang diterima sejauh ini.",
+    "tapPlusToStartRecording": "Ketuk + untuk mulai merekam"
 }

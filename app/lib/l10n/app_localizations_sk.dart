@@ -2047,7 +2047,8 @@ class AppLocalizationsSk extends AppLocalizations {
   String get memoryDeleted => 'Spomienka bola odstránená.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Časť histórie spomienok nie je k dispozícii. Zobrazuje sa história prijatá doteraz.';
 
   @override
   String get undo => 'Vrátiť späť';
@@ -9910,7 +9911,7 @@ class AppLocalizationsSk extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripcia neprijíma zvuk';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Klepnutím na + spustíte nahrávanie';
 
   @override
   String get couldNotLoadMemories => 'Nepodarilo sa načítať spomienky';

@@ -2047,7 +2047,8 @@ class AppLocalizationsKn extends AppLocalizations {
   String get memoryDeleted => 'ಸ್ಮೃತಿ ಅಳಿಸಲಾಗಿದೆ.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'ಕೆಲವು ನೆನಪುಗಳ ಇತಿಹಾಸ ಲಭ್ಯವಿಲ್ಲ. ಇಲ್ಲಿಯವರೆಗೆ ಸ್ವೀಕರಿಸಿದ ಇತಿಹಾಸವನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ.';
 
   @override
   String get undo => 'ರದ್ದುಗೊಳಿಸಿ';
@@ -9949,7 +9950,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get transcriptionNoAudio => 'ಲಿಪ್ಯಂತರಣ ಆಡಿಯೊ ಸ್ವೀಕರಿಸುತ್ತಿಲ್ಲ';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'ರೆಕಾರ್ಡಿಂಗ್ ಪ್ರಾರಂಭಿಸಲು + ಟ್ಯಾಪ್ ಮಾಡಿ';
 
   @override
   String get couldNotLoadMemories => 'ನೆನಪುಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ';

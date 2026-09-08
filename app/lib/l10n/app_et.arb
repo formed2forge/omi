@@ -3247,5 +3247,7 @@
     },
     "planIssueContactSupport": "Teie paketiga võib olla probleem. Palun võtke ühendust toega, et teenuses ei tekiks katkestusi.",
     "planLapseCancellationScheduled": "Sinu pakett lõpeb {date}. Kuni selle ajani säilib sul täielik juurdepääs.",
-    "planLapseAccessEnded": "Sinu tasuline juurdepääs on lõppenud."
+    "planLapseAccessEnded": "Sinu tasuline juurdepääs on lõppenud.",
+    "memoryHistoryPartial": "Osa mälestuste ajaloost pole saadaval. Kuvatakse seni saadud ajalugu.",
+    "tapPlusToStartRecording": "Puuduta salvestamise alustamiseks +"
 }

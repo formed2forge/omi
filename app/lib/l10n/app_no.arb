@@ -3247,5 +3247,7 @@
     },
     "planIssueContactSupport": "Det kan være et problem med abonnementet ditt. Kontakt support for å sikre at tjenesten din ikke blir avbrutt.",
     "planLapseCancellationScheduled": "Abonnementet ditt utløper {date}. Du beholder full tilgang frem til da.",
-    "planLapseAccessEnded": "Din betalte tilgang har utløpt."
+    "planLapseAccessEnded": "Din betalte tilgang har utløpt.",
+    "memoryHistoryPartial": "Noe av minnehistorikken er ikke tilgjengelig. Viser historikken mottatt så langt.",
+    "tapPlusToStartRecording": "Trykk på + for å starte opptak"
 }

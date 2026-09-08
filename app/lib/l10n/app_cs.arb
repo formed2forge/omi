@@ -3225,5 +3225,7 @@
     },
     "planIssueContactSupport": "S vaším tarifem může být problém. Kontaktujte prosím podporu, aby nedošlo k přerušení vaší služby.",
     "planLapseCancellationScheduled": "Váš plán skončí {date}. Do té doby si zachováte plný přístup.",
-    "planLapseAccessEnded": "Váš placený přístup skončil."
+    "planLapseAccessEnded": "Váš placený přístup skončil.",
+    "memoryHistoryPartial": "Část historie vzpomínek není k dispozici. Zobrazuje se historie přijatá doposud.",
+    "tapPlusToStartRecording": "Klepnutím na + zahájíte nahrávání"
 }

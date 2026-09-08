@@ -2044,7 +2044,7 @@ class AppLocalizationsBe extends AppLocalizations {
   String get memoryDeleted => 'Спамін выдалена.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Частка гісторыі ўспамінаў недаступная. Паказана гісторыя, атрыманая дагэтуль.';
 
   @override
   String get undo => 'Адмяніць';
@@ -9949,7 +9949,7 @@ class AppLocalizationsBe extends AppLocalizations {
   String get transcriptionNoAudio => 'Транскрыпцыя не атрымлівае аўдыё';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Націсніце +, каб пачаць запіс';
 
   @override
   String get couldNotLoadMemories => 'Не ўдалося загрузіць успаміны';
