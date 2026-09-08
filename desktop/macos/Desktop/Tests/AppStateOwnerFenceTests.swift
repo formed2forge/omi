@@ -54,6 +54,40 @@ final class AppStateOwnerFenceTests: XCTestCase {
     XCTAssertTrue(state.people.isEmpty, "previous account's people must clear on switch")
   }
 
+  /// Regression: the owner-fence observer registered with `queue: nil` and called
+  /// `MainActor.assumeIsolated` in the block. `queue: nil` delivers the block
+  /// synchronously on the *posting* thread, so a background poster made
+  /// `assumeIsolated` trap and terminate the whole process (SIGTRAP). The fence must
+  /// reach the main actor from any poster instead of asserting the poster was correct.
+  func testRuntimeOwnerChangePostedOffTheMainThreadClearsStateWithoutTrapping() async throws {
+    let state = AppState()
+    let folder = try JSONDecoder().decode(
+      Folder.self,
+      from: Data(#"{"id":"previous-folder","name":"Previous account folder"}"#.utf8))
+    state.folders = [folder]
+    state.showStarredOnly = true
+    state.totalConversationsCount = 42
+    state.people = [Person(id: "previous-person", name: "Previous account person")]
+
+    await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async {
+        XCTAssertFalse(Thread.isMainThread, "precondition: the poster must not be the main thread")
+        NotificationCenter.default.post(name: .runtimeOwnerDidChange, object: nil)
+        continuation.resume()
+      }
+    }
+    // A background post hops to the main queue; FIFO ordering means this barrier runs
+    // after the fence, so the assertions below need no sleep.
+    await withCheckedContinuation { continuation in
+      DispatchQueue.main.async { continuation.resume() }
+    }
+
+    XCTAssertTrue(state.folders.isEmpty, "a background-thread owner switch must still clear folders")
+    XCTAssertFalse(state.showStarredOnly)
+    XCTAssertNil(state.totalConversationsCount)
+    XCTAssertTrue(state.people.isEmpty)
+  }
+
   func testInFlightFolderLoadFromPreviousAccountIsDroppedAfterOwnerSwitch() async throws {
     let state = AppState()
     let previousFolder = try JSONDecoder().decode(
