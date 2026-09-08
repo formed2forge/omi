@@ -204,3 +204,58 @@ for spelling in yes on 1 TRUE; do
   fi
 done
 echo "repair-git-primary-worktree boolean-spelling test passed."
+
+# Regression: the mistaken core.bare=true is *written from a linked worktree*. An
+# unisolated `git init` under a linked worktree's exported GIT_DIR has no work tree to
+# infer, so Git re-inits it as bare and sets core.bare=true on the shared config. That is
+# also where `make setup` gets run, and the repair used to bail out there because a linked
+# worktree's `.git` is a file — silently skipping the fix in the one place that needs it.
+WTBARE_ROOT="$TMPDIR/wtbare"
+git init -q --initial-branch=main "$WTBARE_ROOT"
+git -C "$WTBARE_ROOT" commit -q --allow-empty -m "seed"
+git -C "$WTBARE_ROOT" worktree add -q -b side "$TMPDIR/wtbare-linked"
+if [ ! -f "$TMPDIR/wtbare-linked/.git" ]; then
+  echo "FAIL: linked worktree fixture should have a .git file, not a directory." >&2
+  exit 1
+fi
+
+# Reproduce the break the way it actually happens, rather than by setting the config.
+(cd "$TMPDIR" && GIT_DIR="$WTBARE_ROOT/.git/worktrees/wtbare-linked" git init -q)
+if [ "$(git -C "$WTBARE_ROOT" config --bool --get core.bare)" != "true" ]; then
+  echo "FAIL: fixture did not reproduce core.bare=true from a linked-worktree git init." >&2
+  exit 1
+fi
+if [ "$(git -C "$WTBARE_ROOT" rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
+  echo "FAIL: primary should not report inside-work-tree while mistakenly bare." >&2
+  exit 1
+fi
+
+# Repairing *via the linked worktree* must fix the primary.
+bash "$ROOT/scripts/repair-git-primary-worktree.sh" "$TMPDIR/wtbare-linked"
+if [ "$(git -C "$WTBARE_ROOT" config --bool --get core.bare)" != "false" ]; then
+  echo "FAIL: repair invoked from a linked worktree did not clear core.bare on the primary." >&2
+  exit 1
+fi
+if [ "$(git -C "$WTBARE_ROOT" rev-parse --is-inside-work-tree)" != "true" ]; then
+  echo "FAIL: primary still not a work tree after linked-worktree repair." >&2
+  exit 1
+fi
+echo "repair-git-primary-worktree linked-worktree test passed."
+
+# A repository that is genuinely bare must never be "repaired", including when it hosts
+# linked worktrees. Clearing core.bare there would corrupt a legitimate setup.
+TRUEBARE="$TMPDIR/truebare.git"
+git init -q --bare --initial-branch=main "$TRUEBARE"
+bash "$ROOT/scripts/repair-git-primary-worktree.sh" "$TRUEBARE"
+if [ "$(git -C "$TRUEBARE" config --bool --get core.bare)" != "true" ]; then
+  echo "FAIL: repair must leave a genuinely bare repository alone." >&2
+  exit 1
+fi
+git -C "$WTBARE_ROOT" push -q "$TRUEBARE" main:refs/heads/main
+git -C "$TRUEBARE" worktree add -q "$TMPDIR/truebare-linked" main
+bash "$ROOT/scripts/repair-git-primary-worktree.sh" "$TMPDIR/truebare-linked"
+if [ "$(git -C "$TRUEBARE" config --bool --get core.bare)" != "true" ]; then
+  echo "FAIL: repair must not clear core.bare on a bare worktree host." >&2
+  exit 1
+fi
+echo "repair-git-primary-worktree bare-host test passed."
