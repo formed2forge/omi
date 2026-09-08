@@ -256,6 +256,44 @@ enum SubscriptionPlanPresentation {
   static func catalogGroupingKey(for price: AvailablePlanPriceOption) -> String {
     price.planId.isEmpty ? (normalizedPlanId(from: price.title) ?? "unknown") : price.planId
   }
+
+  // MARK: - Subscription lapse notice
+
+  /// Neutral copy for `SubscriptionLapseState.accessEnded`. The backend's `reason` is
+  /// always `unknown` for this state (see `SubscriptionLapse` in APIClient+Settings.swift),
+  /// so this must never claim a specific cause ("your payment failed", "you cancelled",
+  /// "your subscription expired"). Also the fallback copy for `cancellationScheduled`
+  /// when the stored row proves the state without proving its date — matching the
+  /// Flutter implementation's `SubscriptionLapseNoticeCard`, which prefers this neutral
+  /// message over guessing a date.
+  static let lapseAccessEndedMessage = "Your paid access has ended."
+
+  /// Copy must match the Flutter implementation (`SubscriptionLapseNoticeCard`) exactly —
+  /// this is one product decision shared across platforms, not per-platform wording.
+  static func lapseNoticeMessage(for lapse: SubscriptionLapse, dateFormatter: DateFormatter) -> String {
+    switch lapse.state {
+    case .cancellationScheduled:
+      guard let effectiveAt = lapse.effectiveAt else { return lapseAccessEndedMessage }
+      let date = Date(timeIntervalSince1970: TimeInterval(effectiveAt))
+      return "Your plan will end on \(dateFormatter.string(from: date)). You'll keep full access until then."
+    case .accessEnded:
+      return lapseAccessEndedMessage
+    }
+  }
+
+  static func lapseNoticeTitle(for state: SubscriptionLapseState) -> String {
+    switch state {
+    case .cancellationScheduled: return "Plan Ending"
+    case .accessEnded: return "Access Ended"
+    }
+  }
+
+  static func lapseNoticeActionLabel(for state: SubscriptionLapseState) -> String {
+    switch state {
+    case .cancellationScheduled: return "Keep My Plan"
+    case .accessEnded: return "Resubscribe"
+    }
+  }
 }
 
 extension SettingsContentView {
@@ -382,6 +420,15 @@ extension SettingsContentView {
     formatter.timeStyle = .none
     let prefix = subscription.cancelAtPeriodEnd ? "Access ends" : "Renews"
     return "\(prefix) on \(formatter.string(from: date))"
+  }
+
+  /// Same `.medium` date style as `currentPlanPeriodText`, reused for the lapse notice's
+  /// own effective-date copy.
+  var lapseDateFormatter: DateFormatter {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .none
+    return formatter
   }
 
   static func planSubtitle(for planId: String) -> String? {
@@ -1196,6 +1243,31 @@ extension SettingsContentView {
     }
 
     refreshPlanUsageDetails()
+  }
+
+  /// Reverses a scheduled cancellation (`SubscriptionLapseRecovery.keepSubscription`) by
+  /// reusing the existing reactivation path: `startCheckout(for:)` with the account's own
+  /// `currentPriceId` resolves server-side to `_try_reactivate_subscription`, which clears
+  /// `cancel_at_period_end` with no new checkout/charge (the server responds
+  /// `status == "reactivated"` and `startCheckout` just refreshes rather than opening a
+  /// browser flow — see the `response.status == "reactivated"` branch below). No new
+  /// endpoint; mirrors the Flutter implementation's `_keepSubscription`.
+  func keepSubscription(for lapse: SubscriptionLapse) {
+    guard let currentPriceId = userSubscription?.subscription.currentPriceId else {
+      subscriptionError = "Could not process your subscription. Please try again."
+      return
+    }
+    startCheckout(for: currentPriceId)
+  }
+
+  /// Reveals the resubscribe path for `SubscriptionLapseRecovery.resubscribe`. macOS has no
+  /// separate upgrade sheet (unlike the Flutter `PlansSheet` modal) — the purchasable plan
+  /// cards already render inline below the current-plan card whenever
+  /// `shouldShowPlanPurchaseOptions` is true, which holds here because `accessEnded` implies
+  /// the account is back on Free. Preselecting the first plan expands its billing-choice UI
+  /// in place, the same mechanism `subscriptionPlanCard`'s own selection button uses.
+  func resubscribe() {
+    selectedPlanIdForCheckout = subscriptionPlansForDisplay.first?.id
   }
 
   func startCheckout(for priceId: String) {

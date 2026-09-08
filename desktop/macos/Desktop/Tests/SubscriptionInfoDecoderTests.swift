@@ -184,6 +184,120 @@ final class SubscriptionInfoDecoderTests: XCTestCase {
     XCTAssertTrue(plan.hasPaidCapability)
   }
 
+  // MARK: - Subscription lapse (`UserSubscriptionResponse.lapse`)
+
+  private static func subscriptionResponseJSON(lapseFragment: String?) -> String {
+    let lapseField = lapseFragment.map { ",\n    \"lapse\": \($0)" } ?? ""
+    return """
+      {
+        "subscription": {
+          "plan": "basic",
+          "status": "active",
+          "current_period_end": 1700000000,
+          "stripe_subscription_id": "sub_lapsed",
+          "current_price_id": "price_plus_month",
+          "features": [],
+          "cancel_at_period_end": false,
+          "limits": {
+            "transcription_seconds": 3600,
+            "words_transcribed": 10000,
+            "insights_gained": 50,
+            "memories_created": 100
+          }
+        }\(lapseField)
+      }
+      """
+  }
+
+  func testDecodeLapseCancellationScheduled() throws {
+    let json = Self.subscriptionResponseJSON(
+      lapseFragment: """
+        {
+          "state": "cancellation_scheduled",
+          "reason": "user_requested",
+          "recovery_action": "keep_subscription",
+          "effective_at": 1700000000
+        }
+        """)
+    let response = try JSONDecoder().decode(UserSubscriptionResponse.self, from: Data(json.utf8))
+    XCTAssertEqual(response.lapse?.state, .cancellationScheduled)
+    XCTAssertEqual(response.lapse?.reason, .userRequested)
+    XCTAssertEqual(response.lapse?.recoveryAction, .keepSubscription)
+    XCTAssertEqual(response.lapse?.effectiveAt, 1_700_000_000)
+  }
+
+  func testDecodeLapseAccessEnded() throws {
+    let json = Self.subscriptionResponseJSON(
+      lapseFragment: """
+        {
+          "state": "access_ended",
+          "reason": "unknown",
+          "recovery_action": "resubscribe",
+          "effective_at": 1650000000
+        }
+        """)
+    let response = try JSONDecoder().decode(UserSubscriptionResponse.self, from: Data(json.utf8))
+    XCTAssertEqual(response.lapse?.state, .accessEnded)
+    XCTAssertEqual(response.lapse?.reason, .unknown)
+    XCTAssertEqual(response.lapse?.recoveryAction, .resubscribe)
+  }
+
+  func testDecodeMissingLapseDefaultsToNil() throws {
+    let json = Self.subscriptionResponseJSON(lapseFragment: nil)
+    let response = try JSONDecoder().decode(UserSubscriptionResponse.self, from: Data(json.utf8))
+    XCTAssertNil(response.lapse)
+  }
+
+  func testDecodeUnrecognizedLapseStateDegradesToNilRatherThanThrowing() throws {
+    // A future `state`/`reason`/`recovery_action` value this build doesn't know about must
+    // not blank the entire Plan & Usage page — see the `try?` in
+    // UserSubscriptionResponse.init(from:). Forward-compat posture, matching how
+    // SubscriptionPlanType.unknown handles a future plan id.
+    let json = Self.subscriptionResponseJSON(
+      lapseFragment: """
+        {
+          "state": "some_future_state",
+          "reason": "unknown",
+          "recovery_action": "resubscribe",
+          "effective_at": null
+        }
+        """)
+    let response = try JSONDecoder().decode(UserSubscriptionResponse.self, from: Data(json.utf8))
+    XCTAssertNil(response.lapse)
+  }
+
+  func testNullLapseCoexistsWithUnknownPlanSentinelWithoutEitherImplyingTheOther() throws {
+    // The unknown-plan sentinel (a plan value this client doesn't recognize) and `lapse` are
+    // independent fields from different backend computations
+    // (`SubscriptionPlanType` decode vs. `resolve_subscription_lapse`) — a response can carry
+    // the unknown-plan sentinel with no lapse evidence at all, and the two must never be
+    // conflated into one notice.
+    let json = """
+      {
+        "subscription": {
+          "plan": "future_plan_123",
+          "status": "active",
+          "current_period_end": null,
+          "stripe_subscription_id": null,
+          "current_price_id": null,
+          "features": [],
+          "cancel_at_period_end": false,
+          "limits": {
+            "transcription_seconds": null,
+            "words_transcribed": null,
+            "insights_gained": null,
+            "memories_created": null
+          }
+        }
+      }
+      """
+    let response = try JSONDecoder().decode(UserSubscriptionResponse.self, from: Data(json.utf8))
+    guard case .unknown = response.subscription.plan else {
+      return XCTFail("expected the unknown-plan sentinel")
+    }
+    XCTAssertNil(response.lapse)
+  }
+
   func testDecodeUnknownPlanPreservesIdentityAndDeniesPaidCapability() throws {
     let rawValue = "future_plan_123"
     let plan = try JSONDecoder().decode(SubscriptionPlanType.self, from: Data(#""future_plan_123""#.utf8))

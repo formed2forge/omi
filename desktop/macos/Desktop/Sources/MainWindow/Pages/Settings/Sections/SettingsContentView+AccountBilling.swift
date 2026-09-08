@@ -384,6 +384,55 @@ extension SettingsContentView {
         }
       }
 
+      // Per product decision this renders directly on the primary always-visible Plan &
+      // Usage card, never a separate dialog or buried sheet — the macOS counterpart of the
+      // Flutter `SubscriptionLapseNoticeCard`. `lapse` and the unknown-plan sentinel
+      // (`SubscriptionPlanType.unknown`, handled above via `currentPlanDescription`) are
+      // mutually exclusive at runtime: `resolve_subscription_lapse` derives this purely from
+      // the stored/resolved `Subscription` rows' period and cancellation evidence, never from
+      // an unresolved plan value, so the backend does not set both for the same response.
+      if let lapse = userSubscription?.lapse {
+        settingsCard(settingId: "planusage.lapse") {
+          VStack(alignment: .leading, spacing: OmiSpacing.md) {
+            HStack(spacing: OmiSpacing.sm) {
+              Image(
+                systemName: lapse.state == .cancellationScheduled
+                  ? "clock.arrow.circlepath" : "exclamationmark.circle.fill"
+              )
+              .foregroundColor(Ink.secondary)
+              .scaledFont(size: OmiType.subheading)
+              Text(SubscriptionPlanPresentation.lapseNoticeTitle(for: lapse.state))
+                .scaledFont(size: OmiType.subheading, weight: .semibold)
+                .foregroundColor(Ink.primary)
+            }
+
+            Text(SubscriptionPlanPresentation.lapseNoticeMessage(for: lapse, dateFormatter: lapseDateFormatter))
+              .scaledFont(size: OmiType.body)
+              .foregroundColor(Ink.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: {
+              switch lapse.recoveryAction {
+              case .keepSubscription:
+                keepSubscription(for: lapse)
+              case .resubscribe:
+                resubscribe()
+              }
+            }) {
+              if lapse.recoveryAction == .keepSubscription && activeCheckoutPriceId != nil {
+                ProgressView()
+                  .controlSize(.small)
+              } else {
+                Text(SubscriptionPlanPresentation.lapseNoticeActionLabel(for: lapse.state))
+                  .scaledFont(size: OmiType.body, weight: .semibold)
+              }
+            }
+            .buttonStyle(OmiButtonStyle(.secondary, size: .compact))
+            .disabled(lapse.recoveryAction == .keepSubscription && activeCheckoutPriceId != nil)
+          }
+        }
+      }
+
       if shouldShowPlanPurchaseOptions {
         // Deliberately a `settingsGroup` and not a `settingsCard`: each plan tile draws its own
         // fill, corner and selected border, so wrapping the row in a card put a card inside a card
