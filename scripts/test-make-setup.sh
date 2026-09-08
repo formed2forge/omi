@@ -212,7 +212,13 @@ echo "repair-git-primary-worktree boolean-spelling test passed."
 # worktree's `.git` is a file — silently skipping the fix in the one place that needs it.
 WTBARE_ROOT="$TMPDIR/wtbare"
 git init -q --initial-branch=main "$WTBARE_ROOT"
-git -C "$WTBARE_ROOT" commit -q --allow-empty -m "seed"
+# Scratch fixture repo: give it its own throwaway identity via `git -c` rather
+# than relying on the caller's global/repo identity, which a CI runner may not
+# have configured at all (git then fails hard: "empty ident name ... not
+# allowed"). Never set a global or this-repo identity for this — see
+# AGENTS.md's git-identity rule.
+git -c user.name="Omi Test Fixture" -c user.email="test-fixture@example.invalid" \
+  -C "$WTBARE_ROOT" commit -q --allow-empty -m "seed"
 git -C "$WTBARE_ROOT" worktree add -q -b side "$TMPDIR/wtbare-linked"
 if [ ! -f "$TMPDIR/wtbare-linked/.git" ]; then
   echo "FAIL: linked worktree fixture should have a .git file, not a directory." >&2
