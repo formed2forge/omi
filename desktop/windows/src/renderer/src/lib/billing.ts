@@ -422,6 +422,10 @@ export function orderedCatalog(
     .map(({ p }) => p)
 }
 
+// Single edit point for the Operator price quoted in the deprecation-banner
+// fallback (used only when the API omits `deprecation_message`).
+export const OPERATOR_DEPRECATION_FALLBACK_PRICE = '$49/mo'
+
 // Per-plan-id fallbacks (BillingHelpers planEyebrow/planSubtitle/planDescription/
 // fallback features), used only when the catalog omits the field.
 const PLAN_FALLBACKS: Record<
