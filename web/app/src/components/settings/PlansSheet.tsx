@@ -294,10 +294,17 @@ export function PlansSheet({
                     {isUnknownPlan ? (
                       <div className="py-8 text-center">
                         <p className="text-sm text-text-secondary">
-                          This account uses a plan that this version of Omi does not
-                          recognize yet. Plan options are unavailable until the plan can
-                          be identified.
+                          There may be an issue with your plan, please contact support to
+                          ensure there is no interruption in your service.
                         </p>
+                        <a
+                          href="https://help.omi.me"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 inline-block text-sm font-medium text-text-primary hover:text-text-secondary transition-colors"
+                        >
+                          Help Center
+                        </a>
                       </div>
                     ) : isLoadingPlans ? (
                       <div className="flex items-center justify-center py-12">

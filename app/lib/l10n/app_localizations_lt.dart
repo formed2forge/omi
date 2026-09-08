@@ -9951,4 +9951,8 @@ class AppLocalizationsLt extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Ačiū, kad esate ankstyvasis omi rėmėjas! Sename plane galite likti neribotą laiką. Atminkite, kad šie senieji planai jau neparduodami ir jų negalima pasirinkti perėjus prie kito plano.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Gali būti, kad su jūsų planu iškilo problema. Susisiekite su palaikymo komanda, kad jūsų paslauga nebūtų nutraukta.';
 }

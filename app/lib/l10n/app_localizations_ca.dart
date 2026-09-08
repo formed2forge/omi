@@ -9988,4 +9988,8 @@ class AppLocalizationsCa extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Gràcies per ser un dels primers a donar suport a omi! Pots quedar-te al teu pla antic indefinidament. Tingues en compte, però, que aquests plans antics ja no es venen i no es poden triar si canvies a un altre pla.';
+
+  @override
+  String get planIssueContactSupport =>
+      'És possible que hi hagi un problema amb el teu pla. Contacta amb el suport per assegurar que no hi hagi cap interrupció del servei.';
 }

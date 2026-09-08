@@ -9961,4 +9961,8 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Dziękujemy, że jesteś wczesnym wspierającym omi! Możesz pozostać na starszym planie bezterminowo. Pamiętaj jednak, że te starsze plany nie są już sprzedawane i nie można ich wybrać po przejściu na inny plan.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Może występować problem z Twoim planem. Skontaktuj się z pomocą techniczną, aby uniknąć przerwy w działaniu usługi.';
 }

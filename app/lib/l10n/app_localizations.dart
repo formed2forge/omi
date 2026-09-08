@@ -18488,6 +18488,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan.'**
   String get legacyPlanSupporterNote;
+
+  /// Shown when the app cannot resolve the user's subscription plan. Must not imply cancellation or suggest re-subscribing — the account may still be actively paying.
+  ///
+  /// In en, this message translates to:
+  /// **'There may be an issue with your plan, please contact support to ensure there is no interruption in your service.'**
+  String get planIssueContactSupport;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

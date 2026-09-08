@@ -9742,4 +9742,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get legacyPlanSupporterNote => '感谢你从一开始就支持 omi！你可以无限期留在旧套餐上。请注意，这些旧套餐已不再出售，换成其他套餐后也无法再选回来。';
+
+  @override
+  String get planIssueContactSupport => '您的套餐可能存在问题，请联系客服，以确保您的服务不会中断。';
 }

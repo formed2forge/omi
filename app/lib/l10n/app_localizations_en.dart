@@ -9922,4 +9922,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan.';
+
+  @override
+  String get planIssueContactSupport =>
+      'There may be an issue with your plan, please contact support to ensure there is no interruption in your service.';
 }

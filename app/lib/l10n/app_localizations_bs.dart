@@ -9960,4 +9960,8 @@ class AppLocalizationsBs extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Hvala što ste rani podržavalac omi! Možete ostati na svom naslijeđenom planu neograničeno. Imajte na umu da se ti naslijeđeni planovi više ne prodaju i ne mogu se odabrati ako pređete na drugi plan.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Možda postoji problem s vašim planom. Molimo kontaktirajte podršku kako ne bi došlo do prekida u vašoj usluzi.';
 }

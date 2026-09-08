@@ -10018,4 +10018,8 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Merci d\'être un des premiers soutiens d\'omi ! Vous pouvez rester sur votre ancien forfait indéfiniment. Notez toutefois que ces anciens forfaits ne sont plus vendus et ne peuvent pas être choisis si vous passez à un autre forfait.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Il se peut qu\'il y ait un problème avec votre forfait. Veuillez contacter le support afin d\'éviter toute interruption de votre service.';
 }

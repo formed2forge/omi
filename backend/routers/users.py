@@ -26,6 +26,7 @@ from database.sync_jobs import release_job_run_lock, try_acquire_job_run_lock
 from services.users.data_export import iter_user_data_export
 from services.users.account_deletion import background_wipe_user_data, start_account_deletion
 from database.app_review_config import should_hide_subscription_ui
+from database.read_boundary import MalformedDocError
 from database.webhook_health import record_dev_webhook_success
 from database.conversations import get_in_progress_conversation, get_conversation
 from database.redis_db import (
@@ -142,6 +143,7 @@ from utils.byok import (
     invalidate_byok_state_cache,
     peppered_fingerprint,
 )
+from utils.observability.fallback import record_fallback
 import logging
 
 logger = logging.getLogger(__name__)
@@ -1204,6 +1206,76 @@ def _byok_unlimited_subscription(
     )
 
 
+# Wire-only identity for "this account's stored plan is not in the catalog".
+#
+# Deliberately NOT a `PlanType` member: the enum is the entitlement vocabulary,
+# and every reader of it (payment.py, sync.py, the listen gate) would then have
+# an identity to parse that grants nothing. It also is never the raw Firestore
+# value — `read_boundary` withholds that on purpose, since it is untrusted input
+# that can carry PII. Clients decode it through their tolerant unknown-plan
+# decoder and show the contact-support state.
+UNKNOWN_PLAN_WIRE_VALUE = 'unknown'
+
+
+def _is_unknown_plan_document(error: MalformedDocError) -> bool:
+    """True only for the one corruption shape this endpoint can present.
+
+    A stored `subscription.plan` outside the catalog enum is a presentable
+    identity problem. Anything else (a broken period, a bad limits shape, a
+    non-mapping payload) stays a fail-closed 500.
+    """
+    return error.error_fields == ('plan',) and error.error_types == ('enum',)
+
+
+def unknown_plan_subscription_payload() -> dict[str, Any]:
+    """The HTTP 200 body for an account whose stored plan is unrecognized.
+
+    Grants nothing: `status=inactive`, zero limits, no features, no available
+    plans, and the free on-device transcription path. No catalog lookup
+    (`get_plan_limits` / `get_plan_features` / `filter_plans_for_user`) and no
+    Stripe call happens here — none of them can answer for a plan that is not
+    in the catalog — and nothing is written back to Firestore.
+
+    `get_default_basic_subscription()` is deliberately not used: silently
+    seating a possibly-paying account on Free is the failure mode this branch
+    exists to avoid.
+    """
+    # `Subscription.plan` is typed `PlanType` and stays that way; `basic` is only
+    # a construction placeholder and is overwritten below before the payload
+    # leaves this function. Nothing here derives entitlement from it.
+    snapshot = UserSubscriptionResponse(
+        subscription=Subscription(
+            plan=PlanType.basic,
+            status=SubscriptionStatus.inactive,
+            features=[],
+            limits=PlanLimits(
+                transcription_seconds=0,
+                words_transcribed=0,
+                insights_gained=0,
+                chat_questions_per_month=0,
+            ),
+        ),
+        transcription_seconds_used=0,
+        transcription_seconds_limit=0,
+        words_transcribed_used=0,
+        words_transcribed_limit=0,
+        insights_gained_used=0,
+        insights_gained_limit=0,
+        available_plans=[],
+        show_subscription_ui=True,
+        chat_quota_allowed=False,
+        phone_call_quota=PhoneCallQuota(has_access=False, is_paid=False, monthly_limit=0, remaining=0),
+        # Same shape the shared resolver's closed path returns: the local engine
+        # is free on every plan, and no billed socket is opened.
+        transcription_allowance=TranscriptionAllowanceSnapshot(
+            mode='on_device', remaining_seconds=0, reason='unknown_plan'
+        ),
+    )
+    payload = snapshot.model_dump(mode='json')
+    payload['subscription']['plan'] = UNKNOWN_PLAN_WIRE_VALUE
+    return payload
+
+
 @router.get('/v1/users/me/subscription', tags=['v1'], response_model=UserSubscriptionResponse)
 def get_user_subscription_endpoint(
     # Keep reachable even when BYOK fingerprints drift — broken-BYOK users
@@ -1214,7 +1286,25 @@ def get_user_subscription_endpoint(
 ):
     """Gets the user's subscription plan and usage, plus the one transcription-allowance answer."""
     already_read: dict[str, Any] = {}
-    response = _user_subscription_response(uid, x_app_platform, x_app_version, already_read)
+    try:
+        response = _user_subscription_response(uid, x_app_platform, x_app_version, already_read)
+    except MalformedDocError as error:
+        if not _is_unknown_plan_document(error):
+            raise
+        record_fallback(
+            component='firestore_read',
+            from_mode='stored_plan',
+            to_mode='unknown_plan_sentinel',
+            reason='malformed_doc',
+            outcome='degraded',
+            log=logger,
+        )
+        # Never render the rejected value; only the structural location.
+        logger.warning('subscription snapshot: unrecognized stored plan for uid=%s path=%s', uid, error.document_path)
+        # Returned as a Response so it bypasses `response_model` validation: the
+        # sentinel is intentionally outside the released `plan` enum, which the
+        # published app-client contract still bounds.
+        return JSONResponse(content=unknown_plan_subscription_payload())
     # The same resolver the listen socket enforces, so the client's startup
     # snapshot and the server's gate cannot disagree about which STT mode to
     # open. `X-App-Platform` plays the listen `source` role for the paywall,

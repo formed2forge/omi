@@ -9915,4 +9915,8 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Tak fordi du er en tidlig støtter af omi! Du kan blive på dit ældre abonnement på ubestemt tid. Bemærk dog, at disse ældre abonnementer ikke længere sælges og ikke kan vælges, hvis du skifter til et andet abonnement.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Der kan være et problem med dit abonnement. Kontakt venligst support for at sikre, at der ikke sker afbrydelser i din service.';
 }

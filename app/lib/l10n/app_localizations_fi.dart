@@ -9932,4 +9932,8 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Kiitos, että olet omi:n varhainen tukija! Voit pysyä vanhalla tilauksellasi toistaiseksi. Huomaa kuitenkin, että näitä vanhoja tilauksia ei enää myydä, eikä niitä voi valita, jos vaihdat toiseen tilaukseen.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Tilauksessasi saattaa olla ongelma. Ota yhteyttä tukeen, jotta palvelusi ei keskeydy.';
 }

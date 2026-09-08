@@ -10022,4 +10022,8 @@ class AppLocalizationsTl extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Salamat sa pagiging maagang tagasuporta ng omi! Maaari kang manatili sa dating plano nang walang takdang panahon. Tandaan na ang mga dating planong ito ay hindi na ibinebenta at hindi na mapipili kung lilipat ka sa ibang plano.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Maaaring may problema sa iyong plan. Mangyaring makipag-ugnayan sa suporta upang matiyak na walang maantala sa iyong serbisyo.';
 }

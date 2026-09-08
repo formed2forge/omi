@@ -9925,4 +9925,8 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Aitäh, et oled omi varajane toetaja! Võid oma pärandplaanil jääda määramata ajaks. Pane tähele, et neid pärandplaane enam ei müüda ja neid ei saa valida, kui vahetad teisele plaanile.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Teie paketiga võib olla probleem. Palun võtke ühendust toega, et teenuses ei tekiks katkestusi.';
 }

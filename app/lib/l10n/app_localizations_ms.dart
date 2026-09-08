@@ -9957,4 +9957,8 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Terima kasih kerana menjadi penyokong awal omi! Anda boleh kekal pada pelan lama tanpa had masa. Sila ambil perhatian bahawa pelan lama ini tidak lagi dijual dan tidak boleh dipilih jika anda bertukar ke pelan lain.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Mungkin terdapat masalah dengan pelan anda. Sila hubungi sokongan bagi memastikan tiada gangguan pada perkhidmatan anda.';
 }

@@ -3340,5 +3340,6 @@
     "legacyPlanSupporterNote": "Köszönjük, hogy az omi korai támogatója vagy! A korábbi csomagodon korlátlan ideig maradhatsz. Vedd figyelembe azonban, hogy ezeket a korábbi csomagokat már nem áruljuk, és másik csomagra váltás után nem választhatók újra.",
     "@legacyPlanSupporterNote": {
         "description": "Shown on the current-plan card for keep-until-cancel subscribers"
-    }
+    },
+    "planIssueContactSupport": "Lehet, hogy probléma van a csomagoddal. Kérjük, lépj kapcsolatba az ügyfélszolgálattal, hogy a szolgáltatásod ne szakadjon meg."
 }

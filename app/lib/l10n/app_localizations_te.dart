@@ -9980,4 +9980,8 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'omiకి ముందస్తు మద్దతుదారుగా ఉన్నందుకు ధన్యవాదాలు! మీ పాత ప్లాన్‌లో అనిశ్చితకాలం ఉండవచ్చు. గమనించండి, ఈ పాత ప్లాన్‌లు ఇక అమ్మకం లేవు మరియు మరో ప్లాన్‌కు మారితే వాటిని మళ్లీ ఎంచుకోలేరు.';
+
+  @override
+  String get planIssueContactSupport =>
+      'మీ ప్లాన్‌లో సమస్య ఉండవచ్చు. మీ సేవలో అంతరాయం కలగకుండా ఉండేందుకు దయచేసి సపోర్ట్‌ను సంప్రదించండి.';
 }

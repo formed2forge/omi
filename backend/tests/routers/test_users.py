@@ -838,3 +838,109 @@ def test_llm_only_byok_snapshot_reads_monthly_usage_once_for_snapshot_and_allowa
         'remaining_seconds': 1_000,
         'reason': 'plan_within_allowance',
     }
+
+
+def _malformed_plan_error():
+    from database.read_boundary import MalformedDocError
+
+    return MalformedDocError(
+        document_path='users/uid-corrupt-plan',
+        error_types=('enum',),
+        error_fields=('plan',),
+    )
+
+
+def test_unrecognized_stored_plan_returns_an_explicit_unknown_plan_snapshot():
+    """A stored plan outside the catalog enum is a presentation problem, not a 500.
+
+    The strict reader exists so canonical-state readers fail closed; this pure
+    read endpoint must instead tell the user their plan could not be resolved,
+    without granting Free and without touching the catalog or Stripe.
+    """
+    catalog_limits = MagicMock()
+    catalog_features = MagicMock()
+    catalog_filter = MagicMock()
+    default_basic = MagicMock()
+    reconcile = MagicMock()
+    allowance = MagicMock()
+
+    with patch.object(users_router.users_db, 'is_byok_active', MagicMock(return_value=False)), patch.object(
+        users_router, 'get_user_subscription', MagicMock(side_effect=_malformed_plan_error())
+    ), patch.object(users_router, 'reconcile_basic_plan_with_stripe', reconcile), patch.object(
+        users_router, 'get_default_basic_subscription', default_basic
+    ), patch.object(
+        users_router, 'get_plan_limits', catalog_limits
+    ), patch.object(
+        users_router, 'get_plan_features', catalog_features
+    ), patch.object(
+        users_router, 'filter_plans_for_user', catalog_filter
+    ), patch.object(
+        users_router, 'resolve_transcription_allowance', allowance
+    ), patch.object(
+        users_router, 'record_fallback'
+    ) as record, patch.dict(
+        users_router.os.environ, {'MARKETPLACE_APP_REVIEWERS': ''}
+    ):
+        response = users_router.get_user_subscription_endpoint(
+            uid='uid-corrupt-plan', x_app_platform='ios', x_app_version='1.0.0'
+        )
+
+    assert response.status_code == 200
+    payload = json.loads(response.body)
+    # A backend-owned sentinel, never the rejected Firestore value.
+    assert payload['subscription']['plan'] == users_router.UNKNOWN_PLAN_WIRE_VALUE
+    assert payload['subscription']['plan'] not in {plan.value for plan in users_router.PlanType}
+    assert payload['subscription']['status'] == 'inactive'
+    assert payload['subscription']['features'] == []
+    assert payload['subscription']['limits']['transcription_seconds'] == 0
+    assert payload['available_plans'] == []
+    assert payload['transcription_seconds_limit'] == 0
+    assert payload['transcription_allowance']['mode'] == 'on_device'
+    assert payload['transcription_allowance']['remaining_seconds'] == 0
+
+    # No entitlement granted, no catalog/Stripe lookup, nothing persisted.
+    default_basic.assert_not_called()
+    reconcile.assert_not_called()
+    catalog_limits.assert_not_called()
+    catalog_features.assert_not_called()
+    catalog_filter.assert_not_called()
+    allowance.assert_not_called()
+
+    record.assert_called_once()
+    assert record.call_args.kwargs['component'] == 'firestore_read'
+    assert record.call_args.kwargs['reason'] == 'malformed_doc'
+    assert record.call_args.kwargs['outcome'] == 'degraded'
+
+
+def test_other_malformed_subscription_fields_still_fail_closed():
+    """Only the unrecognized-plan shape is presentable; everything else stays a 500."""
+    from database.read_boundary import MalformedDocError
+
+    broken_period = MalformedDocError(
+        document_path='users/uid-corrupt',
+        error_types=('int_parsing',),
+        error_fields=('current_period_end',),
+    )
+
+    with patch.object(users_router.users_db, 'is_byok_active', MagicMock(return_value=False)), patch.object(
+        users_router, 'get_user_subscription', MagicMock(side_effect=broken_period)
+    ), patch.dict(users_router.os.environ, {'MARKETPLACE_APP_REVIEWERS': ''}):
+        with pytest.raises(MalformedDocError):
+            users_router.get_user_subscription_endpoint(uid='uid-corrupt', x_app_platform='ios', x_app_version='1.0.0')
+
+
+def test_multi_field_corruption_including_plan_still_fails_closed():
+    """A plan error alongside other corruption is not the presentable shape."""
+    from database.read_boundary import MalformedDocError
+
+    mixed = MalformedDocError(
+        document_path='users/uid-corrupt',
+        error_types=('enum', 'int_parsing'),
+        error_fields=('plan', 'current_period_end'),
+    )
+
+    with patch.object(users_router.users_db, 'is_byok_active', MagicMock(return_value=False)), patch.object(
+        users_router, 'get_user_subscription', MagicMock(side_effect=mixed)
+    ), patch.dict(users_router.os.environ, {'MARKETPLACE_APP_REVIEWERS': ''}):
+        with pytest.raises(MalformedDocError):
+            users_router.get_user_subscription_endpoint(uid='uid-corrupt', x_app_platform='ios', x_app_version='1.0.0')

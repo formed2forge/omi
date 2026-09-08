@@ -9955,4 +9955,8 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       '¡Gracias por ser uno de los primeros en apoyar a omi! Puedes quedarte en tu plan heredado de forma indefinida. Ten en cuenta, eso sí, que estos planes heredados ya no se venden y no se pueden elegir si cambias a otro plan.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Puede que haya un problema con tu plan. Ponte en contacto con el soporte para asegurarte de que no haya interrupciones en tu servicio.';
 }

@@ -9962,4 +9962,8 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get legacyPlanSupporterNote =>
       'Hvala, ker ste zgodnji podpornik omi! Na podedovanem paketu lahko ostanete neomejeno dolgo. Upoštevajte pa, da se ti podedovani paketi ne prodajajo več in jih po prehodu na drug paket ni mogoče znova izbrati.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Morda je prišlo do težave z vašim paketom. Obrnite se na podporo, da ne pride do prekinitve storitve.';
 }
