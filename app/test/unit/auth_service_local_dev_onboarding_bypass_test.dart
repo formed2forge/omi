@@ -23,11 +23,7 @@ void main() {
       await expectLater(
         AuthService.instance.signInWithLocalDevOnboardingBypass(),
         throwsA(
-          isA<StateError>().having(
-            (e) => e.message,
-            'message',
-            contains('only available in the local_dev profile'),
-          ),
+          isA<StateError>().having((e) => e.message, 'message', contains('only available in the local_dev profile')),
         ),
       );
     });

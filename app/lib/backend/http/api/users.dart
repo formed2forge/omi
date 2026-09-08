@@ -496,12 +496,7 @@ class SubscriptionFetchException implements Exception {
 /// production path always goes through [makeApiCall].
 Future<UserSubscriptionResponse> getUserSubscription({Future<http.Response?> Function()? httpCall}) async {
   final response = await (httpCall ??
-      () => makeApiCall(
-            url: '${Env.apiBaseUrl}v1/users/me/subscription',
-            headers: {},
-            method: 'GET',
-            body: '',
-          ))();
+      () => makeApiCall(url: '${Env.apiBaseUrl}v1/users/me/subscription', headers: {}, method: 'GET', body: ''))();
   return decodeUserSubscriptionResponse(response);
 }
 

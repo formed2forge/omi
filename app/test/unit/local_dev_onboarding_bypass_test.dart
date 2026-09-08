@@ -9,52 +9,31 @@ void main() {
     // Shared contract: contracts/parity/local_dev_onboarding_bypass.json's
     // gate_cases — every platform's gate must agree on this exact truth table.
     test('production_default', () {
-      expect(
-        resolveLocalDevOnboardingBypassActive(localDevProfileActive: false, bypassFlagValue: null),
-        isFalse,
-      );
+      expect(resolveLocalDevOnboardingBypassActive(localDevProfileActive: false, bypassFlagValue: null), isFalse);
     });
 
     test('local_dev_no_flag', () {
-      expect(
-        resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: null),
-        isFalse,
-      );
+      expect(resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: null), isFalse);
     });
 
     test('local_dev_flag_explicit_off', () {
-      expect(
-        resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: '0'),
-        isFalse,
-      );
+      expect(resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: '0'), isFalse);
     });
 
     test('local_dev_flag_on', () {
-      expect(
-        resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: '1'),
-        isTrue,
-      );
+      expect(resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: '1'), isTrue);
     });
 
     test('production_flag_on_is_still_refused', () {
-      expect(
-        resolveLocalDevOnboardingBypassActive(localDevProfileActive: false, bypassFlagValue: '1'),
-        isFalse,
-      );
+      expect(resolveLocalDevOnboardingBypassActive(localDevProfileActive: false, bypassFlagValue: '1'), isFalse);
     });
 
     test('malformed_flag_value_refused', () {
-      expect(
-        resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: 'yes'),
-        isFalse,
-      );
+      expect(resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: 'yes'), isFalse);
     });
 
     test('whitespace_flag_value_refused', () {
-      expect(
-        resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: '  1  '),
-        isFalse,
-      );
+      expect(resolveLocalDevOnboardingBypassActive(localDevProfileActive: true, bypassFlagValue: '  1  '), isFalse);
     });
   });
 

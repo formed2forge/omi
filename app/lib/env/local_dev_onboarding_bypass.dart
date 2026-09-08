@@ -34,10 +34,7 @@ const String kLocalDevFixtureDisplayName = 'Local Dev';
 /// value are required. Any other flag value (empty, "0", "yes", whitespace-
 /// padded) is treated as off — no fuzzy matching. See contracts/parity/
 /// local_dev_onboarding_bypass.json's gate_cases for the full truth table.
-bool resolveLocalDevOnboardingBypassActive({
-  required bool localDevProfileActive,
-  required String? bypassFlagValue,
-}) {
+bool resolveLocalDevOnboardingBypassActive({required bool localDevProfileActive, required String? bypassFlagValue}) {
   if (!localDevProfileActive) return false;
   return bypassFlagValue == '1';
 }

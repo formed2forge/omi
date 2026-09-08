@@ -66,9 +66,7 @@ Map<String, dynamic> _snapshotJson({required String plan, required String status
 /// Wires a canned HTTP response through the production fetch function.
 void _respondWith(UsageProvider provider, http.Response response) {
   final client = MockClient((_) async => response);
-  provider.subscriptionFetcher = () => getUserSubscription(
-        httpCall: () => client.get(Uri.parse(_subscriptionUrl)),
-      );
+  provider.subscriptionFetcher = () => getUserSubscription(httpCall: () => client.get(Uri.parse(_subscriptionUrl)));
 }
 
 void main() {
@@ -134,10 +132,7 @@ void main() {
 
     test('the unknown-plan 200 loads as an unknown plan, not a silent Free', () async {
       final provider = UsageProvider();
-      _respondWith(
-        provider,
-        http.Response(jsonEncode(_snapshotJson(plan: 'unknown', status: 'inactive')), 200),
-      );
+      _respondWith(provider, http.Response(jsonEncode(_snapshotJson(plan: 'unknown', status: 'inactive')), 200));
 
       await provider.fetchSubscription();
 
@@ -150,10 +145,7 @@ void main() {
 
     test('a recognized plan still loads normally', () async {
       final provider = UsageProvider();
-      _respondWith(
-        provider,
-        http.Response(jsonEncode(_snapshotJson(plan: 'unlimited', status: 'active')), 200),
-      );
+      _respondWith(provider, http.Response(jsonEncode(_snapshotJson(plan: 'unlimited', status: 'active')), 200));
 
       await provider.fetchSubscription();
 

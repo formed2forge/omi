@@ -34,9 +34,7 @@ Widget buildTestApp(Widget child) {
 void main() {
   group('Unknown plan card (Defect 2 regression)', () {
     testWidgets('shows the contact-support message, not a blank space', (tester) async {
-      await tester.pumpWidget(
-        buildTestApp(Scaffold(body: PlanErrorCard(unknownPlan: true, onRetry: () {}))),
-      );
+      await tester.pumpWidget(buildTestApp(Scaffold(body: PlanErrorCard(unknownPlan: true, onRetry: () {}))));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('plan_usage_error_card')), findsOneWidget);
@@ -58,13 +56,11 @@ void main() {
       // the support action is the real recovery and must always be present.
       var contacted = false;
       await tester.pumpWidget(
-        buildTestApp(Scaffold(
-          body: PlanErrorCard(
-            unknownPlan: true,
-            onRetry: () {},
-            onContactSupport: () async => contacted = true,
+        buildTestApp(
+          Scaffold(
+            body: PlanErrorCard(unknownPlan: true, onRetry: () {}, onContactSupport: () async => contacted = true),
           ),
-        )),
+        ),
       );
       await tester.pumpAndSettle();
 

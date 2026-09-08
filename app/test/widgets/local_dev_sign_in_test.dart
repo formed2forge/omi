@@ -11,14 +11,20 @@ void main() {
   Widget host({required Future<void> Function(String) signIn, bool loading = false}) => MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(body: LocalDevSignIn(loading: loading, onSignIn: signIn)),
+        home: Scaffold(
+          body: LocalDevSignIn(loading: loading, onSignIn: signIn),
+        ),
       );
   testWidgets('selects and submits a seeded pricing user', (tester) async {
     F.env = Environment.dev;
     String? selected;
-    await tester.pumpWidget(host(signIn: (uid) async {
-      selected = uid;
-    }));
+    await tester.pumpWidget(
+      host(
+        signIn: (uid) async {
+          selected = uid;
+        },
+      ),
+    );
     await tester.tap(find.byKey(const ValueKey('local-dev-sign-in')));
     await tester.pumpAndSettle();
     expect(find.text('pricing_plus'), findsOneWidget);
