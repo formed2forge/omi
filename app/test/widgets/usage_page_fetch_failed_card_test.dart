@@ -37,7 +37,8 @@ Widget buildTestApp(Widget child) {
 // ---------------------------------------------------------------------------
 
 class FetchFailedCardHarness extends StatelessWidget {
-  const FetchFailedCardHarness({super.key, required this.subscriptionIsNull, required this.error, required this.onRetry});
+  const FetchFailedCardHarness(
+      {super.key, required this.subscriptionIsNull, required this.error, required this.onRetry});
   final bool subscriptionIsNull;
   final String? error;
   final VoidCallback onRetry;

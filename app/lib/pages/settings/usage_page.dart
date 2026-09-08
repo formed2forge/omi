@@ -330,8 +330,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
       ),
       body: Consumer<UsageProvider>(
         builder: (context, provider, child) {
-          final hasAnyData =
-              provider.todayUsage != null ||
+          final hasAnyData = provider.todayUsage != null ||
               provider.monthlyUsage != null ||
               provider.yearlyUsage != null ||
               provider.allTimeUsage != null;
@@ -459,9 +458,8 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
     // price-id match is what testers (and subscribers) see as the real title.
     final view = currentPlanView(subscription: response.subscription, catalog: response.availablePlans);
     final planLabel = view.titled(legacySuffix: context.l10n.legacyPlanTitleSuffix);
-    final planDescription = view.description.isNotEmpty
-        ? view.description
-        : (!isPaid ? context.l10n.basicPlanDescription : '');
+    final planDescription =
+        view.description.isNotEmpty ? view.description : (!isPaid ? context.l10n.basicPlanDescription : '');
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -1245,8 +1243,8 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
                 builder: (context) {
                   final minutesUsed = (subscription.transcriptionSecondsUsed / 60).round();
                   final minutesLimit = (subscription.transcriptionSecondsLimit / 60).round();
-                  final percentage = (subscription.transcriptionSecondsUsed / subscription.transcriptionSecondsLimit)
-                      .clamp(0.0, 1.0);
+                  final percentage =
+                      (subscription.transcriptionSecondsUsed / subscription.transcriptionSecondsLimit).clamp(0.0, 1.0);
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
