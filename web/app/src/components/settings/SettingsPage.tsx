@@ -891,10 +891,25 @@ function UnknownPlanCard() {
         </div>
         <div>
           <h3 className="text-lg font-semibold text-text-primary">Plan unavailable</h3>
+          {/*
+            The account may still be actively paying, so this must not imply
+            cancellation or invite a second purchase (that risks a double
+            charge). Retrying cannot resolve an unrecognized plan either, so the
+            support link is the real recovery and is always shown.
+          */}
           <p className="text-sm text-text-tertiary mt-1">
-            This account uses a plan that this version of Omi does not recognize yet.
-            Plan features are unavailable until the plan can be identified.
+            There may be an issue with your plan, please contact support to ensure there
+            is no interruption in your service.
           </p>
+          <a
+            href="https://help.omi.me"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors"
+          >
+            Help Center
+            <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
       </div>
     </Card>

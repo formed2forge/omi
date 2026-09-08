@@ -149,6 +149,15 @@ export const LEGACY_PLAN_TITLE_SUFFIX = ' (Legacy Plan)'
 export const LEGACY_SUPPORTER_NOTE =
   'Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan.'
 
+/**
+ * Shown when the plan identity cannot be resolved — a plan newer than this
+ * build, or the backend's `unknown` sentinel for a stored plan it could not
+ * resolve either. The account may still be actively paying, so this must never
+ * imply cancellation or invite a second purchase.
+ */
+export const UNKNOWN_PLAN_SUPPORT_NOTE =
+  'There may be an issue with your plan, please contact support to ensure there is no interruption in your service.'
+
 const KEEP_UNTIL_CANCEL_PLAN_IDS = new Set([
   'unlimited',
   'unlimited_v2',
@@ -262,7 +271,7 @@ export function currentPlanDescription(
     if (description) return description
   }
   const planId = owning?.id ?? canonicalPlanId(sub.plan)
-  if (!planId) return ''
+  if (!planId) return UNKNOWN_PLAN_SUPPORT_NOTE
   return PLAN_FALLBACKS[planId]?.description ?? ''
 }
 

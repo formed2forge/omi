@@ -11,6 +11,7 @@ import {
   currentPlanDescription,
   isKeepUntilCancelPlan,
   LEGACY_SUPPORTER_NOTE,
+  UNKNOWN_PLAN_SUPPORT_NOTE,
   chatQuotaView,
   quotaResetText,
   orderedCatalog,
@@ -305,6 +306,14 @@ describe('current-plan description and legacy label', () => {
       false
     )
     expect(LEGACY_SUPPORTER_NOTE).toContain('early supporter')
+  })
+  it('points an unresolvable plan at support without implying cancellation', () => {
+    // The account may still be actively paying, so the copy must not suggest
+    // re-subscribing: that risks a double charge.
+    const description = currentPlanDescription(sub({ plan: 'unknown' }), [])
+    expect(description).toBe(UNKNOWN_PLAN_SUPPORT_NOTE)
+    expect(description).toContain('contact support')
+    expect(description.toLowerCase()).not.toContain('cancel')
   })
   it('describes Free, Plus, and Pro so current plans can be compared', () => {
     expect(currentPlanDescription(sub({ plan: 'basic' }), [])).toContain('30 chat')
