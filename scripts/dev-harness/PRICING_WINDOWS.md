@@ -48,7 +48,27 @@ VITE_OMI_APP_PROFILE=local_dev
 VITE_OMI_API_BASE=http://<mac-host>:8000
 VITE_FIREBASE_AUTH_EMULATOR_HOST=<mac-host>
 VITE_FIREBASE_AUTH_EMULATOR_PORT=9099
+VITE_FIREBASE_API_KEY=local-firebase-auth-emulator-api-key
+VITE_FIREBASE_PROJECT_ID=demo-omi-local
+VITE_FIREBASE_AUTH_DOMAIN=demo-omi-local.firebaseapp.com
 ```
+
+**The last three are required and their absence fails silently.** Unlike the
+local-dev block above, they are read at module init by `initializeApp` in
+`src/renderer/src/lib/firebase.ts` (~line 77) with no guard, so if they are
+unset `initializeApp` throws `auth/invalid-api-key` out of module init, the
+React mount dies, and the window renders as a **blank `#0f0f0f` panel with no
+error UI at all** — no Login screen, no missing-config message. Found the hard
+way during the 2026-09-09 Electron-on-Mac pricing pass, diagnosed only via the
+Chrome DevTools Protocol (`Runtime.exceptionThrown`). The values above are the
+same ones the macOS harness launcher already uses
+(`scripts/dev-harness/dev_harness/desktop_profile.py`); on the same machine as
+the harness use `127.0.0.1` for `<mac-host>`.
+
+Note the asymmetry, because it is what makes this confusing: the *documented*
+local-dev vars genuinely do fail closed with a helpful message (see below, and
+the comment at `firebase.ts` line 41 explaining that choice), but the three
+Firebase core vars do not participate in that mechanism.
 
 Leaving `VITE_OMI_APP_PROFILE` unset (or anything other than `local_dev`) keeps
 the app on its normal production/cloud OAuth behavior with no Developer
