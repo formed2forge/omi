@@ -777,7 +777,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
                 title: context.l10n.remembering,
                 value: '${numberFormatter.format(stats.memoriesCreated)} ${context.l10n.memories}',
                 subtitle: context.l10n.rememberingSubtitle,
-                color: Colors.purple.shade300,
+                color: Colors.grey.shade300,
                 subscription: provider.subscription,
               ),
               if (provider.chatQuotaUnit != null && period == 'monthly') ...[
@@ -877,7 +877,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
         processedHistory = List.from(history);
     }
 
-    final metricColors = [Colors.blue.shade300, Colors.green.shade300, Colors.orange.shade300, Colors.purple.shade300];
+    final metricColors = [Colors.blue.shade300, Colors.green.shade300, Colors.orange.shade300, Colors.grey.shade300];
 
     double maxY = 0;
     for (var point in processedHistory) {
@@ -1073,7 +1073,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
       {'color': Colors.blue.shade300, 'text': context.l10n.listeningMins},
       {'color': Colors.green.shade300, 'text': context.l10n.understandingWords},
       {'color': Colors.orange.shade300, 'text': context.l10n.insights},
-      {'color': Colors.purple.shade300, 'text': context.l10n.memories},
+      {'color': Colors.grey.shade300, 'text': context.l10n.memories},
     ];
 
     return Wrap(
