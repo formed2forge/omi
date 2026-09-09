@@ -29,6 +29,72 @@ make seed-pricing-scenario SCENARIO=plan_catalog_matrix
 both the Python API (port 8000) and the Firebase Auth emulator (port 9099).
 The Windows machine must be able to reach both ports through the Mac firewall.
 
+### 1a. Run a second, isolated instance (when the default is in use)
+
+Use this when the default instance is already running something you must not
+disturb — e.g. a Stripe-connected overlay backend whose canceled/lapsed
+fixtures have since been recovered to paid. Reseeding that instance destroys
+the recovery evidence, and pointing display QA at it silently invalidates
+every canceled/lapsed case: the fixture renders as an active paid plan, the
+screenshot looks clean, and the layout assertions still pass.
+
+`OMI_LOCAL_INSTANCE` selects a separate state root
+(`.local/dev-harness/<instance>/` — its own emulator data, logs and
+manifests) and `OMI_HARNESS_PORT_OFFSET` shifts every service port, so both
+instances run side by side:
+
+```bash
+export OMI_LOCAL_INSTANCE=windows-qa   # ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$
+export OMI_HARNESS_PORT_OFFSET=100     # integer, 0–50000
+export OMI_DEV_HOST="$(tailscale ip -4 | head -1)"
+export PROVIDER_MODE=offline
+make dev-up
+```
+
+Each port is its default plus the offset (`dev_harness/config.py`), so an
+offset of 100 gives:
+
+| Service | Default | +100 |
+|---|---|---|
+| backend | 8000 | 8100 |
+| firebase auth | 9099 | 9199 |
+| firestore | 8085 | 8185 |
+| redis | 6380 | 6480 |
+| typesense | 8108 | 8208 |
+| llm gateway | 9080 | 9180 |
+| desktop backend | 10201 | 10301 |
+
+A single service can be pinned instead with `OMI_HARNESS_<SERVICE>_PORT`
+(`FIRESTORE`, `AUTH`, `BACKEND`, `DESKTOP_BACKEND`, `REDIS`, `TYPESENSE`,
+`LLM_GATEWAY`).
+
+**Export the same `OMI_LOCAL_INSTANCE` and `OMI_HARNESS_PORT_OFFSET` for every
+later command in the same shell.** `make dev-status`, `make
+seed-pricing-scenario`, `make reset-pricing-scenario` and `make dev-down` all
+resolve their state root and ports from those two variables. Running `make
+dev-down` without them tears down the **default** instance — the one you were
+protecting.
+
+Seeding is additive, and `reset-pricing-scenario` deletes only its own
+scenario's users, so scenarios with disjoint uids coexist on one instance.
+The seven uids in the narrow retest span three:
+
+```bash
+make seed-pricing-scenario SCENARIO=plan_catalog_matrix
+make seed-pricing-scenario SCENARIO=cancellation_and_downgrade_safety
+make seed-pricing-scenario SCENARIO=legacy_and_unknown_plan_resilience
+```
+
+Point the Windows `.env` at the offset ports, then confirm the isolation
+**from the Windows machine** rather than from the Mac: the protected
+instance's ports should be unreachable (it binds loopback-only unless its own
+`OMI_DEV_HOST` was set) while the offset ports answer. Tear down only your
+instance when finished:
+
+```bash
+OMI_LOCAL_INSTANCE=windows-qa OMI_HARNESS_PORT_OFFSET=100 make dev-down
+```
+
 ## 2. Configure the Windows app for local-dev
 
 On Windows, use Node 22 and pnpm 10:
@@ -120,6 +186,52 @@ To test another uid: sign out (clears the emulator session and local
 persisted auth state) and sign in again with a different uid. Restarting the
 app restores the same emulator session without re-entering a uid, same as the
 normal OAuth path.
+
+### Verify the signed-in uid and its fixture
+
+A screenshot proves layout, not identity. Check both the authenticated uid
+**and** its subscription payload before trusting any capture — two distinct
+failures each yield a plausible-looking Free card:
+
+- `/v1/auth/local-dev/custom-token` takes **form-encoded** fields
+  (`uid: str = Form("local-dev-user")` in `backend/routers/auth.py`), not
+  JSON. A JSON body is ignored without error and the endpoint falls back to
+  its default `local-dev-user`, so every identity signs in as the same
+  unseeded account and reads back as Free.
+- The endpoint **creates** any uid the emulator does not already have
+  (`UserNotFoundError` → `create_user`). A typo'd or unseeded uid therefore
+  succeeds and returns a token for exactly that uid — the uid check passes
+  and the account is still empty.
+
+The uid check alone catches the first but not the second, so assert the
+fixture data too:
+
+```bash
+API=127.0.0.1:8100; AUTH=127.0.0.1:9199   # offset ports from step 1a
+KEY=local-firebase-auth-emulator-api-key
+UID=pricing_plus_cancel_at_period_end
+
+TOKEN=$(curl -s -X POST "http://$API/v1/auth/local-dev/custom-token" \
+  -d "uid=$UID" | python3 -c 'import sys,json;print(json.load(sys.stdin)["custom_token"])')
+
+ID=$(curl -s -X POST \
+  "http://$AUTH/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=$KEY" \
+  -H 'Content-Type: application/json' \
+  -d "{\"token\":\"$TOKEN\",\"returnSecureToken\":true}" \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["idToken"])')
+
+curl -s "http://$API/v1/users/me/subscription" -H "Authorization: Bearer $ID"
+```
+
+`curl -d` sends `application/x-www-form-urlencoded`, which is the point.
+Decode the `user_id` claim of `$ID` and require it to equal `$UID`, then
+require the response to match the fixture — for the uid above,
+`cancel_at_period_end: true` with `current_price_id:
+price_local_plus_month`. A `price_local_*` id also confirms you are on
+baseline display fixtures rather than a Stripe-connected instance.
+
+Resolve the expected title from `current_price_id`, not `plan` — see the Wire
+trap above.
 
 For the other scenarios, reseed before signing in again:
 
