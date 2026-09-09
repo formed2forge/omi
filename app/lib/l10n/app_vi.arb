@@ -3241,5 +3241,18 @@
     "conversationsNotCapturedCount": "Không được ghi âm ({count})",
     "transcriptionNoAudio": "Bản ghi âm không nhận được âm thanh",
     "couldNotLoadMemories": "Không thể tải ký ức",
-    "couldNotLoadKnowledgeGraph": "Không thể tải đồ thị tri thức"
+    "couldNotLoadKnowledgeGraph": "Không thể tải đồ thị tri thức",
+    "legacyPlanTitleSuffix": " (Gói cũ)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Cảm ơn bạn đã là người ủng hộ sớm của omi! Bạn có thể ở lại gói cũ vô thời hạn. Lưu ý rằng các gói cũ này không còn được bán và không thể chọn lại nếu bạn chuyển sang gói khác.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    },
+    "planIssueContactSupport": "Có thể có sự cố với gói dịch vụ của bạn. Vui lòng liên hệ bộ phận hỗ trợ để đảm bảo dịch vụ của bạn không bị gián đoạn.",
+    "planLapseCancellationScheduled": "Gói của bạn sẽ kết thúc vào {date}. Bạn vẫn có toàn quyền truy cập cho đến lúc đó.",
+    "planLapseAccessEnded": "Quyền truy cập trả phí của bạn đã kết thúc.",
+    "memoryHistoryPartial": "Một số lịch sử ký ức không khả dụng. Đang hiển thị lịch sử đã nhận được cho đến nay.",
+    "tapPlusToStartRecording": "Nhấn + để bắt đầu ghi âm"
 }

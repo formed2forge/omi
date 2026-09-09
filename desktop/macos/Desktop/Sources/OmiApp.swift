@@ -25,12 +25,6 @@ enum LaunchMode: String {
   }
 }
 
-// MARK: - Dev Flags
-/// Check for --skip-onboarding flag to bypass onboarding during development
-func shouldSkipOnboarding() -> Bool {
-  return CommandLine.arguments.contains("--skip-onboarding")
-}
-
 // Simple observable state without Firebase types
 @MainActor
 class AuthState: ObservableObject {

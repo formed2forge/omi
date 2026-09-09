@@ -849,7 +849,8 @@ def test_unknown_tier_falls_back_to_free_row_without_raising(monkeypatch):
     [
         (desktop_proactivity.PlanType.basic, 60, 150),
         (desktop_proactivity.PlanType.operator, 500, 1000),
-        (desktop_proactivity.PlanType.architect, 1000, 2000),
+        (desktop_proactivity.PlanType.plus, 500, 1000),
+        (desktop_proactivity.PlanType.pro_v2, 1000, 2000),
     ],
 )
 def test_quota_limit_scales_from_server_verified_subscription(plan, reasoning_limit, extraction_limit):

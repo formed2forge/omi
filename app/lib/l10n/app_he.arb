@@ -10802,5 +10802,18 @@
     "conversationsNotCapturedCount": "לא הוקלט ({count})",
     "transcriptionNoAudio": "התמליל אינו מקבל שמע",
     "couldNotLoadMemories": "לא ניתן לטעון את הזיכרונות",
-    "couldNotLoadKnowledgeGraph": "לא ניתן לטעון את גרף הידע"
+    "couldNotLoadKnowledgeGraph": "לא ניתן לטעון את גרף הידע",
+    "legacyPlanTitleSuffix": " (תוכנית ישנה)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "תודה שהייתם מהתומכים המוקדמים של omi! אפשר להישאר בתוכנית הישנה ללא הגבלת זמן. שימו לב עם זאת שתוכניות ישנות אלה כבר לא נמכרות ולא ניתן לבחור אותן אם עוברים לתוכנית אחרת.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    },
+    "planIssueContactSupport": "ייתכן שיש בעיה בתוכנית שלך. אנא פנה לתמיכה כדי לוודא שלא תהיה הפרעה בשירות שלך.",
+    "planLapseCancellationScheduled": "התוכנית שלך תסתיים בתאריך {date}. תשמור על גישה מלאה עד אז.",
+    "planLapseAccessEnded": "הגישה בתשלום שלך הסתיימה.",
+    "memoryHistoryPartial": "חלק מהיסטוריית הזיכרונות אינו זמין. מוצגת ההיסטוריה שהתקבלה עד כה.",
+    "tapPlusToStartRecording": "הקש על + כדי להתחיל בהקלטה"
 }

@@ -2044,7 +2044,7 @@ class AppLocalizationsBe extends AppLocalizations {
   String get memoryDeleted => 'Спамін выдалена.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Частка гісторыі ўспамінаў недаступная. Паказана гісторыя, атрыманая дагэтуль.';
 
   @override
   String get undo => 'Адмяніць';
@@ -9949,11 +9949,30 @@ class AppLocalizationsBe extends AppLocalizations {
   String get transcriptionNoAudio => 'Транскрыпцыя не атрымлівае аўдыё';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Націсніце +, каб пачаць запіс';
 
   @override
   String get couldNotLoadMemories => 'Не ўдалося загрузіць успаміны';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Не ўдалося загрузіць граф ведаў';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (састарэлы план)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Дзякуй, што вы адзін з ранніх прыхільнікаў omi! Вы можаце заставацца на сваім састарэлым плане бестэрмінова. Звярніце ўвагу: гэтыя састарэлыя планы больш не прадаюцца і іх нельга выбраць, калі вы пераключыцеся на іншы план.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Магчыма, узнікла праблема з вашым тарыфным планам. Калі ласка, звярніцеся ў службу падтрымкі, каб пазбегнуць перапынку ў абслугоўванні.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Ваш план скончыцца $date. Вы захаваеце поўны доступ да гэтага часу.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Ваш платны доступ скончыўся.';
 }

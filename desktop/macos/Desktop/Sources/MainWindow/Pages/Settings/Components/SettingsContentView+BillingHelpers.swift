@@ -4,12 +4,327 @@ import SwiftUI
 import UniformTypeIdentifiers
 import WebKit
 
+/// Single edit point for the Operator price quoted in the deprecation-banner
+/// fallback (used only when the backend omits `deprecationMessage`).
+let operatorDeprecationFallbackPrice = "$49/mo"
+
 enum SubscriptionPlanPresentation {
+  static let purchaseOrder = ["plus": 0, "pro_v2": 1]
+  static let keepUntilCancelPlanIds: Set<String> = [
+    "unlimited", "unlimited_v2", "operator", "architect",
+  ]
+  static let legacyPlanTitleSuffix = " (Legacy Plan)"
+  static let legacySupporterNote =
+    "Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan."
+  /// Shown when the plan identity cannot be resolved — a plan newer than this
+  /// build, or the backend's `unknown` sentinel for a stored plan it could not
+  /// resolve either. The account may still be actively paying, so this must
+  /// never imply cancellation or invite a second purchase.
+  static let unknownPlanSupportNote =
+    "There may be an issue with your plan, please contact support to ensure there is no interruption in your service."
+  /// Subtitle for the same unknown-plan state as `unknownPlanSupportNote`. Deliberately
+  /// distinct wording — the body already renders the support note directly below this
+  /// subtitle, so repeating that sentence here would read as a stutter on screen. This
+  /// must not assert a Free or paid tier: the plan identity itself could not be resolved.
+  static let unknownPlanSubtitle = "We couldn't confirm your plan."
+
+  static func isPurchasablePlan(id: String) -> Bool {
+    purchaseOrder[id] != nil
+  }
+
   static func selectionLabel(planTitle: String, startingPrice: String?) -> String {
     guard let startingPrice, !startingPrice.isEmpty else {
       return "Select \(planTitle)"
     }
     return "Select \(planTitle) · \(startingPrice)"
+  }
+
+  /// Catalog row that owns `currentPriceId`. The backend serializes Plus, Pro,
+  /// and Operator as `plan=unlimited` for old-mobile compatibility; matching by
+  /// price id is how Settings recovers the title the user actually bought.
+  static func owningCatalogPlan(
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> SubscriptionPlanOption? {
+    guard let currentPriceId, !currentPriceId.isEmpty else { return nil }
+    return catalog.first { plan in
+      plan.prices.contains { $0.id == currentPriceId }
+    }
+  }
+
+  static func isKeepUntilCancelPlan(
+    plan: SubscriptionPlanType,
+    features: [String],
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> Bool {
+    if features.contains("byok") {
+      return false
+    }
+    if let owning = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog) {
+      if owning.legacy == true {
+        return true
+      }
+      return keepUntilCancelPlanIds.contains(owning.id)
+    }
+    return keepUntilCancelPlanIds.contains(plan.rawValue)
+  }
+
+  static func titledWithLegacySuffix(_ title: String, isLegacy: Bool) -> String {
+    guard isLegacy else { return title }
+    if title.hasSuffix(legacyPlanTitleSuffix) {
+      return title
+    }
+    return title + legacyPlanTitleSuffix
+  }
+
+  static func currentPlanTitle(
+    plan: SubscriptionPlanType,
+    features: [String],
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> String {
+    if features.contains("byok") {
+      return "Free (BYOK)"
+    }
+    let baseTitle: String
+    if let catalogTitle = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog)?.title {
+      baseTitle = catalogTitle
+    } else {
+      switch plan {
+      case .basic:
+        baseTitle = "Free"
+      case .plus:
+        baseTitle = "Plus"
+      case .proV2:
+        baseTitle = "Pro"
+      case .unlimited:
+        baseTitle = "Neo"
+      case .unlimitedV2:
+        baseTitle = "Unlimited"
+      case .architect, .pro:
+        baseTitle = "Architect"
+      case .operator:
+        baseTitle = "Operator"
+      case .unknown:
+        baseTitle = plan.displayName
+      }
+    }
+    return titledWithLegacySuffix(
+      baseTitle,
+      isLegacy: isKeepUntilCancelPlan(
+        plan: plan, features: features, currentPriceId: currentPriceId, catalog: catalog)
+    )
+  }
+
+  static func fallbackDescription(for planId: String) -> String {
+    switch planId {
+    case "basic":
+      return
+        "30 chat questions per month. 300 minutes of transcription per month, then on-device. Shared with mobile and web."
+    case "plus":
+      return
+        "200 chat questions per month. 1,500 minutes of transcription per month, then on-device. Full desktop, mobile, and web access."
+    case "pro_v2":
+      return "1,000 chat questions per month. Full desktop, mobile, and web access."
+    case "unlimited":
+      return "200 chat questions per month. Unlimited transcription. Desktop capture with Free-tier allowance."
+    case "unlimited_v2":
+      return "Unlimited transcription — record all day."
+    case "operator":
+      return "500 chat questions per month. Shared with mobile and web."
+    case "architect":
+      return "Power-user AI for heavy agentic workflows and vibe coding."
+    default:
+      return ""
+    }
+  }
+
+  static func currentPlanDescription(
+    plan: SubscriptionPlanType,
+    features: [String],
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> String {
+    if features.contains("byok") {
+      return "Your own API keys. Cloud transcription and chat still follow the Free plan."
+    }
+    if case .unknown = plan {
+      return unknownPlanSupportNote
+    }
+    if let owning = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog) {
+      if let description = owning.description?.trimmingCharacters(in: .whitespacesAndNewlines),
+        !description.isEmpty
+      {
+        return description
+      }
+      return fallbackDescription(for: owning.id)
+    }
+    return fallbackDescription(for: plan.rawValue)
+  }
+
+  /// Mirrors `currentPlanDescription`'s unknown-plan guard: an unresolved plan must not
+  /// be presented as a specific tier (Free or paid) in either the description or the
+  /// subtitle. `plan` is optional because the instance caller has not unwrapped
+  /// `userSubscription?.subscription` yet — passing `nil` (no subscription loaded, not
+  /// loading) intentionally falls through to the pre-existing "free tier" copy, matching
+  /// `currentPlanTitle`'s own no-subscription fallback.
+  static func currentPlanSubtitle(
+    isLoadingSubscription: Bool,
+    plan: SubscriptionPlanType?,
+    billingDetail: String?,
+    hasPaidSubscription: Bool
+  ) -> String {
+    if isLoadingSubscription {
+      return "Fetching subscription details from omi."
+    }
+    if case .unknown = plan {
+      return unknownPlanSubtitle
+    }
+    if let billingDetail {
+      return billingDetail
+    }
+    if hasPaidSubscription {
+      return "Your paid plan is active."
+    }
+    return "You are currently on the free tier."
+  }
+
+  static func currentPlanFeatures(
+    plan: SubscriptionPlanType,
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption],
+    fallback: (String) -> [String]
+  ) -> [String] {
+    if let owning = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog),
+      !owning.features.isEmpty
+    {
+      return Array(owning.features.prefix(4))
+    }
+    let planId = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog)?.id ?? plan.rawValue
+    return Array(fallback(planId).prefix(4))
+  }
+
+  static func isCurrentSubscriptionPlan(
+    _ plan: SubscriptionPlanOption,
+    currentPlan: SubscriptionPlanType,
+    currentPriceId: String?,
+    catalog: [SubscriptionPlanOption]
+  ) -> Bool {
+    if let owning = owningCatalogPlan(currentPriceId: currentPriceId, catalog: catalog) {
+      return owning.id == plan.id
+    }
+    if currentPlan == .operator && plan.id == "unlimited" {
+      return true
+    }
+    return currentPlan.rawValue == plan.id
+  }
+
+  /// Maps a raw Stripe price title to the internal plan id used to bucket prices
+  /// into the fallback catalog (`SettingsContentView.planCatalog(from:)`). Order
+  /// matters: more specific substrings (e.g. "unlimited_v2") must be checked
+  /// before the substrings they're contained in (e.g. "unlimited"), or two
+  /// distinct plans collapse into one fallback catalog entry.
+  static func normalizedPlanId(from title: String) -> String? {
+    let normalized = title.lowercased()
+    // "-", "_", and " " are treated as equivalent separators so this matches
+    // regardless of exactly how the backend/Stripe price nickname punctuates
+    // a multi-word plan name (e.g. "pro_v2", "pro-v2", "Pro v2").
+    let collapsed = normalized.replacingOccurrences(of: "-", with: " ")
+      .replacingOccurrences(of: "_", with: " ")
+    // Degraded price-fallback identity only. Descriptive copy comes from
+    // /v1/users/me/subscription's available_plans. Keep `pro` (Architect's
+    // wire alias) distinct from the new Pro SKU (`pro_v2`, display "Pro").
+    if collapsed.contains("pro v2") {
+      return "pro_v2"
+    }
+    if normalized.contains("plus") {
+      return "plus"
+    }
+    if normalized.contains("free") || normalized.contains("basic") {
+      return "basic"
+    }
+    // Check for Unlimited-v2 before "unlimited", which would otherwise match
+    // both "unlimited" and "unlimited_v2" titles and collapse them together.
+    if collapsed.contains("unlimited v2") {
+      return "unlimited_v2"
+    }
+    if normalized.contains("unlimited") || normalized.contains("neo") {
+      return "unlimited"
+    }
+    if normalized.contains("operator") {
+      return "operator"
+    }
+    if normalized.contains("architect") || normalized.contains("omi pro") {
+      return "architect"
+    }
+    if normalized == "pro" || normalized.hasPrefix("pro ") {
+      return "pro_v2"
+    }
+    return nil
+  }
+
+  /// The fallback-catalog bucket key for one backend price entry
+  /// (`SettingsContentView.planCatalog(from:)`). Prefers the backend's own
+  /// `plan_id` — always present on real responses (`PricingOption.plan_id` in
+  /// `backend/routers/payment.py`) — over parsing `title`.
+  ///
+  /// Title text is not a reliable discriminator between Neo and Unlimited-v2:
+  /// Unlimited-v2's own price title is literally "Unlimited Monthly" (its
+  /// catalog display name is "Unlimited", not "Unlimited v2" — see
+  /// `get_paid_plan_definitions()` — so no price title a real backend sends
+  /// ever contains the substring "v2"). `normalizedPlanId` maps both "Neo
+  /// Monthly" and "Unlimited Monthly" to the same "unlimited" bucket by
+  /// design (that's the legacy/keep-until-cancel Neo identity), which
+  /// silently collapsed Unlimited-v2's own prices into a "Neo"-titled
+  /// fallback entry sharing the same price ids as the correctly-labeled
+  /// "unlimited_v2" entry the primary (per-user) catalog already provides.
+  /// `owningCatalogPlan`'s `catalog.first` then resolved to whichever
+  /// same-price-id entry the merged dictionary happened to iterate first —
+  /// title, description, and features flip between Neo's and Unlimited-v2's
+  /// depending on that undefined order. Reading `plan_id` off the wire
+  /// removes the ambiguity at its source: only degrade to title parsing for
+  /// a backend that omits the field entirely.
+  static func catalogGroupingKey(for price: AvailablePlanPriceOption) -> String {
+    price.planId.isEmpty ? (normalizedPlanId(from: price.title) ?? "unknown") : price.planId
+  }
+
+  // MARK: - Subscription lapse notice
+
+  /// Neutral copy for `SubscriptionLapseState.accessEnded`. The backend's `reason` is
+  /// always `unknown` for this state (see `SubscriptionLapse` in APIClient+Settings.swift),
+  /// so this must never claim a specific cause ("your payment failed", "you cancelled",
+  /// "your subscription expired"). Also the fallback copy for `cancellationScheduled`
+  /// when the stored row proves the state without proving its date — matching the
+  /// Flutter implementation's `SubscriptionLapseNoticeCard`, which prefers this neutral
+  /// message over guessing a date.
+  static let lapseAccessEndedMessage = "Your paid access has ended."
+
+  /// Copy must match the Flutter implementation (`SubscriptionLapseNoticeCard`) exactly —
+  /// this is one product decision shared across platforms, not per-platform wording.
+  static func lapseNoticeMessage(for lapse: SubscriptionLapse, dateFormatter: DateFormatter) -> String {
+    switch lapse.state {
+    case .cancellationScheduled:
+      guard let effectiveAt = lapse.effectiveAt else { return lapseAccessEndedMessage }
+      let date = Date(timeIntervalSince1970: TimeInterval(effectiveAt))
+      return "Your plan will end on \(dateFormatter.string(from: date)). You'll keep full access until then."
+    case .accessEnded:
+      return lapseAccessEndedMessage
+    }
+  }
+
+  static func lapseNoticeTitle(for state: SubscriptionLapseState) -> String {
+    switch state {
+    case .cancellationScheduled: return "Plan Ending"
+    case .accessEnded: return "Access Ended"
+    }
+  }
+
+  static func lapseNoticeActionLabel(for state: SubscriptionLapseState) -> String {
+    switch state {
+    case .cancellationScheduled: return "Keep My Plan"
+    case .accessEnded: return "Resubscribe"
+    }
   }
 }
 
@@ -25,16 +340,15 @@ extension SettingsContentView {
   }
 
   var subscriptionPlansForDisplay: [SubscriptionPlanOption] {
-    // Operator (mass-market, green) on the left, Architect (premium, white accent)
-    // on the right. Hide the user's current plan — they already see it above.
-    // Neo ($20) | Operator ($49) | Architect ($200) — cheapest to premium
-    let order = ["unlimited": 0, "operator": 1, "architect": 2]
+    // The server-provided catalog owns plan availability and copy. The client only
+    // supplies the stable Plus/Pro display order for cards that are purchasable
+    // on this surface; legacy current plans remain visible through the current-plan card.
     return
       mergedPlanCatalog
-      .filter { !isCurrentSubscriptionPlan($0) }
+      .filter { SubscriptionPlanPresentation.isPurchasablePlan(id: $0.id) && !isCurrentSubscriptionPlan($0) }
       .sorted { lhs, rhs in
-        let lhsOrder = order[lhs.id, default: Int.max]
-        let rhsOrder = order[rhs.id, default: Int.max]
+        let lhsOrder = SubscriptionPlanPresentation.purchaseOrder[lhs.id, default: Int.max]
+        let rhsOrder = SubscriptionPlanPresentation.purchaseOrder[rhs.id, default: Int.max]
         if lhsOrder != rhsOrder {
           return lhsOrder < rhsOrder
         }
@@ -46,64 +360,66 @@ extension SettingsContentView {
     guard let subscription = userSubscription?.subscription else {
       return isLoadingSubscription ? "Loading plan..." : "Free"
     }
-    // BYOK users: the backend returns plan=unlimited to turn off metering
-    // but that's an implementation detail — to the user, they're on the
-    // free plan because they pay the providers directly, not Omi.
-    if subscription.features.contains("byok") {
-      return "Free (BYOK)"
+    return SubscriptionPlanPresentation.currentPlanTitle(
+      plan: subscription.plan,
+      features: subscription.features,
+      currentPriceId: subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )
+  }
+
+  var currentPlanIsKeepUntilCancel: Bool {
+    guard let subscription = userSubscription?.subscription else { return false }
+    return SubscriptionPlanPresentation.isKeepUntilCancelPlan(
+      plan: subscription.plan,
+      features: subscription.features,
+      currentPriceId: subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )
+  }
+
+  var currentPlanDescription: String {
+    guard let subscription = userSubscription?.subscription else {
+      return isLoadingSubscription
+        ? "" : SubscriptionPlanPresentation.fallbackDescription(for: "basic")
     }
-    switch subscription.plan {
-    case .basic:
-      return "Free"
-    case .plus:
-      return "Plus"
-    case .unlimited:
-      // Backend serializes Operator subscribers as plan="unlimited" for
-      // backward compat with old mobile builds that don't know the
-      // `operator` enum. Distinguish by matching current_price_id against
-      // an Operator-titled plan in the catalog.
-      if isCurrentSubscriptionOperator() {
-        return "Operator"
-      }
-      return "Neo"
-    case .unlimitedV2:
-      return "Unlimited"
-    case .architect, .pro:
-      return "Architect"
-    case .operator:
-      return "Operator"
-    case .unknown:
-      return subscription.plan.displayName
+    return SubscriptionPlanPresentation.currentPlanDescription(
+      plan: subscription.plan,
+      features: subscription.features,
+      currentPriceId: subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )
+  }
+
+  var currentPlanFeatureList: [String] {
+    guard let subscription = userSubscription?.subscription else {
+      return Self.fallbackFeatures(for: "basic")
     }
+    return SubscriptionPlanPresentation.currentPlanFeatures(
+      plan: subscription.plan,
+      currentPriceId: subscription.currentPriceId,
+      catalog: mergedPlanCatalog,
+      fallback: Self.fallbackFeatures(for:)
+    )
   }
 
   /// Returns true when the user's current Stripe price maps to a plan the
   /// backend is calling "Operator". Protects against the wire-level
   /// Operator→Unlimited remapping in `/v1/users/me/subscription`.
   func isCurrentSubscriptionOperator() -> Bool {
-    guard let subscription = userSubscription?.subscription,
-      let currentPriceId = subscription.currentPriceId
-    else { return false }
-    for plan in mergedPlanCatalog {
-      guard plan.title == "Operator" else { continue }
-      if plan.prices.contains(where: { $0.id == currentPriceId }) {
-        return true
-      }
-    }
-    return false
+    SubscriptionPlanPresentation.owningCatalogPlan(
+      currentPriceId: userSubscription?.subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )?.title == "Operator"
   }
 
   var currentPlanSubtitle: String {
-    if isLoadingSubscription {
-      return "Fetching subscription details from omi."
-    }
-    if let detail = currentPlanBillingDetail {
-      return detail
-    }
-    if hasPaidSubscription {
-      return "Your paid plan is active."
-    }
-    return "You are currently on the free tier."
+    SubscriptionPlanPresentation.currentPlanSubtitle(
+      isLoadingSubscription: isLoadingSubscription,
+      plan: userSubscription?.subscription.plan,
+      billingDetail: currentPlanBillingDetail,
+      hasPaidSubscription: hasPaidSubscription
+    )
   }
 
   var currentPlanBillingDetail: String? {
@@ -134,8 +450,21 @@ extension SettingsContentView {
     return "\(prefix) on \(formatter.string(from: date))"
   }
 
-  func planSubtitle(for planId: String) -> String? {
+  /// Same `.medium` date style as `currentPlanPeriodText`, reused for the lapse notice's
+  /// own effective-date copy.
+  var lapseDateFormatter: DateFormatter {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .none
+    return formatter
+  }
+
+  static func planSubtitle(for planId: String) -> String? {
     switch planId {
+    case "plus":
+      return "200 questions per month"
+    case "pro_v2":
+      return "1,000 questions per month"
     case "unlimited":
       return "200 questions per month"
     case "operator":
@@ -150,7 +479,7 @@ extension SettingsContentView {
   func planAccentColor(for planId: String) -> Color {
     // Architect is the premium white-accent tier; Operator + legacy Unlimited
     // are the mass-market green tier.
-    planId == "architect" ? Ink.accent : Ink.listeningGreen
+    planId == "pro_v2" || planId == "architect" ? Ink.accent : Ink.listeningGreen
   }
 
   func planSummaryText(for plan: SubscriptionPlanOption) -> String {
@@ -175,8 +504,12 @@ extension SettingsContentView {
     return prices.first
   }
 
-  func planEyebrow(for planId: String) -> String {
+  static func planEyebrow(for planId: String) -> String {
     switch planId {
+    case "plus":
+      return "For everyday use"
+    case "pro_v2":
+      return "For power users"
     case "unlimited":
       return "Starter"
     case "operator":
@@ -189,16 +522,13 @@ extension SettingsContentView {
   }
 
   func planDescription(for planId: String) -> String {
-    switch planId {
-    case "unlimited":
-      return "100 chat questions per month. Shared with mobile and web."
-    case "operator":
-      return "500 chat questions per month. Shared with mobile and web."
-    case "architect":
-      return "Power-user AI for heavy agentic workflows and vibe coding."
-    default:
-      return ""
+    if let catalogDescription = mergedPlanCatalog.first(where: { $0.id == planId })?.description {
+      let trimmed = catalogDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+      if !trimmed.isEmpty {
+        return trimmed
+      }
     }
+    return SubscriptionPlanPresentation.fallbackDescription(for: planId)
   }
 
   func sortedPrices(for plan: SubscriptionPlanOption) -> [SubscriptionPriceOption] {
@@ -216,13 +546,12 @@ extension SettingsContentView {
     guard hasPaidSubscription, let currentPlan = userSubscription?.subscription.plan else {
       return false
     }
-    if currentPlan == .operator && plan.id == "unlimited" {
-      return true
-    }
-    if currentPlan == .unlimited && plan.id == "operator" && isCurrentSubscriptionOperator() {
-      return true
-    }
-    return currentPlan.rawValue == plan.id
+    return SubscriptionPlanPresentation.isCurrentSubscriptionPlan(
+      plan,
+      currentPlan: currentPlan,
+      currentPriceId: userSubscription?.subscription.currentPriceId,
+      catalog: mergedPlanCatalog
+    )
   }
 
   var mergedPlanCatalog: [SubscriptionPlanOption] {
@@ -236,8 +565,22 @@ extension SettingsContentView {
     SubscriptionPlanCatalogMerger.merge(primary: primary, fallback: fallback)
   }
 
-  func fallbackFeatures(for planId: String) -> [String] {
+  static func fallbackFeatures(for planId: String) -> [String] {
     switch planId {
+    case "plus":
+      return [
+        "200 chat questions per month",
+        "1,500 minutes of cloud transcription, then on-device",
+        "Unlimited memories and insights",
+        "Shared with mobile and web",
+      ]
+    case "pro_v2":
+      return [
+        "1,000 chat questions per month",
+        "Unlimited cloud transcription",
+        "Unlimited memories and insights",
+        "Priority desktop AI features",
+      ]
     case "architect":
       return [
         "Automations and vibe coding",
@@ -257,6 +600,19 @@ extension SettingsContentView {
         "200 chat questions per month",
         "Unlimited listening and transcription",
         "Unlimited memories and insights",
+        "Desktop capture with Free-tier allowance",
+      ]
+    case "unlimited_v2":
+      return [
+        "Unlimited transcription",
+        "Unlimited memories and insights",
+        "Shared with mobile and web",
+      ]
+    case "basic":
+      return [
+        "30 chat questions per month",
+        "300 minutes of cloud transcription, then on-device",
+        "Unlimited memories",
         "Shared with mobile and web",
       ]
     default:
@@ -264,26 +620,9 @@ extension SettingsContentView {
     }
   }
 
-  func normalizedPlanId(from title: String) -> String? {
-    let normalized = title.lowercased()
-    // Match the three plan families by title keyword. Neo is the post-rename
-    // display name for the legacy "unlimited" plan and still maps to that id
-    // because Stripe/backend PlanType enum is unchanged.
-    if normalized.contains("unlimited") || normalized.contains("neo") {
-      return "unlimited"
-    }
-    if normalized.contains("operator") {
-      return "operator"
-    }
-    if normalized.contains("architect") || normalized.contains("pro") {
-      return "architect"
-    }
-    return nil
-  }
-
   func planCatalog(from prices: [AvailablePlanPriceOption]) -> [SubscriptionPlanOption] {
-    let groupedPrices = Dictionary(grouping: prices) { price in
-      normalizedPlanId(from: price.title) ?? "unknown"
+    let groupedPrices = Dictionary(grouping: prices) {
+      SubscriptionPlanPresentation.catalogGroupingKey(for: $0)
     }
 
     return groupedPrices.compactMap { planId, options in
@@ -291,8 +630,16 @@ extension SettingsContentView {
 
       let title: String
       switch planId {
+      case "basic":
+        title = "Free"
+      case "plus":
+        title = "Plus"
+      case "pro_v2":
+        title = "Pro"
       case "unlimited":
         title = "Neo"
+      case "unlimited_v2":
+        title = "Unlimited"
       case "operator":
         title = "Operator"
       case "architect":
@@ -313,7 +660,7 @@ extension SettingsContentView {
       return SubscriptionPlanOption(
         id: planId,
         title: title,
-        features: fallbackFeatures(for: planId),
+        features: Self.fallbackFeatures(for: planId),
         prices: mappedPrices
       )
     }
@@ -342,7 +689,7 @@ extension SettingsContentView {
             Circle()
               .fill(accent)
               .frame(width: 6, height: 6)
-            Text((plan.eyebrow ?? planEyebrow(for: plan.id)).uppercased())
+            Text((plan.eyebrow ?? Self.planEyebrow(for: plan.id)).uppercased())
               .scaledFont(size: OmiType.micro, weight: .bold)
               .foregroundColor(Ink.secondary)
               .tracking(0.8)
@@ -352,7 +699,7 @@ extension SettingsContentView {
             .scaledFont(size: OmiType.heading, weight: .bold)
             .foregroundColor(Ink.primary)
 
-          if let subtitle = plan.subtitle ?? planSubtitle(for: plan.id) {
+          if let subtitle = plan.subtitle ?? Self.planSubtitle(for: plan.id) {
             Text(subtitle)
               .scaledFont(size: OmiType.caption)
               .foregroundColor(Ink.secondary)
@@ -924,6 +1271,31 @@ extension SettingsContentView {
     }
 
     refreshPlanUsageDetails()
+  }
+
+  /// Reverses a scheduled cancellation (`SubscriptionLapseRecovery.keepSubscription`) by
+  /// reusing the existing reactivation path: `startCheckout(for:)` with the account's own
+  /// `currentPriceId` resolves server-side to `_try_reactivate_subscription`, which clears
+  /// `cancel_at_period_end` with no new checkout/charge (the server responds
+  /// `status == "reactivated"` and `startCheckout` just refreshes rather than opening a
+  /// browser flow — see the `response.status == "reactivated"` branch below). No new
+  /// endpoint; mirrors the Flutter implementation's `_keepSubscription`.
+  func keepSubscription(for lapse: SubscriptionLapse) {
+    guard let currentPriceId = userSubscription?.subscription.currentPriceId else {
+      subscriptionError = "Could not process your subscription. Please try again."
+      return
+    }
+    startCheckout(for: currentPriceId)
+  }
+
+  /// Reveals the resubscribe path for `SubscriptionLapseRecovery.resubscribe`. macOS has no
+  /// separate upgrade sheet (unlike the Flutter `PlansSheet` modal) — the purchasable plan
+  /// cards already render inline below the current-plan card whenever
+  /// `shouldShowPlanPurchaseOptions` is true, which holds here because `accessEnded` implies
+  /// the account is back on Free. Preselecting the first plan expands its billing-choice UI
+  /// in place, the same mechanism `subscriptionPlanCard`'s own selection button uses.
+  func resubscribe() {
+    selectedPlanIdForCheckout = subscriptionPlansForDisplay.first?.id
   }
 
   func startCheckout(for priceId: String) {

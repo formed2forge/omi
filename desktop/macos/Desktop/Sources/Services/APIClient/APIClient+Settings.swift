@@ -365,6 +365,7 @@ struct NotificationSettingsResponse: Codable {
 enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
   case basic  // display "Free"
   case plus
+  case proV2  // display "Pro" — new ladder; not the Architect wire alias `pro`
   case unlimited  // legacy — display "Unlimited (legacy)"
   case unlimitedV2
   case architect  // display "Architect" ($400/mo, cost_usd quota)
@@ -376,6 +377,7 @@ enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
     switch rawValue {
     case "basic": self = .basic
     case "plus": self = .plus
+    case "pro_v2": self = .proV2
     case "unlimited": self = .unlimited
     case "unlimited_v2": self = .unlimitedV2
     case "architect": self = .architect
@@ -389,6 +391,7 @@ enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
     switch self {
     case .basic: return "basic"
     case .plus: return "plus"
+    case .proV2: return "pro_v2"
     case .unlimited: return "unlimited"
     case .unlimitedV2: return "unlimited_v2"
     case .architect: return "architect"
@@ -413,6 +416,7 @@ enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
     switch self {
     case .basic: return "Free"
     case .plus: return "Plus"
+    case .proV2: return "Pro"
     case .unlimited: return "Unlimited (legacy)"
     case .unlimitedV2: return "Unlimited"
     case .architect, .pro: return "Architect"
@@ -425,7 +429,7 @@ enum SubscriptionPlanType: Codable, Equatable, RawRepresentable {
   var hasPaidCapability: Bool {
     switch self {
     case .basic, .unknown: return false
-    case .plus, .unlimited, .unlimitedV2, .architect, .pro, .operator: return true
+    case .plus, .proV2, .unlimited, .unlimitedV2, .architect, .pro, .operator: return true
     }
   }
 }
@@ -491,10 +495,12 @@ struct SubscriptionPlanOption: Codable, Identifiable {
   let eyebrow: String?
   let features: [String]
   let prices: [SubscriptionPriceOption]
+  /// Keep-until-cancel / no longer sold. Absent on older backends.
+  let legacy: Bool?
 
   init(
     id: String, title: String, subtitle: String? = nil, description: String? = nil, eyebrow: String? = nil,
-    features: [String] = [], prices: [SubscriptionPriceOption] = []
+    features: [String] = [], prices: [SubscriptionPriceOption] = [], legacy: Bool? = nil
   ) {
     self.id = id
     self.title = title
@@ -503,6 +509,55 @@ struct SubscriptionPlanOption: Codable, Identifiable {
     self.eyebrow = eyebrow
     self.features = features
     self.prices = prices
+    self.legacy = legacy
+  }
+}
+
+/// Where an account stands relative to the end of a *real* paid subscription.
+/// Mirrors `backend.models.users.SubscriptionLapseState`; see
+/// `backend/utils/subscription.py`'s `resolve_subscription_lapse` docstring
+/// for the evidence rules that decide when this is non-nil.
+enum SubscriptionLapseState: String, Codable {
+  // Still entitled: the user asked Stripe to cancel and the paid period is
+  // running out. `effectiveAt` is when access is scheduled to end.
+  case cancellationScheduled = "cancellation_scheduled"
+  // No longer entitled: a paid period this account really had has passed.
+  case accessEnded = "access_ended"
+}
+
+/// Mirrors `backend.models.users.SubscriptionLapseReason`. `accessEnded` is
+/// always `unknown` — the backend deliberately cannot tell cancellation apart
+/// from payment failure or plain expiration after the fact, so this client
+/// must never guess a specific cause in copy.
+enum SubscriptionLapseReason: String, Codable {
+  case userRequested = "user_requested"
+  case unknown
+}
+
+/// Mirrors `backend.models.users.SubscriptionLapseRecovery`. Server-owned:
+/// the one action that resolves this lapse state, not a styling choice.
+enum SubscriptionLapseRecovery: String, Codable {
+  // Access has not lapsed yet: the cancellation can be reverted in place.
+  case keepSubscription = "keep_subscription"
+  // Access is over: a new checkout is required.
+  case resubscribe
+}
+
+/// Mirrors `backend.models.users.SubscriptionLapse`. Read-only projection of
+/// "this account's paid access is ending or over" — never an entitlement
+/// input; see `resolve_subscription_lapse`'s docstring.
+struct SubscriptionLapse: Codable {
+  let state: SubscriptionLapseState
+  let reason: SubscriptionLapseReason
+  let recoveryAction: SubscriptionLapseRecovery
+  // Unix seconds. Null only when the stored row proves the state without
+  // proving its date.
+  let effectiveAt: Int?
+
+  enum CodingKeys: String, CodingKey {
+    case state, reason
+    case recoveryAction = "recovery_action"
+    case effectiveAt = "effective_at"
   }
 }
 
@@ -522,6 +577,11 @@ struct UserSubscriptionResponse: Codable {
   // policy change in #7496 — they retain desktop access until this unix-seconds
   // timestamp (their `current_period_end`). Null for everyone else.
   let desktopGrandfatherUntil: Int?
+  // Read-only projection of "this account's paid access is ending or over".
+  // Null means there is no evidence of a real paid subscription ending —
+  // every always-Free account, every legacy row with no period data, and
+  // every currently-active plan. See `SubscriptionLapse` for the contract.
+  let lapse: SubscriptionLapse?
 
   enum CodingKeys: String, CodingKey {
     case subscription
@@ -536,6 +596,7 @@ struct UserSubscriptionResponse: Codable {
     case availablePlans = "available_plans"
     case showSubscriptionUI = "show_subscription_ui"
     case desktopGrandfatherUntil = "desktop_grandfather_until"
+    case lapse
   }
 
   // Defensive decode: only `subscription` is required. The usage counters and
@@ -556,6 +617,11 @@ struct UserSubscriptionResponse: Codable {
     availablePlans = try c.decodeIfPresent([SubscriptionPlanOption].self, forKey: .availablePlans) ?? []
     showSubscriptionUI = try c.decodeIfPresent(Bool.self, forKey: .showSubscriptionUI) ?? true
     desktopGrandfatherUntil = try c.decodeIfPresent(Int.self, forKey: .desktopGrandfatherUntil)
+    // `try?` (rather than `decodeIfPresent`'s plain optional) also swallows a future
+    // `state`/`reason`/`recovery_action` value this build doesn't recognize yet, so an
+    // unrecognized lapse variant degrades to "no notice shown" instead of blanking the
+    // entire Plan & Usage page — the same forward-compat posture as the rest of this decode.
+    lapse = (try? c.decodeIfPresent(SubscriptionLapse.self, forKey: .lapse)) ?? nil
   }
 }
 
@@ -586,6 +652,15 @@ struct UpgradeSubscriptionResponse: Codable {
 
 struct AvailablePlanPriceOption: Codable, Identifiable {
   let id: String
+  /// Authoritative plan identity for this price, e.g. "unlimited_v2" vs
+  /// "unlimited" (Neo). The backend always sets this (`PricingOption.plan_id`
+  /// in `backend/routers/payment.py`); prefer it over parsing `title`, whose
+  /// human-readable text is not unique per plan id — Unlimited-v2's own price
+  /// title is literally "Unlimited Monthly", indistinguishable by substring
+  /// matching from a hypothetical Neo title, and collapsing them into one
+  /// `normalizedPlanId` bucket produced two catalog entries that both claimed
+  /// the same price id (Defect: Unlimited-v2 vs Neo ambiguous fallback bucket).
+  let planId: String
   let title: String
   let priceString: String
   let description: String?
@@ -595,9 +670,24 @@ struct AvailablePlanPriceOption: Codable, Identifiable {
 
   enum CodingKeys: String, CodingKey {
     case id, title, description, interval
+    case planId = "plan_id"
     case priceString = "price_string"
     case unitAmount = "unit_amount"
     case isActive = "is_active"
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    id = try c.decode(String.self, forKey: .id)
+    // Older/dry-run backends may omit plan_id; degrade to title parsing rather
+    // than failing the whole decode.
+    planId = try c.decodeIfPresent(String.self, forKey: .planId) ?? ""
+    title = try c.decode(String.self, forKey: .title)
+    priceString = try c.decode(String.self, forKey: .priceString)
+    description = try c.decodeIfPresent(String.self, forKey: .description)
+    interval = try c.decode(String.self, forKey: .interval)
+    unitAmount = try c.decode(Int.self, forKey: .unitAmount)
+    isActive = try c.decodeIfPresent(Bool.self, forKey: .isActive) ?? false
   }
 }
 

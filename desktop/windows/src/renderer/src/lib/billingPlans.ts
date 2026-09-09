@@ -9,7 +9,8 @@ export const CATALOG_PLAN_IDS = [
   'unlimited',
   'unlimited_v2',
   'operator',
-  'architect'
+  'architect',
+  'pro_v2'
 ] as const
 
 export type CatalogPlanId = (typeof CATALOG_PLAN_IDS)[number]
@@ -82,7 +83,8 @@ const PAID_PLAN_IDS: ReadonlySet<CatalogPlanId> = new Set([
   'unlimited',
   'unlimited_v2',
   'operator',
-  'architect'
+  'architect',
+  'pro_v2'
 ])
 
 /** Unknown values never acquire paid capability by default. */
@@ -97,7 +99,8 @@ const PLAN_DISPLAY_NAMES: Readonly<Record<CatalogPlanId, string>> = {
   unlimited: 'Neo',
   unlimited_v2: 'Unlimited',
   operator: 'Operator',
-  architect: 'Architect'
+  architect: 'Architect',
+  pro_v2: 'Pro'
 }
 
 /** Neutral copy for unknown values; never call them Free/Basic. */

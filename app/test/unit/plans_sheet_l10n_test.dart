@@ -44,6 +44,8 @@ const _planSheetKeys = [
   'youreOnAnnualPlan',
   'alreadyBestValuePlan',
   'trainingDataProgram',
+  'legacyPlanTitleSuffix',
+  'legacyPlanSupporterNote',
 ];
 
 Map<String, dynamic> _arb(String locale) =>
@@ -153,6 +155,10 @@ void main() {
       expect(ja.popularBadge, isNot('POPULAR'), reason: 'Japanese must not fall back to the English badge');
       expect(ja.availableOnMacMobileWeb, isNot(en.availableOnMacMobileWeb));
       expect(ja.noDesktopAccess, isNot(en.noDesktopAccess));
+      expect(en.legacyPlanTitleSuffix, ' (Legacy Plan)');
+      expect(en.legacyPlanSupporterNote, contains('early supporter'));
+      expect(ja.legacyPlanTitleSuffix, isNot(en.legacyPlanTitleSuffix));
+      expect(ja.legacyPlanSupporterNote, isNot(en.legacyPlanSupporterNote));
     });
 
     test('the months-free badge pluralizes', () async {

@@ -338,7 +338,7 @@ def test_no_uid_or_customer_id_ever_appears_in_a_recorded_label():
 
 def test_all_recorded_labels_stay_within_the_bounded_sets():
     allowed_events = {'created', 'cancellation_requested', 'cancellation_reverted', 'ended', 'payment_failed'}
-    allowed_plans = {'basic', 'unlimited', 'architect', 'operator', 'plus', 'unlimited_v2', 'unknown'}
+    allowed_plans = {'basic', 'unlimited', 'architect', 'operator', 'plus', 'unlimited_v2', 'pro_v2', 'unknown'}
     allowed_intervals = {'month', 'year', 'unknown'}
     allowed_reasons = {'cancellation_requested', 'payment_failure', 'payment_disputed', 'none'}
 
@@ -439,8 +439,9 @@ def test_zero_initialization_stays_inside_the_space_recording_can_emit():
     exported = set(_exported_series())
     reachable = _reachable_series()
 
-    # 4 reason-free events x 7 plans x 3 intervals, plus `ended` x 7 x 3 x 4 reasons.
-    assert len(reachable) == 168
+    # 4 reason-free events x 8 plans x 3 intervals, plus `ended` x 8 x 3 x 4 reasons.
+    # 8 plans since Pro (`pro_v2`) joined the catalog (Free/Plus/Pro unification).
+    assert len(reachable) == 192
     # Both the initialization and the recording path read the same label sets,
     # so neither can grow a combination the other does not know about.
     assert exported - reachable == set()

@@ -137,6 +137,28 @@ class AuthenticationProvider extends BaseProvider {
     notifyListeners();
   }
 
+  @override
+  void setLoadingState(bool value) => setLoading(value);
+
+  Future<void> onLocalDevSignIn(Function() onSignIn, {required String uid}) async {
+    if (loading) return;
+    setLoading(true);
+    try {
+      final credential = await AuthService.instance.signInWithLocalDevToken(uid: uid);
+      if (credential != null && _hasFirebaseUser) {
+        await _signIn(onSignIn, credential: credential, authProvider: 'local_dev');
+      } else {
+        throw StateError('Local development sign-in did not produce a session.');
+      }
+    } catch (_) {
+      AppSnackbar.showSnackbarError(
+        globalNavigatorKey.currentContext?.l10n.authenticationFailed ?? 'Authentication failed. Please try again.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   Future<void> onGoogleSignIn(Function() onSignIn) async {
     final useWebAuth = Env.useWebAuth;
     if (!loading) {

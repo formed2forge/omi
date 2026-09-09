@@ -66,6 +66,16 @@ Firebase Auth emulator on port `9099`, using the `demo-omi-local` Firebase
 project. iOS builds address them as `127.0.0.1`; Android builds default to the
 emulator's host alias `10.0.2.2`.
 
+For local sign-in, tap **Sign In (Developer)** and enter an emulator user ID.
+The default is `pricing_plus`; run `make seed-pricing-scenario SCENARIO=plan_catalog_matrix`
+from the repository root first to populate that account's plan. Other seeded IDs,
+such as `pricing_pro_v2`, select other plans. The local backend exchanges a custom
+token with the Auth emulator, so no Apple/Google OAuth configuration is needed.
+Your personal Apple developer account signs the build; it does not sign you into
+your production Omi account. The developer sign-in control is absent from beta
+and production profiles. Rebuild the app and restart the harness from the same
+checkout if the control or `/v1/auth/local-dev/custom-token` endpoint is missing.
+
 <Warning>
 `setup.sh` does **not** start the backend or the emulator — start the harness
 first (step 1 below), or the app builds and launches but every request fails to

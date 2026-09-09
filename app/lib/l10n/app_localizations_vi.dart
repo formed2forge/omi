@@ -2045,7 +2045,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get memoryDeleted => 'Đã xóa ký ức.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Một số lịch sử ký ức không khả dụng. Đang hiển thị lịch sử đã nhận được cho đến nay.';
 
   @override
   String get undo => 'Hoàn tác';
@@ -9912,11 +9913,30 @@ class AppLocalizationsVi extends AppLocalizations {
   String get transcriptionNoAudio => 'Bản ghi âm không nhận được âm thanh';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Nhấn + để bắt đầu ghi âm';
 
   @override
   String get couldNotLoadMemories => 'Không thể tải ký ức';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Không thể tải đồ thị tri thức';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Gói cũ)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Cảm ơn bạn đã là người ủng hộ sớm của omi! Bạn có thể ở lại gói cũ vô thời hạn. Lưu ý rằng các gói cũ này không còn được bán và không thể chọn lại nếu bạn chuyển sang gói khác.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Có thể có sự cố với gói dịch vụ của bạn. Vui lòng liên hệ bộ phận hỗ trợ để đảm bảo dịch vụ của bạn không bị gián đoạn.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Gói của bạn sẽ kết thúc vào $date. Bạn vẫn có toàn quyền truy cập cho đến lúc đó.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Quyền truy cập trả phí của bạn đã kết thúc.';
 }

@@ -70,6 +70,13 @@ def _local_storage_name(app_name: str) -> str:
     return app_name
 
 
+def _is_pricing_harness_launch(*, user: str, app_name: str) -> bool:
+    if user.startswith("pricing_"):
+        return True
+    lowered = app_name.lower()
+    return lowered == "omi-pricing" or lowered.startswith("omi-pricing-")
+
+
 PROHIBITED_ENDPOINT_PATTERNS = (
     re.compile(r"https://api\.omi\.me", re.IGNORECASE),
     re.compile(r"https://api\.omiapi\.com", re.IGNORECASE),
@@ -141,17 +148,11 @@ def _is_loopback_url(raw: str) -> bool:
 
 
 def _user_payload_from_seed_manifest(cfg: config.HarnessConfig, user: str) -> dict[str, str]:
-    manifests = sorted((cfg.layout.state_root / "manifests").glob("memory-scenario-*-seed.json"))
-    if not manifests:
-        return {}
-    data = json.loads(max(manifests, key=lambda path: path.stat().st_mtime).read_text(encoding="utf-8"))
-    for op in data.get("operations", []):
-        if not isinstance(op, dict) or op.get("kind") != "auth" or op.get("action") != "upsert":
-            continue
-        payload = op.get("payload")
-        if isinstance(payload, dict) and payload.get("localId") == user:
-            return {str(k): str(v) for k, v in payload.items() if v is not None}
-    return {}
+    from .emulator_seeding import merged_auth_users_from_seed_manifests
+
+    users = merged_auth_users_from_seed_manifests(cfg)
+    payload = users.get(user)
+    return dict(payload) if payload else {}
 
 
 def resolve_profile(
@@ -181,6 +182,11 @@ def resolve_profile(
         "OMI_SKIP_TUNNEL": "1",
         "OMI_DESKTOP_API_URL": desktop_api_url,
         "OMI_PYTHON_API_URL": python_api_url,
+        # Auth HTTP (referrals, desktop prompts, export, AuthService) reads
+        # OMI_AUTH_API_URL and falls back to production api.omi.me when unset.
+        # Local emulator tokens must never hit that host or RequestAuthPolicy
+        # signs the session out on 401.
+        "OMI_AUTH_API_URL": python_api_url,
         "OMI_LOCAL_PROFILE_STORAGE_NAME": storage_name,
         "OMI_LOCAL_AUTH_USER": user,
         "OMI_LOCAL_AUTH_EMAIL": email,
@@ -192,6 +198,8 @@ def resolve_profile(
         "FIRESTORE_DATABASE_ID": cfg.database_id,
         "FIREBASE_API_KEY": LOCAL_FIREBASE_API_KEY,
     }
+    if _is_pricing_harness_launch(user=user, app_name=app_name):
+        profile_env["OMI_SKIP_ONBOARDING"] = "1"
     if app_name != LOCAL_APP_NAME:
         profile_env["OMI_APP_NAME"] = app_name
         profile_env["OMI_ENABLE_LOCAL_AUTOMATION"] = source_env.get("OMI_ENABLE_LOCAL_AUTOMATION", "1")
@@ -257,6 +265,11 @@ def validate_profile(profile: DesktopLocalProfile) -> list[str]:
     for label, raw in (("python_api_url", profile.python_api_url), ("desktop_api_url", profile.desktop_api_url)):
         if not _is_loopback_url(raw):
             errors.append(f"{label} must be loopback http/ws, got {raw!r}")
+    auth_api_url = str(profile.env.get("OMI_AUTH_API_URL") or "")
+    if auth_api_url != profile.python_api_url:
+        errors.append("OMI_AUTH_API_URL must match the local python API URL")
+    elif not _is_loopback_url(auth_api_url):
+        errors.append(f"OMI_AUTH_API_URL must be loopback http/ws, got {auth_api_url!r}")
     if not safety.is_loopback_host(profile.firebase_auth_emulator_host):
         errors.append("Firebase Auth emulator host must be loopback")
     text = profile.to_json()

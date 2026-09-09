@@ -3298,7 +3298,7 @@ export interface PlanLimits {
   words_transcribed?: number | null;
 }
 
-export type PlanType = "basic" | "unlimited" | "architect" | "operator" | "plus" | "unlimited_v2";
+export type PlanType = "basic" | "unlimited" | "architect" | "operator" | "plus" | "pro_v2" | "unlimited_v2";
 
 export interface PlatformMinimumBuild {
   minimum_supported_build: number;
@@ -4006,6 +4006,19 @@ export interface Subscription {
   stripe_subscription_id?: string | null;
 }
 
+export interface SubscriptionLapse {
+  effective_at?: number | null;
+  reason: SubscriptionLapseReason;
+  recovery_action: SubscriptionLapseRecovery;
+  state: SubscriptionLapseState;
+}
+
+export type SubscriptionLapseReason = "user_requested" | "unknown";
+
+export type SubscriptionLapseRecovery = "keep_subscription" | "resubscribe";
+
+export type SubscriptionLapseState = "cancellation_scheduled" | "access_ended";
+
 export interface SubscriptionPlan {
   description?: string | null;
   eyebrow?: string | null;
@@ -4624,6 +4637,7 @@ export interface UserSubscriptionResponse {
   desktop_grandfather_until?: number | null;
   insights_gained_limit: number;
   insights_gained_used: number;
+  lapse?: SubscriptionLapse | null;
   phone_call_quota?: PhoneCallQuota | null;
   show_subscription_ui?: boolean;
   subscription: Subscription;
@@ -5370,6 +5384,10 @@ export interface OmiApiSchemas {
   "Structured": Structured;
   "SubjectAttribution": SubjectAttribution;
   "Subscription": Subscription;
+  "SubscriptionLapse": SubscriptionLapse;
+  "SubscriptionLapseReason": SubscriptionLapseReason;
+  "SubscriptionLapseRecovery": SubscriptionLapseRecovery;
+  "SubscriptionLapseState": SubscriptionLapseState;
   "SubscriptionPlan": SubscriptionPlan;
   "SubscriptionStatus": SubscriptionStatus;
   "SyncBatchItem": SyncBatchItem;
@@ -10512,7 +10530,7 @@ export async function get_app_categories_v1_app_categories_get(init?: OmiApiClie
   return _res.status === 204 ? (undefined as any) : await _res.json();
 }
 
-export async function generate_app_endpoint_v1_app_generate_post(header: { authorization?: string, X_App_Platform?: string, X_Device_Id_Hash?: string, X_App_Version?: string }, body: GenerateAppRequest, init?: OmiApiClientInit): Promise<AppGenerationResponse> {
+export async function generate_app_endpoint_v1_app_generate_post(header: { X_App_Platform?: string, authorization?: string, X_Device_Id_Hash?: string, X_App_Version?: string }, body: GenerateAppRequest, init?: OmiApiClientInit): Promise<AppGenerationResponse> {
   const _base = init?.baseURL ?? "";
   const _path = `/v1/app/generate`;
   const _search = "";
@@ -10522,8 +10540,8 @@ export async function generate_app_endpoint_v1_app_generate_post(header: { autho
       ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(init?.token ? { Authorization: `Bearer ${init.token}` } : {}),
       ...init?.headers,
-      ...(header.authorization !== undefined ? { "authorization": String(header.authorization) } : {}),
       ...(header.X_App_Platform !== undefined ? { "X-App-Platform": String(header.X_App_Platform) } : {}),
+      ...(header.authorization !== undefined ? { "authorization": String(header.authorization) } : {}),
       ...(header.X_Device_Id_Hash !== undefined ? { "X-Device-Id-Hash": String(header.X_Device_Id_Hash) } : {}),
       ...(header.X_App_Version !== undefined ? { "X-App-Version": String(header.X_App_Version) } : {}),
     },
@@ -10575,7 +10593,7 @@ export async function generate_description_and_emoji_endpoint_v1_app_generate_de
   return _res.status === 204 ? (undefined as any) : await _res.json();
 }
 
-export async function generate_app_icon_endpoint_v1_app_generate_icon_post(header: { authorization?: string, X_App_Platform?: string, X_Device_Id_Hash?: string, X_App_Version?: string }, body: GenerateAppIconRequest, init?: OmiApiClientInit): Promise<AppIconGenerationResponse> {
+export async function generate_app_icon_endpoint_v1_app_generate_icon_post(header: { X_App_Platform?: string, authorization?: string, X_Device_Id_Hash?: string, X_App_Version?: string }, body: GenerateAppIconRequest, init?: OmiApiClientInit): Promise<AppIconGenerationResponse> {
   const _base = init?.baseURL ?? "";
   const _path = `/v1/app/generate-icon`;
   const _search = "";
@@ -10585,8 +10603,8 @@ export async function generate_app_icon_endpoint_v1_app_generate_icon_post(heade
       ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(init?.token ? { Authorization: `Bearer ${init.token}` } : {}),
       ...init?.headers,
-      ...(header.authorization !== undefined ? { "authorization": String(header.authorization) } : {}),
       ...(header.X_App_Platform !== undefined ? { "X-App-Platform": String(header.X_App_Platform) } : {}),
+      ...(header.authorization !== undefined ? { "authorization": String(header.authorization) } : {}),
       ...(header.X_Device_Id_Hash !== undefined ? { "X-Device-Id-Hash": String(header.X_Device_Id_Hash) } : {}),
       ...(header.X_App_Version !== undefined ? { "X-App-Version": String(header.X_App_Version) } : {}),
     },

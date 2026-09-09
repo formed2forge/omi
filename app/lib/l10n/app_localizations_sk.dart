@@ -2047,7 +2047,8 @@ class AppLocalizationsSk extends AppLocalizations {
   String get memoryDeleted => 'Spomienka bola odstránená.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Časť histórie spomienok nie je k dispozícii. Zobrazuje sa história prijatá doteraz.';
 
   @override
   String get undo => 'Vrátiť späť';
@@ -9910,11 +9911,30 @@ class AppLocalizationsSk extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripcia neprijíma zvuk';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Klepnutím na + spustíte nahrávanie';
 
   @override
   String get couldNotLoadMemories => 'Nepodarilo sa načítať spomienky';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Nepodarilo sa načítať graf znalostí';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (starší tarif)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Ďakujeme, že ste raným podporovateľom omi! Na staršom tarife môžete zostať neobmedzene dlho. Upozorňujeme však, že tieto staršie tarify sa už nepredávajú a po prechode na iný tarif ich nemožno znova vybrať.';
+
+  @override
+  String get planIssueContactSupport =>
+      'S vaším plánom môže byť problém. Kontaktujte prosím podporu, aby nedošlo k prerušeniu vašej služby.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Váš plán sa skončí $date. Do vtedy si zachováte plný prístup.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Váš platený prístup sa skončil.';
 }

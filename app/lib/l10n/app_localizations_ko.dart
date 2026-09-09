@@ -2004,7 +2004,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memoryDeleted => '기억이 삭제되었습니다.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => '일부 메모리 기록을 사용할 수 없습니다. 지금까지 수신된 기록을 표시합니다.';
 
   @override
   String get undo => '실행 취소';
@@ -9751,11 +9751,29 @@ class AppLocalizationsKo extends AppLocalizations {
   String get transcriptionNoAudio => '전사가 오디오를 받지 못하고 있습니다';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => '녹음을 시작하려면 +를 탭하세요';
 
   @override
   String get couldNotLoadMemories => '추억을 불러올 수 없습니다';
 
   @override
   String get couldNotLoadKnowledgeGraph => '지식 그래프를 불러올 수 없습니다';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (레거시 플랜)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omi의 초기 후원자가 되어 주셔서 감사합니다. 레거시 플랜은 기한 없이 유지할 수 있습니다. 다만 이 레거시 플랜은 더 이상 판매되지 않으며, 다른 플랜으로 바꾸면 다시 선택할 수 없습니다.';
+
+  @override
+  String get planIssueContactSupport => '요금제에 문제가 있을 수 있습니다. 서비스가 중단되지 않도록 고객 지원팀에 문의해 주세요.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return '요금제는 $date에 종료됩니다. 그때까지는 전체 액세스 권한이 유지됩니다.';
+  }
+
+  @override
+  String get planLapseAccessEnded => '유료 액세스가 종료되었습니다.';
 }

@@ -140,6 +140,11 @@ class UsageProvider with ChangeNotifier {
     await fetchSubscription(); // Sync with backend
   }
 
+  /// The subscription fetch, injectable so tests can drive the real
+  /// status-code handling in [getUserSubscription] without a live backend.
+  @visibleForTesting
+  Future<UserSubscriptionResponse> Function() subscriptionFetcher = getUserSubscription;
+
   Future<void> fetchSubscription() async {
     if (_isSubscriptionLoading) return;
 
@@ -149,14 +154,17 @@ class UsageProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final subscription = await getUserSubscription();
+      final subscription = await subscriptionFetcher();
       if (generation != _sessionGeneration) return; // Session cleared mid-flight; discard stale response.
       _subscription = subscription;
-      if (_subscription != null) {
-        PlatformManager.instance.analytics.setSubscriptionTier(_subscription!.subscription.plan.name);
-      }
+      PlatformManager.instance.analytics.setSubscriptionTier(subscription.subscription.plan.name);
     } catch (e) {
       if (generation != _sessionGeneration) return;
+      // Drop any previous snapshot: the plan card must fail loud (error state
+      // + a way to recover) rather than keep showing a plan we can no longer
+      // confirm. Before this, a non-200 resolved to a silent null here, so
+      // `_error` stayed null and the card rendered blank.
+      _subscription = null;
       _error = 'Failed to load subscription data. Please try again later.';
       Logger.debug('Failed to fetch subscription: $e');
     } finally {

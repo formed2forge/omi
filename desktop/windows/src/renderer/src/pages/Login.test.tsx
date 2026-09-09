@@ -4,7 +4,15 @@ import { render, cleanup, fireEvent, screen, waitFor } from '@testing-library/re
 
 const signInWithProvider = vi.hoisted(() => vi.fn())
 
-vi.mock('../lib/firebase', () => ({ signInWithProvider }))
+// isLocalDevProfile: false — Login also renders LocalDevSignIn, which reads
+// these from the same module; the production/default case renders nothing (see
+// components/auth/LocalDevSignIn.test.tsx for its own dedicated coverage).
+vi.mock('../lib/firebase', () => ({
+  signInWithProvider,
+  isLocalDevProfile: false,
+  localDevConfigError: null,
+  signInWithLocalDevToken: vi.fn()
+}))
 
 import { Login } from './Login'
 

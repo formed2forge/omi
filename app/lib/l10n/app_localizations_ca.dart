@@ -2055,7 +2055,8 @@ class AppLocalizationsCa extends AppLocalizations {
   String get memoryDeleted => 'Record eliminat.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Part de l\'historial de records no està disponible. Es mostra l\'historial rebut fins ara.';
 
   @override
   String get undo => 'Desfer';
@@ -9974,11 +9975,30 @@ class AppLocalizationsCa extends AppLocalizations {
   String get transcriptionNoAudio => 'La transcripció no rep àudio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Toca + per començar a gravar';
 
   @override
   String get couldNotLoadMemories => 'No s\'han pogut carregar els records';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'No s\'ha pogut carregar el graf de coneixement';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (pla antic)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Gràcies per ser un dels primers a donar suport a omi! Pots quedar-te al teu pla antic indefinidament. Tingues en compte, però, que aquests plans antics ja no es venen i no es poden triar si canvies a un altre pla.';
+
+  @override
+  String get planIssueContactSupport =>
+      'És possible que hi hagi un problema amb el teu pla. Contacta amb el suport per assegurar que no hi hagi cap interrupció del servei.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'El teu pla acabarà el $date. Mantindràs accés complet fins llavors.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'El teu accés de pagament ha finalitzat.';
 }

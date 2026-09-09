@@ -2047,7 +2047,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get memoryDeleted => 'Herinnering verwijderd.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Een deel van de geheugengeschiedenis is niet beschikbaar. De tot nu toe ontvangen geschiedenis wordt weergegeven.';
 
   @override
   String get undo => 'Ongedaan maken';
@@ -9944,11 +9945,30 @@ class AppLocalizationsNl extends AppLocalizations {
   String get transcriptionNoAudio => 'Transcriptie ontvangt geen audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Tik op + om te beginnen met opnemen';
 
   @override
   String get couldNotLoadMemories => 'Herinneringen konden niet worden geladen';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Kennisgrafiek kon niet worden geladen';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (oud abonnement)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Dank je dat je omi vanaf het begin steunt! Je mag onbeperkt op je oude abonnement blijven. Let wel: deze oude abonnementen worden niet meer verkocht en kun je niet opnieuw kiezen als je naar een ander abonnement overstapt.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Er is mogelijk een probleem met je abonnement. Neem contact op met de support om onderbreking van je service te voorkomen.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Je abonnement eindigt op $date. Tot die tijd behoud je volledige toegang.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Je betaalde toegang is beëindigd.';
 }

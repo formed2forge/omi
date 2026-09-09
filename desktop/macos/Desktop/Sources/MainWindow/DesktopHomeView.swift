@@ -151,7 +151,7 @@ struct DesktopHomeView: View {
         }
       }
       .onAppear {
-        log("DesktopHomeView: --skip-onboarding flag detected, skipping onboarding")
+        log("DesktopHomeView: skip-onboarding requested, skipping onboarding")
         appState.hasCompletedOnboarding = true
       }
     } else {

@@ -23,6 +23,7 @@ void main() {
         'unlimited_v2': PlanType.unlimitedV2,
         'operator': PlanType.operator,
         'architect': PlanType.architect,
+        'pro_v2': PlanType.proV2,
         'pro': PlanType.architect,
       };
 
@@ -83,15 +84,27 @@ void main() {
       expect(PlanType.unlimited.hasUnlimitedTranscription, isTrue);
       expect(PlanType.operator.hasUnlimitedTranscription, isTrue);
       expect(PlanType.architect.hasUnlimitedTranscription, isTrue);
+      expect(PlanType.proV2.hasUnlimitedTranscription, isTrue);
       expect(PlanType.basic.hasUnlimitedTranscription, isFalse);
     });
 
-    test('only operator and architect grant desktop (mirrors backend)', () {
+    test('Plus and Pro grant desktop under the unified catalog', () {
       expect(PlanType.operator.grantsDesktop, isTrue);
       expect(PlanType.architect.grantsDesktop, isTrue);
-      for (final plan in [PlanType.basic, PlanType.unlimited, PlanType.plus, PlanType.unlimitedV2]) {
+      expect(PlanType.plus.grantsDesktop, isTrue);
+      expect(PlanType.proV2.grantsDesktop, isTrue);
+      for (final plan in [PlanType.basic, PlanType.unlimited, PlanType.unlimitedV2]) {
         expect(plan.grantsDesktop, isFalse, reason: '${plan.name} must not grant desktop');
       }
+    });
+
+    test('Plus and Pro are mobile storefront plans while desktop-only legacy plans are manage-only', () {
+      expect(PlanType.plus.isSoldOnMobile, isTrue);
+      expect(PlanType.proV2.isSoldOnMobile, isTrue);
+      expect(PlanType.plus.isMobileManageOnly, isFalse);
+      expect(PlanType.proV2.isMobileManageOnly, isFalse);
+      expect(PlanType.operator.isMobileManageOnly, isTrue);
+      expect(PlanType.architect.isMobileManageOnly, isTrue);
     });
 
     test('unknown plans grant no paid capability by assumption', () {
@@ -101,6 +114,7 @@ void main() {
       expect(unknown.isPaid, isFalse);
       expect(unknown.hasUnlimitedTranscription, isFalse);
       expect(unknown.grantsDesktop, isFalse);
+      expect(unknown.isMobileManageOnly, isTrue);
     });
   });
 }

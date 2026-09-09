@@ -57,9 +57,10 @@ int? _annualMonthsFree(List<Map<String, dynamic>> plans) {
 /// Locked (.github/agent-docs/plan-catalog.md) — do not restore `!isOnAnnualPlan`:
 /// that hid Continue for every annual subscriber and blocked Plus → Unlimited.
 /// Hide only when the user is already on the selected tier's annual price.
-/// Desktop-entitled plans are manage-only on this sheet: same-tier
-/// monthly→annual is still a management action; switching onto Plus /
-/// Unlimited / Neo is not.
+/// Desktop-only legacy plans are manage-only on this sheet: same-tier
+/// monthly→annual is still a management action, but a plan change is not.
+/// Plus and Pro are desktop-entitled *and* mobile-sold, so they follow the
+/// normal purchase flow.
 bool shouldShowPlanContinueButton({
   required bool isOnAnnualPlan,
   required bool hasScheduledUpgrade,
@@ -67,10 +68,13 @@ bool shouldShowPlanContinueButton({
   required bool plansLoaded,
   String? selectedTierId,
   String? currentTierId,
-  bool currentGrantsDesktop = false,
+  bool currentPlanIsMobileManageOnly = false,
 }) {
   if (!plansLoaded || isCancelled || hasScheduledUpgrade) return false;
-  if (currentGrantsDesktop && selectedTierId != null && currentTierId != null && selectedTierId != currentTierId) {
+  if (currentPlanIsMobileManageOnly &&
+      selectedTierId != null &&
+      currentTierId != null &&
+      selectedTierId != currentTierId) {
     return false;
   }
   if (isOnAnnualPlan && (selectedTierId == null || selectedTierId == currentTierId)) return false;

@@ -22,15 +22,16 @@ cross-platform decision instead of a single-platform drive-by.
 | `wire_action_item.json` | Action item wire decode: due_at instant equality across ISO offset forms, and the null / missing / unparseable agreement set |
 | `section_labels.json` | Relative day labels (Today / Yesterday / Tomorrow) as calendar-day relationships, including DST transition days |
 | `jit_runtime_contract_matrix.json` | Additive JIT ledger/evidence compatibility across legacy, v1, and future-version payloads |
+| `local_dev_onboarding_bypass.json` | Local-dev onboarding-bypass gate rule and canonical fixture identity (mobile/macOS/Windows only — no backend/API side) |
 
 ## Conformance suites
 
 | Platform | Suite | Runs |
 |---|---|---|
 | Backend/API and standalone MCP | `backend/tests/unit/test_parity_contracts.py`, `backend/testing/contracts/test_jit_runtime_contract_matrix.py` | Backend unit suite and Desktop Backend Contracts CI |
-| Flutter app | `app/test/parity/parity_contracts_test.dart` | `app/test.sh`, CI Flutter tests |
-| Windows desktop | `desktop/windows/src/renderer/src/lib/parityContracts.test.ts`, `desktop/windows/src/shared/knowledgeLedger.test.ts` | `npm test` in `desktop/windows`, CI Desktop Windows tests |
-| macOS desktop | JIT matrix: `desktop/macos/Desktop/Tests/ServerMemoryV17DecodingTests.swift`. Task/day adapter remains pending. | Desktop Swift CI |
+| Flutter app | `app/test/parity/parity_contracts_test.dart`, `app/test/unit/local_dev_onboarding_bypass_test.dart` | `app/test.sh`, CI Flutter tests |
+| Windows desktop | `desktop/windows/src/renderer/src/lib/parityContracts.test.ts`, `desktop/windows/src/shared/knowledgeLedger.test.ts`, `desktop/windows/src/shared/localDevOnboardingBypassContract.test.ts` | `npm test` in `desktop/windows`, CI Desktop Windows tests |
+| macOS desktop | JIT matrix: `desktop/macos/Desktop/Tests/ServerMemoryV17DecodingTests.swift`. Task/day adapter remains pending. Local-dev onboarding bypass: `desktop/macos/Desktop/Tests/DesktopLocalProfileTests.swift` | Desktop Swift CI |
 | Web app | `web/app/src/lib/__tests__/knowledgeLedger.test.ts` | `web/app/test.sh`, CI Web App checks |
 
 The JIT runtime matrix is additionally consumed by the shipped mobile, macOS,

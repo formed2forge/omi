@@ -10802,5 +10802,18 @@
     "conversationsNotCapturedCount": "Не е снимено ({count})",
     "transcriptionNoAudio": "Транскрипцијата не прима аудио",
     "couldNotLoadMemories": "Не можеа да се вчитаат спомените",
-    "couldNotLoadKnowledgeGraph": "Не можеше да се вчита графот на знаење"
+    "couldNotLoadKnowledgeGraph": "Не можеше да се вчита графот на знаење",
+    "legacyPlanTitleSuffix": " (стар план)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Ви благодариме што сте ран поддржувач на omi! Можете да останете на стариот план неодредено. Имајте предвид дека овие стари планови повеќе не се продаваат и не можат да се изберат ако преминете на друг план.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    },
+    "planIssueContactSupport": "Можеби има проблем со вашиот план. Ве молиме контактирајте ја поддршката за да нема прекин во вашата услуга.",
+    "planLapseCancellationScheduled": "Вашиот план ќе заврши на {date}. До тогаш ќе го задржите целосниот пристап.",
+    "planLapseAccessEnded": "Вашиот платен пристап заврши.",
+    "memoryHistoryPartial": "Дел од историјата на сеќавања не е достапен. Прикажана е историјата примена досега.",
+    "tapPlusToStartRecording": "Допрете + за да започнете со снимање"
 }

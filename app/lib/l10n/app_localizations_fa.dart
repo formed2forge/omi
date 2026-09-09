@@ -2040,7 +2040,8 @@ class AppLocalizationsFa extends AppLocalizations {
   String get memoryDeleted => 'خاطره حذف شد.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'بخشی از تاریخچه خاطرات در دسترس نیست. تاریخچه دریافت‌شده تاکنون نمایش داده می‌شود.';
 
   @override
   String get undo => 'بازگشت';
@@ -9917,11 +9918,30 @@ class AppLocalizationsFa extends AppLocalizations {
   String get transcriptionNoAudio => 'رونویسی صدا دریافت نمی‌کند';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'برای شروع ضبط روی + ضربه بزنید';
 
   @override
   String get couldNotLoadMemories => 'بارگذاری خاطرات ممکن نشد';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'بارگذاری گراف دانش ممکن نشد';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (طرح قدیمی)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'از اینکه از حامیان اولیه omi هستید سپاسگزاریم! می‌توانید برای همیشه روی طرح قدیمی خود بمانید. توجه داشته باشید که این طرح‌های قدیمی دیگر فروخته نمی‌شوند و اگر به طرح دیگری بروید نمی‌توان آن‌ها را دوباره انتخاب کرد.';
+
+  @override
+  String get planIssueContactSupport =>
+      'ممکن است مشکلی در طرح اشتراک شما وجود داشته باشد. لطفاً با پشتیبانی تماس بگیرید تا در سرویس شما وقفه‌ای ایجاد نشود.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'طرح شما در $date پایان می‌یابد. تا آن زمان دسترسی کامل خواهید داشت.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'دسترسی پرداختی شما پایان یافته است.';
 }

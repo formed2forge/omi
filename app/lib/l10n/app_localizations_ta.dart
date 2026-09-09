@@ -2054,7 +2054,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get memoryDeleted => 'பதிவு நீக்கப்பட்டுள்ளது.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'சில நினைவக வரலாறு கிடைக்கவில்லை. இதுவரை பெறப்பட்ட வரலாறு காட்டப்படுகிறது.';
 
   @override
   String get undo => 'மறுசெய்க';
@@ -9987,11 +9987,30 @@ class AppLocalizationsTa extends AppLocalizations {
   String get transcriptionNoAudio => 'நகலெடுப்பு ஆடியோவைப் பெறவில்லை';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'பதிவைத் தொடங்க + ஐ தட்டவும்';
 
   @override
   String get couldNotLoadMemories => 'நினைவுகளை ஏற்ற முடியவில்லை';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'அறிவு வரைபடத்தை ஏற்ற முடியவில்லை';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (பழைய திட்டம்)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omi-யின் ஆரம்ப ஆதரவாளராக இருந்ததற்கு நன்றி! உங்கள் பழைய திட்டத்தில் காலவரையின்றி இருக்கலாம். ஆனால் இந்தப் பழைய திட்டங்கள் இனி விற்கப்படுவதில்லை, வேறு திட்டத்துக்கு மாறினால் அவற்றை மீண்டும் தேர்வு செய்ய முடியாது.';
+
+  @override
+  String get planIssueContactSupport =>
+      'உங்கள் திட்டத்தில் சிக்கல் இருக்கக்கூடும். உங்கள் சேவையில் இடையூறு ஏற்படாமல் இருக்க தயவுசெய்து ஆதரவைத் தொடர்பு கொள்ளவும்.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'உங்கள் திட்டம் $date அன்று முடிவடையும். அதுவரை முழு அணுகலையும் தக்கவைத்திருப்பீர்கள்.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'உங்கள் கட்டண அணுகல் முடிந்துவிட்டது.';
 }

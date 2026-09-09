@@ -286,7 +286,7 @@ treated as an observed overlay, not a catalog answer.
 
 ## Foundation delivered here
 
-- `backend/config/plan_catalog.json`: canonical six-plan identity, aliases, lifecycle, storefronts, typed allocations,
+- `backend/config/plan_catalog.json`: canonical plan identity (append-only IDs; `pro` is Architect's wire alias, Pro is `pro_v2`), aliases, lifecycle, storefronts, typed allocations,
   profiles, open decisions, measurement completeness, billing intent state, recognized prices, and products.
 - `backend/scripts/generate_plan_catalog.py`: strict schema/compiler, deterministic projection, merge-base compatibility,
   production-source Stripe ID inventory, and publishability check. (The offline Stripe binding/snapshot

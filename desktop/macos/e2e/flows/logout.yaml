@@ -8,6 +8,14 @@ covers:
   - desktop/macos/Desktop/Sources/Auth/FirebaseAuthAvailability.swift
   - desktop/macos/Desktop/Sources/AuthService.swift
   - desktop/macos/Desktop/Sources/Chat/RuntimeOwnerIdentity.swift
+  # S2's sign_out commits through AuthService.commitSignedOutSession ->
+  # RuntimeOwnerIdentity.performEffectiveOwnerTransition, which posts
+  # .runtimeOwnerDidChange from MainActor.run while the app's already-registered
+  # owner-fence observers (AppState, ConversationRepository,
+  # CaptureArchiveRepository, ChatFirstRoute) are live. Those four all route
+  # through this shared seam, so this flow drives its real main-thread delivery
+  # path end to end.
+  - desktop/macos/Desktop/Sources/OmiSupport/NotificationCenter+MainActorObserver.swift
   - desktop/macos/Desktop/Sources/DesktopAutomationBridge.swift
   - desktop/macos/Desktop/Sources/OmiApp.swift
   - desktop/macos/Desktop/Sources/Rewind/Core/RewindDatabase+AccountDeletion.swift

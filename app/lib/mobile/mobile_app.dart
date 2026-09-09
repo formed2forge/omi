@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:omi/backend/preferences.dart';
+import 'package:omi/env/local_dev_onboarding_bypass.dart';
 import 'package:omi/pages/home/page.dart';
 import 'package:omi/pages/onboarding/device_selection.dart';
 import 'package:omi/pages/onboarding/permissions/permissions_checker.dart';
@@ -50,16 +51,21 @@ class _MobileAppState extends State<MobileApp> {
               // begins, even if the server says they completed onboarding
               // previously. OnboardingWrapper renders the consent step in
               // that case and routes them straight to home after Continue.
-              if (!SharedPreferencesUtil().aiConsentGiven) {
-                return const OnboardingWrapper();
-              }
-              if (SharedPreferencesUtil().onboardingCompleted) {
-                if (!SharedPreferencesUtil().permissionsCompleted) {
+              // See resolveMobileAppRoute for the local-dev bypass composition
+              // (contracts/parity/local_dev_onboarding_bypass.json).
+              switch (resolveMobileAppRoute(
+                aiConsentGiven: SharedPreferencesUtil().aiConsentGiven,
+                onboardingCompleted: SharedPreferencesUtil().onboardingCompleted,
+                permissionsCompleted: SharedPreferencesUtil().permissionsCompleted,
+                bypassSatisfied: localDevOnboardingBypassSatisfied,
+              )) {
+                case MobileAppRoute.onboarding:
+                  return const OnboardingWrapper();
+                case MobileAppRoute.permissionsGate:
                   return const _PermissionsGate();
-                }
-                return const HomePageWrapper();
+                case MobileAppRoute.home:
+                  return const HomePageWrapper();
               }
-              return const OnboardingWrapper();
             },
           );
         } else {

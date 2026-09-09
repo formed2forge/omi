@@ -2025,7 +2025,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get memoryDeleted => 'זכרון מחוק.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'חלק מהיסטוריית הזיכרונות אינו זמין. מוצגת ההיסטוריה שהתקבלה עד כה.';
 
   @override
   String get undo => 'בטל';
@@ -9838,11 +9838,30 @@ class AppLocalizationsHe extends AppLocalizations {
   String get transcriptionNoAudio => 'התמליל אינו מקבל שמע';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'הקש על + כדי להתחיל בהקלטה';
 
   @override
   String get couldNotLoadMemories => 'לא ניתן לטעון את הזיכרונות';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'לא ניתן לטעון את גרף הידע';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (תוכנית ישנה)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'תודה שהייתם מהתומכים המוקדמים של omi! אפשר להישאר בתוכנית הישנה ללא הגבלת זמן. שימו לב עם זאת שתוכניות ישנות אלה כבר לא נמכרות ולא ניתן לבחור אותן אם עוברים לתוכנית אחרת.';
+
+  @override
+  String get planIssueContactSupport =>
+      'ייתכן שיש בעיה בתוכנית שלך. אנא פנה לתמיכה כדי לוודא שלא תהיה הפרעה בשירות שלך.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'התוכנית שלך תסתיים בתאריך $date. תשמור על גישה מלאה עד אז.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'הגישה בתשלום שלך הסתיימה.';
 }

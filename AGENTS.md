@@ -21,7 +21,7 @@ These rules apply to every AI agent working in this repository. This file is **h
 | Product behavior | `PRODUCT.md` + `product/invariants/` — locked invariants and guard tests |
 | A rule shared across app/macOS/Windows (buckets, day grouping, wire decode) | `contracts/parity/README.md` — shared fixtures, per-platform conformance suites, divergence register |
 | Fallback/fail-open branches | `.github/agent-docs/fallback-telemetry.md` — when to call `record_fallback` |
-| Mobile/desktop plan catalog | `.github/agent-docs/plan-catalog.md` — who sees Plus/Neo/Operator/Architect |
+| Mobile/desktop plan catalog | `.github/agent-docs/plan-catalog.md` — who sees Free/Plus/Pro |
 | App flows / E2E | `app/e2e/SKILL.md`, `desktop/macos/e2e/SKILL.md` |
 | Cursor Cloud VM (Linux x86) | `.cursor/cloud-agent-environment.md` — hermetic E2E harness, known failures |
 

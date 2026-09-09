@@ -2041,7 +2041,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get memoryDeleted => 'Mälestus kustutatud.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Osa mälestuste ajaloost pole saadaval. Kuvatakse seni saadud ajalugu.';
 
   @override
   String get undo => 'Tühista';
@@ -9911,11 +9911,30 @@ class AppLocalizationsEt extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkriptsioon ei saa heli';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Puuduta salvestamise alustamiseks +';
 
   @override
   String get couldNotLoadMemories => 'Mälestusi ei õnnestunud laadida';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Teadmiste graafi ei õnnestunud laadida';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (pärandplaan)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Aitäh, et oled omi varajane toetaja! Võid oma pärandplaanil jääda määramata ajaks. Pane tähele, et neid pärandplaane enam ei müüda ja neid ei saa valida, kui vahetad teisele plaanile.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Teie paketiga võib olla probleem. Palun võtke ühendust toega, et teenuses ei tekiks katkestusi.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Sinu pakett lõpeb $date. Kuni selle ajani säilib sul täielik juurdepääs.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Sinu tasuline juurdepääs on lõppenud.';
 }

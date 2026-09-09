@@ -3271,5 +3271,18 @@
     "conversationsNotCapturedCount": "Nie nagrano ({count})",
     "transcriptionNoAudio": "Transkrypcja nie odbiera dźwięku",
     "couldNotLoadMemories": "Nie udało się wczytać wspomnień",
-    "couldNotLoadKnowledgeGraph": "Nie udało się wczytać grafu wiedzy"
+    "couldNotLoadKnowledgeGraph": "Nie udało się wczytać grafu wiedzy",
+    "legacyPlanTitleSuffix": " (plan starszy)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Dziękujemy, że jesteś wczesnym wspierającym omi! Możesz pozostać na starszym planie bezterminowo. Pamiętaj jednak, że te starsze plany nie są już sprzedawane i nie można ich wybrać po przejściu na inny plan.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    },
+    "planIssueContactSupport": "Może występować problem z Twoim planem. Skontaktuj się z pomocą techniczną, aby uniknąć przerwy w działaniu usługi.",
+    "planLapseCancellationScheduled": "Twój plan zakończy się {date}. Do tego czasu zachowasz pełny dostęp.",
+    "planLapseAccessEnded": "Twój płatny dostęp wygasł.",
+    "memoryHistoryPartial": "Część historii wspomnień jest niedostępna. Wyświetlana jest historia otrzymana do tej pory.",
+    "tapPlusToStartRecording": "Stuknij +, aby rozpocząć nagrywanie"
 }

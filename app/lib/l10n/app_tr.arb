@@ -3271,5 +3271,18 @@
     "conversationsNotCapturedCount": "Kaydedilmedi ({count})",
     "transcriptionNoAudio": "Transkripsiyon ses almıyor",
     "couldNotLoadMemories": "Anılar yüklenemedi",
-    "couldNotLoadKnowledgeGraph": "Bilgi grafiği yüklenemedi"
+    "couldNotLoadKnowledgeGraph": "Bilgi grafiği yüklenemedi",
+    "legacyPlanTitleSuffix": " (Eski Plan)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "omi'nin erken destekçilerinden olduğunuz için teşekkürler! Eski planınızda süresiz kalabilirsiniz. Ancak bu eski planlar artık satılmıyor ve başka bir plana geçerseniz yeniden seçilemez.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    },
+    "planIssueContactSupport": "Planınızla ilgili bir sorun olabilir. Hizmetinizde kesinti yaşanmaması için lütfen destek ekibiyle iletişime geçin.",
+    "planLapseCancellationScheduled": "Planınız {date} tarihinde sona erecek. O zamana kadar tam erişiminiz devam edecek.",
+    "planLapseAccessEnded": "Ücretli erişiminiz sona erdi.",
+    "memoryHistoryPartial": "Bazı anı geçmişi kullanılamıyor. Şimdiye kadar alınan geçmiş gösteriliyor.",
+    "tapPlusToStartRecording": "Kayda başlamak için + öğesine dokunun"
 }

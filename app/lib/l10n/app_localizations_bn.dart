@@ -2040,7 +2040,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get memoryDeleted => 'স্মৃতি মুছে ফেলা হয়েছে।';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'কিছু স্মৃতি ইতিহাস অনুপলব্ধ। এখন পর্যন্ত প্রাপ্ত ইতিহাস দেখানো হচ্ছে।';
 
   @override
   String get undo => 'পূর্বাবস্থা';
@@ -9922,11 +9922,30 @@ class AppLocalizationsBn extends AppLocalizations {
   String get transcriptionNoAudio => 'ট্রান্সক্রিপশন অডিও গ্রহণ করছে না';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'রেকর্ডিং শুরু করতে + এ ট্যাপ করুন';
 
   @override
   String get couldNotLoadMemories => 'স্মৃতি লোড করা যায়নি';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'নলেজ গ্রাফ লোড করা যায়নি';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (পুরোনো প্ল্যান)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omi-এর একজন প্রাথমিক সমর্থক হওয়ার জন্য ধন্যবাদ! আপনি আপনার পুরোনো প্ল্যানে অনির্দিষ্টকাল থাকতে পারেন। তবে মনে রাখবেন, এই পুরোনো প্ল্যানগুলো আর বিক্রি হয় না এবং অন্য প্ল্যানে গেলে সেগুলো আর বেছে নেওয়া যাবে না।';
+
+  @override
+  String get planIssueContactSupport =>
+      'আপনার প্ল্যানে একটি সমস্যা থাকতে পারে। আপনার পরিষেবায় যাতে কোনো বিঘ্ন না ঘটে তা নিশ্চিত করতে অনুগ্রহ করে সহায়তার সঙ্গে যোগাযোগ করুন।';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'আপনার প্ল্যান $date তারিখে শেষ হবে। ততক্ষণ পর্যন্ত আপনি সম্পূর্ণ অ্যাক্সেস বজায় রাখবেন।';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'আপনার পেইড অ্যাক্সেসের মেয়াদ শেষ হয়ে গেছে।';
 }

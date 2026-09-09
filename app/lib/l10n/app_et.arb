@@ -3236,5 +3236,18 @@
     "conversationsNotCapturedCount": "Salvestamata ({count})",
     "transcriptionNoAudio": "Transkriptsioon ei saa heli",
     "couldNotLoadMemories": "Mälestusi ei õnnestunud laadida",
-    "couldNotLoadKnowledgeGraph": "Teadmiste graafi ei õnnestunud laadida"
+    "couldNotLoadKnowledgeGraph": "Teadmiste graafi ei õnnestunud laadida",
+    "legacyPlanTitleSuffix": " (pärandplaan)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Aitäh, et oled omi varajane toetaja! Võid oma pärandplaanil jääda määramata ajaks. Pane tähele, et neid pärandplaane enam ei müüda ja neid ei saa valida, kui vahetad teisele plaanile.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    },
+    "planIssueContactSupport": "Teie paketiga võib olla probleem. Palun võtke ühendust toega, et teenuses ei tekiks katkestusi.",
+    "planLapseCancellationScheduled": "Sinu pakett lõpeb {date}. Kuni selle ajani säilib sul täielik juurdepääs.",
+    "planLapseAccessEnded": "Sinu tasuline juurdepääs on lõppenud.",
+    "memoryHistoryPartial": "Osa mälestuste ajaloost pole saadaval. Kuvatakse seni saadud ajalugu.",
+    "tapPlusToStartRecording": "Puuduta salvestamise alustamiseks +"
 }

@@ -1,0 +1,3 @@
+{
+  "change": "Fixed macOS Settings Plan & Usage incorrectly displaying Unlimited-v2 legacy plan as Neo with Neo's entitlements, while showing the correct Unlimited-v2 price"
+}

@@ -22,6 +22,15 @@ describe('subscription plan wire decoding', () => {
     expect(decodePlan('pro')).toEqual({ kind: 'known', id: 'architect', raw: 'pro' });
   });
 
+  it.each([
+    ['basic', 'Free'],
+    ['plus', 'Plus'],
+    ['pro_v2', 'Pro'],
+    ['pro', 'Architect'],
+  ])('uses the catalog display name for %s', (raw, expectedName) => {
+    expect(planDisplayName(decodePlan(raw))).toBe(expectedName);
+  });
+
   it('keeps future values lossless, neutral, and capability-safe', () => {
     const decoded = decodePlan('future_plan_123');
 
@@ -56,6 +65,7 @@ describe('subscription plan wire decoding', () => {
       'unlimited_v2',
       'operator',
       'architect',
+      'pro_v2',
       'pro',
       'future_plan_123',
     ]);

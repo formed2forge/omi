@@ -8,6 +8,10 @@ import {
   hasPaidSubscription,
   currentPlanSubtitle,
   currentPlanPeriodText,
+  currentPlanDescription,
+  isKeepUntilCancelPlan,
+  LEGACY_SUPPORTER_NOTE,
+  UNKNOWN_PLAN_SUPPORT_NOTE,
   chatQuotaView,
   quotaResetText,
   orderedCatalog,
@@ -24,6 +28,7 @@ import {
   trialProgress,
   trialTimeTone,
   startCheckout,
+  lapseNoticeCopy,
   type CheckoutDeps
 } from './billing'
 import {
@@ -69,6 +74,19 @@ const CATALOG: SubscriptionPlan[] = [
   }
 ]
 
+const NEW_LADDER_CATALOG: SubscriptionPlan[] = [
+  {
+    id: 'plus',
+    title: 'Plus',
+    prices: [{ id: 'price_plus_m', title: 'Monthly', price_string: '$19/mo' }]
+  },
+  {
+    id: 'pro_v2',
+    title: 'Pro',
+    prices: [{ id: 'price_pro_v2_m', title: 'Monthly', price_string: '$49/mo' }]
+  }
+]
+
 function sub(partial: Partial<TestSubscription>): TestSubscription {
   return { plan: 'basic', status: 'active', cancel_at_period_end: false, ...partial }
 }
@@ -88,21 +106,37 @@ describe('resolvePlanTitle', () => {
   it('maps unlimited to Neo by default', () => {
     expect(
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'price_neo_m' }), CATALOG)
-    ).toBe('Neo')
+    ).toBe('Neo (Legacy Plan)')
   })
   it('remaps unlimited to Operator when the price belongs to the Operator catalog plan', () => {
     expect(
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'price_op_y' }), CATALOG)
-    ).toBe('Operator')
+    ).toBe('Operator (Legacy Plan)')
+  })
+  it('remaps unlimited to Unlimited-v2 rather than Free when the price matches', () => {
+    const catalog: SubscriptionPlan[] = [
+      ...CATALOG,
+      {
+        id: 'unlimited_v2',
+        title: 'Unlimited',
+        legacy: true,
+        prices: [{ id: 'price_uv2_m', title: 'Monthly', price_string: '$19/mo' }]
+      }
+    ]
+    const s = sub({ plan: 'unlimited', current_price_id: 'price_uv2_m', status: 'active' })
+    expect(resolvePlanTitle(s, catalog)).toBe('Unlimited (Legacy Plan)')
+    expect(hasPaidSubscription(s)).toBe(true)
+    expect(currentPlanSubtitle(s, catalog)).not.toBe('You are currently on the free tier.')
   })
   it('maps operator to Operator and architect to Architect', () => {
-    expect(resolvePlanTitle(sub({ plan: 'operator' }), CATALOG)).toBe('Operator')
-    expect(resolvePlanTitle(sub({ plan: 'architect' }), CATALOG)).toBe('Architect')
+    expect(resolvePlanTitle(sub({ plan: 'operator' }), CATALOG)).toBe('Operator (Legacy Plan)')
+    expect(resolvePlanTitle(sub({ plan: 'architect' }), CATALOG)).toBe('Architect (Legacy Plan)')
   })
   it.each([
     ['plus', 'Plus'],
-    ['unlimited_v2', 'Unlimited'],
-    ['pro', 'Architect']
+    ['unlimited_v2', 'Unlimited (Legacy Plan)'],
+    ['pro_v2', 'Pro'],
+    ['pro', 'Architect (Legacy Plan)']
   ] as const)('handles the known wire plan %s', (wirePlan, title) => {
     expect(resolvePlanTitle(sub({ plan: wirePlan }), undefined)).toBe(title)
     expect(hasPaidSubscription(sub({ plan: wirePlan }))).toBe(true)
@@ -128,6 +162,7 @@ describe('lossless plan decoding', () => {
     'unlimited_v2',
     'operator',
     'architect',
+    'pro_v2',
     'pro',
     'future_plan_123'
   ] as const
@@ -181,15 +216,15 @@ describe('resolvePlanTitle — catalog-first with the live Windows catalog', () 
   it('shows the catalog title the user actually bought, not the enum name', () => {
     expect(
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'price_u_m' }), LIVE_CATALOG)
-    ).toBe('Unlimited Plan')
+    ).toBe('Unlimited Plan (Legacy Plan)')
     expect(
       resolvePlanTitle(sub({ plan: 'architect', current_price_id: 'price_p_m' }), LIVE_CATALOG)
-    ).toBe('Omi Pro')
+    ).toBe('Omi Pro (Legacy Plan)')
   })
   it('falls back to the enum name when the price id is not in the catalog', () => {
     expect(
       resolvePlanTitle(sub({ plan: 'unlimited', current_price_id: 'legacy_price' }), LIVE_CATALOG)
-    ).toBe('Neo')
+    ).toBe('Neo (Legacy Plan)')
   })
   it('still short-circuits to Free (BYOK) even with a catalog price match', () => {
     expect(
@@ -254,6 +289,40 @@ describe('currentPlanSubtitle', () => {
   it('shows the free-tier line otherwise', () => {
     expect(currentPlanSubtitle(sub({ plan: 'basic' }), CATALOG)).toBe(
       'You are currently on the free tier.'
+    )
+  })
+})
+
+describe('current-plan description and legacy label', () => {
+  it('always has a description for Neo, even when the catalog omits copy', () => {
+    const description = currentPlanDescription(
+      sub({ plan: 'unlimited', current_price_id: 'price_neo_m' }),
+      CATALOG
+    )
+    expect(description).toContain('200 chat')
+    expect(description.toLowerCase()).not.toContain('100 chat')
+    expect(isKeepUntilCancelPlan(sub({ plan: 'unlimited' }), CATALOG)).toBe(true)
+    expect(isKeepUntilCancelPlan(sub({ plan: 'plus' }), NEW_LADDER_CATALOG)).toBe(false)
+    expect(isKeepUntilCancelPlan(sub({ plan: 'unlimited', features: ['byok'] }), CATALOG)).toBe(
+      false
+    )
+    expect(LEGACY_SUPPORTER_NOTE).toContain('early supporter')
+  })
+  it('points an unresolvable plan at support without implying cancellation', () => {
+    // The account may still be actively paying, so the copy must not suggest
+    // re-subscribing: that risks a double charge.
+    const description = currentPlanDescription(sub({ plan: 'unknown' }), [])
+    expect(description).toBe(UNKNOWN_PLAN_SUPPORT_NOTE)
+    expect(description).toContain('contact support')
+    expect(description.toLowerCase()).not.toContain('cancel')
+  })
+  it('describes Free, Plus, and Pro so current plans can be compared', () => {
+    expect(currentPlanDescription(sub({ plan: 'basic' }), [])).toContain('30 chat')
+    expect(currentPlanDescription(sub({ plan: 'plus' }), NEW_LADDER_CATALOG)).toContain(
+      '200 chat'
+    )
+    expect(currentPlanDescription(sub({ plan: 'pro_v2' }), NEW_LADDER_CATALOG)).toContain(
+      '1,000 chat'
     )
   })
 })
@@ -369,6 +438,15 @@ describe('plan catalog helpers', () => {
       'c',
       'd'
     ])
+  })
+  it('keeps the Neo (unlimited) fallback subtitle and description question counts in sync', () => {
+    // Regression: subtitle said 200 questions/month while description said 100 for the
+    // same plan id, so a user could see either number depending which card region they read.
+    const p: SubscriptionPlan = { id: 'unlimited', title: 'Neo' }
+    const subtitleCount = planSubtitle(p).match(/\d+/)?.[0]
+    const descriptionCount = planDescription(p).match(/\d+/)?.[0]
+    expect(descriptionCount).toBe(subtitleCount)
+    expect(descriptionCount).toBe('200')
   })
   it('sorts prices month-first and reads the starting price', () => {
     expect(sortedPrices(CATALOG[1]).map((p) => p.title)).toEqual(['Monthly', 'Annual'])
@@ -540,7 +618,7 @@ const LEGACY_CATALOG: SubscriptionPlan[] = [
 
 describe('detectLegacyCatalog', () => {
   it('flags the correct new-shape catalog as NOT legacy', () => {
-    expect(detectLegacyCatalog(CATALOG)).toEqual({ legacy: false, reasons: [] })
+    expect(detectLegacyCatalog(NEW_LADDER_CATALOG)).toEqual({ legacy: false, reasons: [] })
   })
 
   it('treats an empty / absent catalog as NOT legacy (nothing served yet)', () => {
@@ -551,12 +629,15 @@ describe('detectLegacyCatalog', () => {
   it('flags the legacy-adapted catalog with both mechanical signals', () => {
     const { legacy, reasons } = detectLegacyCatalog(LEGACY_CATALOG)
     expect(legacy).toBe(true)
-    expect(reasons.some((r) => r.includes('operator'))).toBe(true)
+    expect(reasons.some((r) => r.includes('plus') && r.includes('pro_v2'))).toBe(true)
     expect(reasons.some((r) => r.includes('Omi Pro') && r.includes('Unlimited Plan'))).toBe(true)
   })
 
-  it('flags a legacy title even if an operator plan is somehow present', () => {
-    const mixed: SubscriptionPlan[] = [{ id: 'operator', title: 'Omi Pro', prices: [] }]
+  it('flags a legacy title even if Plus and Pro are somehow present', () => {
+    const mixed: SubscriptionPlan[] = [
+      { id: 'plus', title: 'Plus', prices: [] },
+      { id: 'pro_v2', title: 'Omi Pro', prices: [] }
+    ]
     expect(detectLegacyCatalog(mixed).legacy).toBe(true)
   })
 })
@@ -567,7 +648,7 @@ describe('reportLegacyCatalog', () => {
 
   it('does not fire the canary for the correct catalog', () => {
     const err = vi.spyOn(console, 'error').mockImplementation(() => {})
-    expect(reportLegacyCatalog(CATALOG)).toBe(false)
+    expect(reportLegacyCatalog(NEW_LADDER_CATALOG)).toBe(false)
     expect(err).not.toHaveBeenCalled()
   })
 
@@ -576,5 +657,53 @@ describe('reportLegacyCatalog', () => {
     expect(reportLegacyCatalog(LEGACY_CATALOG)).toBe(true)
     expect(err).toHaveBeenCalledTimes(1)
     expect(err.mock.calls[0][0]).toContain('[billing:legacy-catalog]')
+  })
+})
+
+describe('lapseNoticeCopy', () => {
+  it('cancellation_scheduled: keep-my-plan copy names the effective date', () => {
+    const copy = lapseNoticeCopy({
+      state: 'cancellation_scheduled',
+      reason: 'user_requested',
+      recovery_action: 'keep_subscription',
+      // Midday UTC avoids day-shift flakiness across the runner's local timezone.
+      effective_at: Math.floor(new Date('2026-10-15T12:00:00Z').getTime() / 1000)
+    })
+    expect(copy.subtitle).toMatch(
+      /^Your plan will end on .*2026\. You'll keep full access until then\.$/
+    )
+    expect(copy.subtitle).toContain('2026')
+    expect(copy.actionLabel).toBe('Keep My Plan')
+  })
+
+  it('cancellation_scheduled with no effective_at: falls back to the neutral access-ended copy', () => {
+    // State proven (backend says the cancellation is scheduled), date not
+    // (effective_at is null). Must not render a dangling/blank date, and
+    // must not claim the user "keeps full access" without proof of when
+    // that access ends. Matches the Flutter/macOS/web fallback contract.
+    const copy = lapseNoticeCopy({
+      state: 'cancellation_scheduled',
+      reason: 'user_requested',
+      recovery_action: 'keep_subscription',
+      effective_at: null
+    })
+    expect(copy.subtitle).toBe('Your paid access has ended.')
+    expect(copy.subtitle).not.toContain('undefined')
+    expect(copy.subtitle).not.toMatch(/end on \s*\./)
+  })
+
+  it('access_ended: neutral copy never names a cause', () => {
+    const copy = lapseNoticeCopy({
+      state: 'access_ended',
+      reason: 'unknown',
+      recovery_action: 'resubscribe',
+      effective_at: null
+    })
+    expect(copy.subtitle).toBe('Your paid access has ended.')
+    expect(copy.actionLabel).toBe('Resubscribe')
+    const lower = copy.subtitle.toLowerCase()
+    expect(lower).not.toContain('cancel')
+    expect(lower).not.toContain('payment failed')
+    expect(lower).not.toContain('expired')
   })
 })

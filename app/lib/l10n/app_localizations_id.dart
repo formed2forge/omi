@@ -2048,7 +2048,8 @@ class AppLocalizationsId extends AppLocalizations {
   String get memoryDeleted => 'Memori Dihapus.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Sebagian riwayat memori tidak tersedia. Menampilkan riwayat yang diterima sejauh ini.';
 
   @override
   String get undo => 'Batalkan';
@@ -9928,11 +9929,30 @@ class AppLocalizationsId extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripsi tidak menerima audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Ketuk + untuk mulai merekam';
 
   @override
   String get couldNotLoadMemories => 'Tidak dapat memuat kenangan';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Tidak dapat memuat graf pengetahuan';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Paket Lama)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Terima kasih telah menjadi pendukung awal omi! Anda dapat tetap di paket lama tanpa batas waktu. Perlu diketahui, paket lama ini tidak lagi dijual dan tidak dapat dipilih jika Anda beralih ke paket lain.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Mungkin ada masalah dengan paket Anda. Silakan hubungi dukungan agar tidak terjadi gangguan pada layanan Anda.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Paket Anda akan berakhir pada $date. Anda tetap memiliki akses penuh hingga saat itu.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Akses berbayar Anda telah berakhir.';
 }

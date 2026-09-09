@@ -19,10 +19,14 @@ import 'package:omi/models/subscription.dart';
 import 'package:omi/models/user_usage.dart';
 import 'package:omi/pages/settings/fair_use_page.dart';
 import 'package:omi/pages/settings/transcription_settings_page.dart';
+import 'package:omi/pages/settings/widgets/plan_error_card.dart';
 import 'package:omi/pages/settings/widgets/plans_sheet.dart';
+import 'package:omi/pages/settings/widgets/subscription_lapse_notice_card.dart';
 import 'package:omi/providers/usage_provider.dart';
 import 'package:omi/services/wals/sync_rate_limit_reconciliation.dart';
+import 'package:omi/utils/alerts/app_snackbar.dart';
 import 'package:omi/utils/l10n_extensions.dart';
+import 'package:omi/utils/subscription_plan_presentation.dart';
 
 class UsagePage extends StatefulWidget {
   final bool showUpgradeDialog;
@@ -314,7 +318,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.deepPurple,
+          indicatorColor: Colors.white,
           isScrollable: true,
           indicatorWeight: 3,
           labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -339,7 +343,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
               children: [
                 _buildFairUseBanner(),
                 const Expanded(
-                  child: Center(child: CircularProgressIndicator(color: Colors.deepPurple)),
+                  child: Center(child: CircularProgressIndicator(color: Colors.white)),
                 ),
               ],
             );
@@ -430,13 +434,38 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
     }
 
     if (provider.subscription == null) {
+      // A failed fetch (e.g. the server could not resolve this account's plan
+      // at all — malformed/unrecognized catalog data server-side) leaves
+      // `subscription` null but populates `error`. Show the same explicit
+      // error+retry state as the recognized-but-unknown-plan case below,
+      // rather than silently rendering nothing: a blank card gives the user
+      // no indication their plan failed to load or how to recover.
+      if (provider.error != null) {
+        return _buildPlanErrorCard(context, unknownPlan: false);
+      }
       return const SizedBox.shrink();
     }
 
-    final plan = provider.subscription!.subscription.plan;
+    final response = provider.subscription!;
+    final plan = response.subscription.plan;
+
+    // Show explicit error state for unknown/unrecognized plans: either a plan
+    // this build predates, or the backend's `unknown` sentinel for a stored
+    // plan it could not resolve at all. Rather than silently rendering as
+    // Free, show the contact-support state — the account may still be paying,
+    // and retrying will never resolve it on its own.
+    if (plan.isUnknown) {
+      return _buildPlanErrorCard(context, unknownPlan: true);
+    }
+
     final isPaid = plan.isPaid;
-    // Plan names are product names; only the free/unlimited labels are localized.
-    final planLabel = plan == PlanType.plus ? 'Plus' : (isPaid ? context.l10n.unlimitedPlan : context.l10n.basicPlan);
+    // Catalog-first: Plus/Pro serialize as plan=unlimited on the wire, so the
+    // price-id match is what testers (and subscribers) see as the real title.
+    final view = currentPlanView(subscription: response.subscription, catalog: response.availablePlans);
+    final planLabel = view.titled(legacySuffix: context.l10n.legacyPlanTitleSuffix);
+    final planDescription =
+        view.description.isNotEmpty ? view.description : (!isPaid ? context.l10n.basicPlanDescription : '');
+    final lapse = response.lapse;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -452,7 +481,9 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(planLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(planLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
               if (isPaid)
                 GestureDetector(
                   onTap: _isUpgrading ? null : _showPlansSheet,
@@ -466,9 +497,27 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
                 ),
             ],
           ),
-          if (!isPaid) ...[
+          if (planDescription.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(context.l10n.basicPlanDescription, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+            Text(planDescription, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+          ],
+          if (view.isKeepUntilCancel) ...[
+            const SizedBox(height: 8),
+            Text(context.l10n.legacyPlanSupporterNote, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+          ],
+          if (lapse != null) ...[
+            const SizedBox(height: 12),
+            SubscriptionLapseNoticeCard(
+              lapse: lapse,
+              busy: _isUpgrading,
+              onKeepSubscription: () => _keepSubscription(response.subscription.currentPriceId),
+              onResubscribe: _showPlansSheet,
+            ),
+          ],
+          // The generic Upgrade CTA is redundant with the lapse notice's own
+          // "Resubscribe" action once access has actually ended — showing both
+          // would stack two near-identical calls to action.
+          if (!isPaid && lapse?.recoveryAction != SubscriptionLapseRecovery.resubscribe) ...[
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -501,6 +550,45 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  /// Explicit error state shared by the two "we have no usable plan data"
+  /// cases: a plan value this client cannot resolve, and a fetch that failed
+  /// outright (`subscription` stayed null). Both must fail loud rather than
+  /// render a blank card with no way to recover. See [PlanErrorCard].
+  Widget _buildPlanErrorCard(BuildContext context, {required bool unknownPlan}) {
+    return PlanErrorCard(unknownPlan: unknownPlan, onRetry: () => context.read<UsageProvider>().fetchSubscription());
+  }
+
+  /// Reverses a scheduled cancellation by reusing the existing reactivation
+  /// path: `POST /v1/payments/checkout-session` with the account's current
+  /// price_id resolves server-side to `_try_reactivate_subscription` and
+  /// clears `cancel_at_period_end` with no new checkout/charge — the exact
+  /// flow `PlansSheet` already uses when it schedules an upgrade onto a
+  /// canceled subscription. No new endpoint.
+  Future<void> _keepSubscription(String? currentPriceId) async {
+    final l10n = context.l10n;
+    if (currentPriceId == null) {
+      AppSnackbar.showSnackbarError(l10n.couldNotProcessSubscription);
+      return;
+    }
+    setState(() => _isUpgrading = true);
+    try {
+      final provider = context.read<UsageProvider>();
+      final result = await provider.createUserCheckoutSession(priceId: currentPriceId);
+      if (!mounted) return;
+      if (result != null && result['status'] == 'reactivated') {
+        final message = result['message'] as String? ?? l10n.subscriptionReactivatedDefault;
+        AppSnackbar.showSnackbar(message);
+        await provider.fetchSubscription();
+      } else {
+        AppSnackbar.showSnackbarError(l10n.couldNotProcessSubscription);
+      }
+    } catch (_) {
+      if (mounted) AppSnackbar.showSnackbarError(l10n.anErrorOccurredTryAgain);
+    } finally {
+      if (mounted) setState(() => _isUpgrading = false);
+    }
   }
 
   void _showPlansSheet() {
@@ -611,7 +699,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
     }
 
     if (stats == null) {
-      return const Center(child: CircularProgressIndicator(color: Colors.deepPurple));
+      return const Center(child: CircularProgressIndicator(color: Colors.white));
     }
 
     if (stats.transcriptionSeconds == 0 &&
@@ -620,7 +708,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
         stats.memoriesCreated == 0) {
       return RefreshIndicator(
         onRefresh: onRefresh,
-        color: Colors.deepPurple,
+        color: Colors.white,
         child: RepaintBoundary(
           key: key,
           child: Container(
@@ -643,7 +731,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
 
     return RefreshIndicator(
       onRefresh: onRefresh,
-      color: Colors.deepPurple,
+      color: Colors.white,
       child: RepaintBoundary(
         key: key,
         child: Container(
@@ -689,7 +777,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
                 title: context.l10n.remembering,
                 value: '${numberFormatter.format(stats.memoriesCreated)} ${context.l10n.memories}',
                 subtitle: context.l10n.rememberingSubtitle,
-                color: Colors.purple.shade300,
+                color: Colors.grey.shade300,
                 subscription: provider.subscription,
               ),
               if (provider.chatQuotaUnit != null && period == 'monthly') ...[
@@ -789,7 +877,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
         processedHistory = List.from(history);
     }
 
-    final metricColors = [Colors.blue.shade300, Colors.green.shade300, Colors.orange.shade300, Colors.purple.shade300];
+    final metricColors = [Colors.blue.shade300, Colors.green.shade300, Colors.orange.shade300, Colors.grey.shade300];
 
     double maxY = 0;
     for (var point in processedHistory) {
@@ -985,7 +1073,7 @@ class _UsagePageState extends State<UsagePage> with TickerProviderStateMixin {
       {'color': Colors.blue.shade300, 'text': context.l10n.listeningMins},
       {'color': Colors.green.shade300, 'text': context.l10n.understandingWords},
       {'color': Colors.orange.shade300, 'text': context.l10n.insights},
-      {'color': Colors.purple.shade300, 'text': context.l10n.memories},
+      {'color': Colors.grey.shade300, 'text': context.l10n.memories},
     ];
 
     return Wrap(

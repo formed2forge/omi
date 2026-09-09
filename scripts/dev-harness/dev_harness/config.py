@@ -29,6 +29,37 @@ LOCAL_LLM_GATEWAY_SERVICE_TOKEN = "local-dev-llm-gateway-service-token-not-real"
 # SCREEN_FRAME_KMS_KEY; without one the egress routes fail closed, so the harness
 # supplies a throwaway value rather than leaving meeting screenshots unrunnable locally.
 LOCAL_SCREEN_FRAME_SIGNING_SECRET = "local-dev-screen-frame-signing-secret-not-real"
+# Synthetic Stripe price ids for local Settings/catalog QA. Never real Stripe objects.
+# The backend returns catalog stubs when ENVIRONMENT=local-dev-harness.
+LOCAL_STRIPE_PRICE_ID_ENV = {
+    "STRIPE_PLUS_MONTHLY_PRICE_ID": "price_local_plus_month",
+    "STRIPE_PLUS_ANNUAL_PRICE_ID": "price_local_plus_year",
+    "STRIPE_PRO_V2_MONTHLY_PRICE_ID": "price_local_pro_v2_month",
+    "STRIPE_PRO_V2_ANNUAL_PRICE_ID": "price_local_pro_v2_year",
+    "STRIPE_OPERATOR_MONTHLY_PRICE_ID": "price_local_operator_month",
+    "STRIPE_OPERATOR_ANNUAL_PRICE_ID": "price_local_operator_year",
+    "STRIPE_ARCHITECT_MONTHLY_PRICE_ID": "price_local_architect_month",
+    "STRIPE_ARCHITECT_ANNUAL_PRICE_ID": "price_local_architect_year",
+    "STRIPE_UNLIMITED_MONTHLY_PRICE_ID": "price_local_unlimited_month",
+    "STRIPE_UNLIMITED_ANNUAL_PRICE_ID": "price_local_unlimited_year",
+    "STRIPE_UNLIMITED_V2_MONTHLY_PRICE_ID": "price_local_unlimited_v2_month",
+    "STRIPE_UNLIMITED_V2_ANNUAL_PRICE_ID": "price_local_unlimited_v2_year",
+}
+# Display-only unit_amount in cents for the matching local price ids.
+LOCAL_STRIPE_PRICE_AMOUNTS = {
+    "price_local_plus_month": (1900, "month"),
+    "price_local_plus_year": (19000, "year"),
+    "price_local_pro_v2_month": (4900, "month"),
+    "price_local_pro_v2_year": (49000, "year"),
+    "price_local_operator_month": (2000, "month"),
+    "price_local_operator_year": (20000, "year"),
+    "price_local_architect_month": (19900, "month"),
+    "price_local_architect_year": (199000, "year"),
+    "price_local_unlimited_month": (2499, "month"),
+    "price_local_unlimited_year": (24990, "year"),
+    "price_local_unlimited_v2_month": (1900, "month"),
+    "price_local_unlimited_v2_year": (19000, "year"),
+}
 LOCAL_STORAGE_BUCKET_ENV = {
     "BUCKET_SPEECH_PROFILES": "speech-profiles",
     "BUCKET_POSTPROCESSING": "postprocessing",
@@ -363,7 +394,9 @@ def _harness_service_extra(cfg: HarnessConfig) -> dict[str, str]:
         # the one place the feature must be on, since running it is the whole point.
         "SCREEN_FRAME_EGRESS_ENABLED": "true",
         "SCREEN_FRAME_SIGNING_SECRET": LOCAL_SCREEN_FRAME_SIGNING_SECRET,
+        "OMI_HARNESS_STRIPE_STUB": "1",
         **LOCAL_STORAGE_BUCKET_ENV,
+        **LOCAL_STRIPE_PRICE_ID_ENV,
     }
 
 

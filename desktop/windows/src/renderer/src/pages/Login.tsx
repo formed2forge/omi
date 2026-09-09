@@ -4,6 +4,7 @@ import type { SignInProvider } from '../../../shared/types'
 import { signInWithProvider } from '../lib/firebase'
 import omiLogo from '../assets/omilogo.png'
 import { BrandImage } from '../components/ui/BrandImage'
+import { LocalDevSignIn } from '../components/auth/LocalDevSignIn'
 
 export function Login(): React.JSX.Element {
   // 'activeProvider' spans the whole system-browser round-trip (opening the browser →
@@ -83,6 +84,7 @@ export function Login(): React.JSX.Element {
           )}
           {error && <p className="text-sm text-red-400/90">{error}</p>}
         </div>
+        <LocalDevSignIn />
       </div>
     </div>
   )

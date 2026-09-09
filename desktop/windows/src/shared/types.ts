@@ -961,6 +961,11 @@ export type OmiBridgeApi = {
   // browser (main owns the loopback callback + token exchange; the renderer
   // finishes with signInWithCustomToken on the returned custom token).
   signInWithProvider: (provider: SignInProvider) => Promise<SignInResult>
+  // Auth: local-dev-only harness sign-in. Main exchanges a seeded emulator uid
+  // for a Firebase custom token via the local backend (main also independently
+  // gates on the local_dev profile, so this always refuses outside it); the
+  // renderer finishes with signInWithCustomToken, same as signInWithProvider.
+  signInWithLocalDevToken: (uid: string) => Promise<SignInResult>
   // Integrations (3d): Google OAuth + Gmail/Calendar. Main owns the OAuth grant
   // and REST reads; the renderer synthesizes the returned items and writes
   // /v3/memories + /v1/action-items itself (it holds the Firebase token).

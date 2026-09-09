@@ -2051,7 +2051,8 @@ class AppLocalizationsRo extends AppLocalizations {
   String get memoryDeleted => 'Amintire ștearsă.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'O parte din istoricul amintirilor nu este disponibilă. Se afișează istoricul primit până acum.';
 
   @override
   String get undo => 'Anulează';
@@ -9964,11 +9965,30 @@ class AppLocalizationsRo extends AppLocalizations {
   String get transcriptionNoAudio => 'Transcrierea nu primește audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Atinge + pentru a începe înregistrarea';
 
   @override
   String get couldNotLoadMemories => 'Nu s-au putut încărca amintirile';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Nu s-a putut încărca graful de cunoștințe';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (plan vechi)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Mulțumim că ești un susținător timpuriu al omi! Poți rămâne pe planul vechi pe termen nelimitat. Reține totuși că aceste planuri vechi nu se mai vând și nu pot fi alese dacă treci la un alt plan.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Este posibil să existe o problemă cu planul tău. Te rugăm să contactezi asistența pentru a evita orice întrerupere a serviciului.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Planul tău se va încheia pe $date. Vei păstra acces complet până atunci.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Accesul tău plătit a expirat.';
 }

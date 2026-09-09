@@ -2042,7 +2042,7 @@ class AppLocalizationsMr extends AppLocalizations {
   String get memoryDeleted => 'स्मृती हटवली गेली.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'काही मेमरी इतिहास उपलब्ध नाही. आतापर्यंत प्राप्त झालेला इतिहास दर्शवला जात आहे.';
 
   @override
   String get undo => 'पूर्ववत् करा';
@@ -9926,11 +9926,30 @@ class AppLocalizationsMr extends AppLocalizations {
   String get transcriptionNoAudio => 'ट्रान्सक्रिप्शन ऑडिओ घेत नाही';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'रेकॉर्डिंग सुरू करण्यासाठी + वर टॅप करा';
 
   @override
   String get couldNotLoadMemories => 'आठवणी लोड करता आल्या नाहीत';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'ज्ञान आलेख लोड करता आला नाही';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (जुनी योजना)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omiचे सुरुवातीचे समर्थक असल्याबद्दल धन्यवाद! तुम्ही तुमच्या जुन्या योजनेवर अनिश्चितकाळ राहू शकता. लक्षात घ्या की या जुन्या योजना आता विकल्या जात नाहीत आणि दुसऱ्या योजनेवर गेल्यास त्या पुन्हा निवडता येत नाहीत.';
+
+  @override
+  String get planIssueContactSupport =>
+      'तुमच्या प्लॅनमध्ये काही अडचण असू शकते. तुमच्या सेवेत खंड पडू नये यासाठी कृपया सपोर्टशी संपर्क साधा.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'तुमची योजना $date रोजी संपेल. तोपर्यंत तुम्हाला पूर्ण प्रवेश मिळत राहील.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'तुमचा सशुल्क प्रवेश संपला आहे.';
 }

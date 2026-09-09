@@ -2058,7 +2058,8 @@ class AppLocalizationsEl extends AppLocalizations {
   String get memoryDeleted => 'Η ανάμνηση διαγράφηκε.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Μέρος του ιστορικού αναμνήσεων δεν είναι διαθέσιμο. Εμφανίζεται το ιστορικό που έχει ληφθεί μέχρι στιγμής.';
 
   @override
   String get undo => 'Αναίρεση';
@@ -9987,11 +9988,30 @@ class AppLocalizationsEl extends AppLocalizations {
   String get transcriptionNoAudio => 'Η μεταγραφή δεν λαμβάνει ήχο';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Πατήστε + για να ξεκινήσετε την ηχογράφηση';
 
   @override
   String get couldNotLoadMemories => 'Δεν ήταν δυνατή η φόρτωση των αναμνήσεων';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Δεν ήταν δυνατή η φόρτωση του γραφήματος γνώσης';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (παλιό πλάνο)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Ευχαριστούμε που είστε από τους πρώτους υποστηρικτές του omi! Μπορείτε να μείνετε στο παλιό σας πλάνο επ\' αόριστον. Ωστόσο, αυτά τα παλιά πλάνα δεν πωλούνται πλέον και δεν μπορούν να επιλεγούν αν αλλάξετε σε άλλο πλάνο.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Ενδέχεται να υπάρχει πρόβλημα με το πρόγραμμά σας. Επικοινωνήστε με την υποστήριξη ώστε να μη διακοπεί η υπηρεσία σας.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Το πλάνο σας θα λήξει στις $date. Θα διατηρήσετε πλήρη πρόσβαση μέχρι τότε.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Η επί πληρωμή πρόσβασή σας έχει λήξει.';
 }

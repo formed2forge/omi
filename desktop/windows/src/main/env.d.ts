@@ -12,6 +12,17 @@ interface ImportMetaEnv {
    *  build time). Main verifies the relayed Firebase ID token's aud/iss against
    *  it (auth/firebaseIdToken.ts); it must come from here, never the renderer. */
   readonly VITE_FIREBASE_PROJECT_ID?: string
+  /** Explicit local-dev gate (shared VITE_ prefix — frozen into the main bundle
+   *  at build time, same as the renderer). 'local_dev' unlocks the
+   *  auth:signInLocalDev IPC handler (ipc/auth.ts); any other value (including
+   *  unset) refuses it regardless of what the renderer's own UI gate shows. See
+   *  shared/environmentProfile.ts and scripts/dev-harness/PRICING_WINDOWS.md. */
+  readonly VITE_OMI_APP_PROFILE?: string
+  /** Firebase Auth emulator host/port (shared VITE_ prefix). Main uses these
+   *  only to widen the local-dev CORS allowlist (shared/localDevCors.ts) —
+   *  the renderer owns the actual emulator connection (lib/firebase.ts). */
+  readonly VITE_FIREBASE_AUTH_EMULATOR_HOST?: string
+  readonly VITE_FIREBASE_AUTH_EMULATOR_PORT?: string
 }
 
 interface ImportMeta {

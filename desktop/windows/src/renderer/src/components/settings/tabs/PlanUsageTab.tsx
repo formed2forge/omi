@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Clock, RefreshCw } from 'lucide-react'
 import { useSearchableRow } from '../searchContext'
 import { toast } from '../../../lib/toast'
 import { BillingCard } from '../billing/BillingCard'
@@ -18,7 +18,9 @@ import {
   startCheckout,
   createCheckoutSession,
   upgradeSubscription,
-  openCustomerPortal
+  openCustomerPortal,
+  lapseNoticeCopy,
+  OPERATOR_DEPRECATION_FALLBACK_PRICE
 } from '../../../lib/billing'
 import type {
   UserSubscriptionResponse,
@@ -154,12 +156,11 @@ export function PlanUsageTab(): React.JSX.Element {
     }
   }
 
-  // Deprecation "Try Operator" + trial "View Plans": select the Operator card
+  // Deprecation "Try Plus" + trial "View Plans": select the Plus card
   // (or first available) and scroll the grid into view.
-  const jumpToOperator = (): void => {
-    const operator =
-      catalog.find((p) => p.id === 'operator' || p.title === 'Operator') ?? catalog[0]
-    if (operator) setSelectedPlanId(operator.id)
+  const jumpToPlus = (): void => {
+    const plus = catalog.find((p) => p.id === 'plus' || p.title === 'Plus') ?? catalog[0]
+    if (plus) setSelectedPlanId(plus.id)
     plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -225,14 +226,41 @@ export function PlanUsageTab(): React.JSX.Element {
           title="Plan Retiring"
           subtitle={
             subscription.deprecation_message ??
-            'Your Unlimited plan is being retired. Try the new Operator plan — same great features at $49/mo.'
+            `Your Unlimited plan is being retired. Try the new Operator plan — same great features at ${OPERATOR_DEPRECATION_FALLBACK_PRICE}.`
           }
           trailing={
             showCatalog ? (
-              <button onClick={jumpToOperator} className="btn-ghost">
-                Try Operator
+              <button onClick={jumpToPlus} className="btn-ghost">
+                Try Plus
               </button>
             ) : undefined
+          }
+        />
+      ) : null}
+
+      {sub.lapse ? (
+        <BillingCard
+          icon={sub.lapse.state === 'cancellation_scheduled' ? Clock : AlertTriangle}
+          iconTone="amber"
+          className="border border-amber-400/25"
+          title={lapseNoticeCopy(sub.lapse).title}
+          subtitle={lapseNoticeCopy(sub.lapse).subtitle}
+          trailing={
+            sub.lapse.recovery_action === 'keep_subscription' ? (
+              subscription.current_price_id ? (
+                <button
+                  onClick={() => onBuy(subscription.current_price_id as string)}
+                  disabled={activePriceId !== null}
+                  className="btn-ghost"
+                >
+                  {lapseNoticeCopy(sub.lapse).actionLabel}
+                </button>
+              ) : undefined
+            ) : (
+              <button onClick={jumpToPlus} className="btn-ghost">
+                {lapseNoticeCopy(sub.lapse).actionLabel}
+              </button>
+            )
           }
         />
       ) : null}
@@ -242,7 +270,7 @@ export function PlanUsageTab(): React.JSX.Element {
       {overage?.is_overage_plan ? <OverageCard overage={overage} /> : null}
 
       {trial && (isTrialActive(trial) || trial.trial_expired) ? (
-        <TrialCard trial={trial} onViewPlans={jumpToOperator} />
+        <TrialCard trial={trial} onViewPlans={jumpToPlus} />
       ) : null}
 
       {showCatalog ? (

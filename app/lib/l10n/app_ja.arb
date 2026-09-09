@@ -3212,5 +3212,18 @@
     "conversationsNotCapturedCount": "未記録 ({count})",
     "transcriptionNoAudio": "文字起こしが音声を受信していません",
     "couldNotLoadMemories": "記憶を読み込めませんでした",
-    "couldNotLoadKnowledgeGraph": "ナレッジグラフを読み込めませんでした"
+    "couldNotLoadKnowledgeGraph": "ナレッジグラフを読み込めませんでした",
+    "legacyPlanTitleSuffix": "（旧プラン）",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "omiの初期サポーターになっていただきありがとうございます。旧プランは無期限で継続できます。ただし、これらの旧プランは販売終了しており、別のプランに切り替えたあとに選び直すことはできません。",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    },
+    "planIssueContactSupport": "ご利用のプランに問題がある可能性があります。サービスが中断しないよう、サポートまでお問い合わせください。",
+    "planLapseCancellationScheduled": "プランは{date}に終了します。それまでは引き続きすべての機能をご利用いただけます。",
+    "planLapseAccessEnded": "有料アクセスが終了しました。",
+    "memoryHistoryPartial": "一部の記憶履歴は利用できません。これまでに受信した履歴を表示しています。",
+    "tapPlusToStartRecording": "+をタップして録音を開始"
 }

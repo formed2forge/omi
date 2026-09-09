@@ -3254,5 +3254,18 @@
     "conversationsNotCapturedCount": "Ikke optaget ({count})",
     "transcriptionNoAudio": "Transskription modtager ikke lyd",
     "couldNotLoadMemories": "Kunne ikke indlæse minder",
-    "couldNotLoadKnowledgeGraph": "Kunne ikke indlæse vidensgrafen"
+    "couldNotLoadKnowledgeGraph": "Kunne ikke indlæse vidensgrafen",
+    "legacyPlanTitleSuffix": " (ældre abonnement)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Tak fordi du er en tidlig støtter af omi! Du kan blive på dit ældre abonnement på ubestemt tid. Bemærk dog, at disse ældre abonnementer ikke længere sælges og ikke kan vælges, hvis du skifter til et andet abonnement.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    },
+    "planIssueContactSupport": "Der kan være et problem med dit abonnement. Kontakt venligst support for at sikre, at der ikke sker afbrydelser i din service.",
+    "planLapseCancellationScheduled": "Din plan udløber den {date}. Du beholder fuld adgang indtil da.",
+    "planLapseAccessEnded": "Din betalte adgang er udløbet.",
+    "memoryHistoryPartial": "Noget af hukommelseshistorikken er ikke tilgængelig. Viser historikken modtaget indtil videre.",
+    "tapPlusToStartRecording": "Tryk på + for at starte optagelse"
 }

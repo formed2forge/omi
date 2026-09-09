@@ -2042,7 +2042,7 @@ class AppLocalizationsLt extends AppLocalizations {
   String get memoryDeleted => 'Prisiminimas ištrintas.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Dalis atsiminimų istorijos nepasiekiama. Rodoma iki šiol gauta istorija.';
 
   @override
   String get undo => 'Atšaukti';
@@ -9937,11 +9937,30 @@ class AppLocalizationsLt extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripcija negauna garso';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Palieskite +, kad pradėtumėte įrašymą';
 
   @override
   String get couldNotLoadMemories => 'Nepavyko įkelti prisiminimų';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Nepavyko įkelti žinių grafo';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (senasis planas)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Ačiū, kad esate ankstyvasis omi rėmėjas! Sename plane galite likti neribotą laiką. Atminkite, kad šie senieji planai jau neparduodami ir jų negalima pasirinkti perėjus prie kito plano.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Gali būti, kad su jūsų planu iškilo problema. Susisiekite su palaikymo komanda, kad jūsų paslauga nebūtų nutraukta.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Jūsų planas baigsis $date. Iki tol išlaikysite visišką prieigą.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Jūsų mokama prieiga baigėsi.';
 }

@@ -27,6 +27,10 @@
     {
       "path": "desktop/windows/src/shared/agentControlTools.ts",
       "reason": "test-only contract module (AGENT_CONTROL_TOOL_NAMES assertions); the live IPC handler is self-contained in src/main/ipc/agentControl.ts"
+    },
+    {
+      "path": "desktop/windows/src/shared/localDevCsp.ts",
+      "reason": "imported only by electron.vite.config.ts (localDevConnectSrcOrigins/widenConnectSrcForLocalDev widen the renderer's local-dev CSP connect-src at build time) — the build config isn't part of the runtime app import graph the scanner walks from main/renderer entry points"
     }
   ]
 }

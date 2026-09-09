@@ -111,6 +111,47 @@ package enum DesktopLocalProfile {
   package static var selectedPassword: String? { nonEmpty(value("OMI_LOCAL_AUTH_PASSWORD")) }
   package static var selectedDisplayName: String? { nonEmpty(value("OMI_LOCAL_AUTH_DISPLAY_NAME")) }
 
+  // MARK: - Local-dev onboarding bypass
+  //
+  // Cross-platform contract: contracts/parity/local_dev_onboarding_bypass.json
+  // (Windows: desktop/windows/src/shared/localDevOnboardingBypass.ts, mobile:
+  // app/lib/env/local_dev_onboarding_bypass.dart). One canonical, non-privileged
+  // fixture identity every platform signs in as when the bypass is active — see
+  // AuthService.swift's bootstrapLocalHarnessAuthIfNeeded() for the sign-in side
+  // and Onboarding/SkipOnboarding.swift for the onboarding-skip composition.
+  //
+  // WHY A SEPARATE FLAG FROM isEnabled: harness mode (OMI_DESKTOP_LOCAL_PROFILE=1)
+  // is ALSO what the existing manual OMI_LOCAL_AUTH_* named-bundle flow runs
+  // under (an operator-chosen uid, e.g. pricing_plus, seeded by the launcher's
+  // local-profile-env.sh), which must keep running onboarding normally so
+  // testers can verify the plan catalogue post-onboarding. The bypass is a
+  // SEPARATE, narrower opt-in on top of harness mode — never inferred from
+  // build type, persisted state, or an existing login alone.
+  package static let onboardingBypassFixtureUID = "local_dev_fixture"
+  package static let onboardingBypassFixtureGivenName = "Local"
+  package static let onboardingBypassFixtureFamilyName = "Dev"
+
+  /// Deterministic gate: `isEnabled` (harness mode + non-production bundle)
+  /// AND a SEPARATE exact `"1"` bypass value are both required. Any other
+  /// bypass value (empty, "0", "yes", whitespace-padded) is off — no fuzzy
+  /// matching. See contracts/parity/local_dev_onboarding_bypass.json's
+  /// gate_cases for the full truth table.
+  package static func onboardingBypassEnabled(
+    bundleIdentifier: String?,
+    profileValue: String?,
+    bypassValue: String?
+  ) -> Bool {
+    isEnabled(bundleIdentifier: bundleIdentifier, profileValue: profileValue) && bypassValue == "1"
+  }
+
+  package static var onboardingBypassEnabled: Bool {
+    onboardingBypassEnabled(
+      bundleIdentifier: Bundle.main.bundleIdentifier,
+      profileValue: value("OMI_DESKTOP_LOCAL_PROFILE"),
+      bypassValue: value("OMI_LOCAL_DEV_ONBOARDING_BYPASS")
+    )
+  }
+
   package static func applicationSupportURL() -> URL {
     guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
       fatalError("Application Support directory not available on this system")

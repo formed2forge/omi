@@ -11,6 +11,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:omi/backend/preferences.dart';
 import 'package:omi/pages/settings/widgets/cancel_subscription_sheet.dart';
+import 'package:omi/pages/settings/widgets/plans_sheet_close_button.dart';
 import 'package:omi/gen/assets.gen.dart';
 import 'package:omi/models/subscription.dart';
 import 'package:omi/pages/settings/transcription_settings_page.dart';
@@ -18,6 +19,7 @@ import 'package:omi/providers/capture_provider.dart';
 import 'package:omi/providers/usage_provider.dart';
 import 'package:omi/providers/user_provider.dart';
 import 'package:omi/utils/plan_pricing.dart';
+import 'package:omi/utils/subscription_plan_presentation.dart';
 import 'package:omi/services/freemium_transcription_service.dart';
 import 'package:omi/utils/alerts/app_snackbar.dart';
 import 'package:omi/utils/l10n_extensions.dart';
@@ -47,7 +49,7 @@ class PlansSheet extends StatefulWidget {
 
 class _PlansSheetState extends State<PlansSheet> {
   String selectedPlan = 'yearly'; // 'yearly' or 'monthly'  (billing period)
-  String? selectedTierId; // 'unlimited', 'operator', 'architect'
+  String? selectedTierId; // 'plus', 'pro_v2', or a keep-until-cancel plan id
   bool _isUpgrading = false;
   bool _showTrainingDataOptIn = false; // Control visibility of training data opt-in
   bool _isSwitchingToFree = false;
@@ -643,804 +645,874 @@ class _PlansSheetState extends State<PlansSheet> {
                 ),
                 borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
               ),
-              child: ListView(
-                controller: scrollController,
+              child: Stack(
                 children: [
-                  Center(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 24),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(color: Colors.grey.shade700, borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 150,
-                    width: double.infinity,
-                    child: Stack(
-                      children: [
-                        Row(
+                  ListView(
+                    controller: scrollController,
+                    children: [
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 24),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade700,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        height: 150,
+                        width: double.infinity,
+                        child: Stack(
                           children: [
-                            Expanded(
-                              flex: 1,
-                              child: ClipRect(
-                                child: SizedBox(
-                                  height: 120,
-                                  child: AnimatedBuilder(
-                                    animation: widget.waveController,
-                                    builder: (context, child) {
-                                      const double totalWidth = 420.0;
-                                      final scrollOffset = (widget.waveController.value * totalWidth) % totalWidth;
-                                      return Stack(
-                                        children: [
-                                          Positioned(
-                                            left: -totalWidth + scrollOffset,
-                                            top: 0,
-                                            bottom: 0,
-                                            child: Row(
-                                              children: List.generate(60, (index) {
-                                                final heights = [
-                                                  20.0,
-                                                  32.0,
-                                                  45.0,
-                                                  26.0,
-                                                  52.0,
-                                                  39.0,
-                                                  32.0,
-                                                  45.0,
-                                                  28.0,
-                                                  36.0,
-                                                  41.0,
-                                                  24.0,
-                                                  48.0,
-                                                  37.0,
-                                                  30.0,
-                                                  43.0,
-                                                  22.0,
-                                                  34.0,
-                                                  47.0,
-                                                  29.0,
-                                                  50.0,
-                                                  38.0,
-                                                  33.0,
-                                                  44.0,
-                                                ];
-                                                final height = heights[index % heights.length];
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 1,
+                                  child: ClipRect(
+                                    child: SizedBox(
+                                      height: 120,
+                                      child: AnimatedBuilder(
+                                        animation: widget.waveController,
+                                        builder: (context, child) {
+                                          const double totalWidth = 420.0;
+                                          final scrollOffset = (widget.waveController.value * totalWidth) % totalWidth;
+                                          return Stack(
+                                            children: [
+                                              Positioned(
+                                                left: -totalWidth + scrollOffset,
+                                                top: 0,
+                                                bottom: 0,
+                                                child: Row(
+                                                  children: List.generate(60, (index) {
+                                                    final heights = [
+                                                      20.0,
+                                                      32.0,
+                                                      45.0,
+                                                      26.0,
+                                                      52.0,
+                                                      39.0,
+                                                      32.0,
+                                                      45.0,
+                                                      28.0,
+                                                      36.0,
+                                                      41.0,
+                                                      24.0,
+                                                      48.0,
+                                                      37.0,
+                                                      30.0,
+                                                      43.0,
+                                                      22.0,
+                                                      34.0,
+                                                      47.0,
+                                                      29.0,
+                                                      50.0,
+                                                      38.0,
+                                                      33.0,
+                                                      44.0,
+                                                    ];
+                                                    final height = heights[index % heights.length];
 
-                                                return Container(
-                                                  width: 4,
-                                                  height: height,
-                                                  margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.red.withValues(alpha: 0.7),
-                                                    borderRadius: BorderRadius.circular(2),
-                                                  ),
-                                                );
-                                              }),
-                                            ),
-                                          ),
-                                          Positioned(
-                                            left: scrollOffset,
-                                            top: 0,
-                                            bottom: 0,
-                                            child: Row(
-                                              children: List.generate(60, (index) {
-                                                final heights = [20.0, 32.0, 45.0, 26.0, 52.0, 39.0, 32.0, 45.0];
-                                                final height = heights[index % heights.length];
+                                                    return Container(
+                                                      width: 4,
+                                                      height: height,
+                                                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.red.withValues(alpha: 0.7),
+                                                        borderRadius: BorderRadius.circular(2),
+                                                      ),
+                                                    );
+                                                  }),
+                                                ),
+                                              ),
+                                              Positioned(
+                                                left: scrollOffset,
+                                                top: 0,
+                                                bottom: 0,
+                                                child: Row(
+                                                  children: List.generate(60, (index) {
+                                                    final heights = [20.0, 32.0, 45.0, 26.0, 52.0, 39.0, 32.0, 45.0];
+                                                    final height = heights[index % heights.length];
 
-                                                return Container(
-                                                  width: 4,
-                                                  height: height,
-                                                  margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.red.withValues(alpha: 0.7),
-                                                    borderRadius: BorderRadius.circular(2),
-                                                  ),
-                                                );
-                                              }),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
+                                                    return Container(
+                                                      width: 4,
+                                                      height: height,
+                                                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.red.withValues(alpha: 0.7),
+                                                        borderRadius: BorderRadius.circular(2),
+                                                      ),
+                                                    );
+                                                  }),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 1,
-                              child: ClipRect(
-                                child: SizedBox(
-                                  height: 120,
-                                  child: AnimatedBuilder(
-                                    animation: widget.notesController,
-                                    builder: (context, child) {
-                                      const double totalWidth = 440.0;
-                                      final scrollOffset = (widget.notesController.value * totalWidth) % totalWidth;
-                                      return Stack(
-                                        children: [
-                                          Positioned(
-                                            left: -totalWidth + scrollOffset,
-                                            top: 0,
-                                            bottom: 0,
-                                            child: Row(
-                                              children: List.generate(8, (index) {
-                                                return Container(
-                                                  width: 45,
-                                                  height: 55,
-                                                  margin: const EdgeInsets.symmetric(horizontal: 5),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white.withValues(alpha: 0.95),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.black.withValues(alpha: 0.15),
-                                                        blurRadius: 4,
-                                                        offset: const Offset(0, 2),
+                                Expanded(
+                                  flex: 1,
+                                  child: ClipRect(
+                                    child: SizedBox(
+                                      height: 120,
+                                      child: AnimatedBuilder(
+                                        animation: widget.notesController,
+                                        builder: (context, child) {
+                                          const double totalWidth = 440.0;
+                                          final scrollOffset = (widget.notesController.value * totalWidth) % totalWidth;
+                                          return Stack(
+                                            children: [
+                                              Positioned(
+                                                left: -totalWidth + scrollOffset,
+                                                top: 0,
+                                                bottom: 0,
+                                                child: Row(
+                                                  children: List.generate(8, (index) {
+                                                    return Container(
+                                                      width: 45,
+                                                      height: 55,
+                                                      margin: const EdgeInsets.symmetric(horizontal: 5),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white.withValues(alpha: 0.95),
+                                                        borderRadius: BorderRadius.circular(8),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Colors.black.withValues(alpha: 0.15),
+                                                            blurRadius: 4,
+                                                            offset: const Offset(0, 2),
+                                                          ),
+                                                        ],
                                                       ),
-                                                    ],
-                                                  ),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(6),
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Container(
-                                                          width: 26,
-                                                          height: 3,
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.black,
-                                                            borderRadius: BorderRadius.circular(1.5),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 4),
-                                                        ...List.generate(
-                                                          5,
-                                                          (i) => Container(
-                                                            width: i == 4 ? 24 : 35, // Last line shorter
-                                                            height: 2,
-                                                            margin: const EdgeInsets.symmetric(vertical: 2),
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.grey[350],
-                                                              borderRadius: BorderRadius.circular(1),
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.all(6),
+                                                        child: Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Container(
+                                                              width: 26,
+                                                              height: 3,
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.black,
+                                                                borderRadius: BorderRadius.circular(1.5),
+                                                              ),
                                                             ),
-                                                          ),
+                                                            const SizedBox(height: 4),
+                                                            ...List.generate(
+                                                              5,
+                                                              (i) => Container(
+                                                                width: i == 4 ? 24 : 35, // Last line shorter
+                                                                height: 2,
+                                                                margin: const EdgeInsets.symmetric(vertical: 2),
+                                                                decoration: BoxDecoration(
+                                                                  color: Colors.grey[350],
+                                                                  borderRadius: BorderRadius.circular(1),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
                                                         ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              }),
-                                            ),
-                                          ),
-                                          Positioned(
-                                            left: scrollOffset,
-                                            top: 0,
-                                            bottom: 0,
-                                            child: Row(
-                                              children: List.generate(8, (index) {
-                                                return Container(
-                                                  width: 45,
-                                                  height: 55,
-                                                  margin: const EdgeInsets.symmetric(horizontal: 5),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white.withValues(alpha: 0.95),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.black.withValues(alpha: 0.15),
-                                                        blurRadius: 4,
-                                                        offset: const Offset(0, 2),
                                                       ),
-                                                    ],
-                                                  ),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(6),
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Container(
-                                                          width: 26,
-                                                          height: 3,
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.black,
-                                                            borderRadius: BorderRadius.circular(1.5),
+                                                    );
+                                                  }),
+                                                ),
+                                              ),
+                                              Positioned(
+                                                left: scrollOffset,
+                                                top: 0,
+                                                bottom: 0,
+                                                child: Row(
+                                                  children: List.generate(8, (index) {
+                                                    return Container(
+                                                      width: 45,
+                                                      height: 55,
+                                                      margin: const EdgeInsets.symmetric(horizontal: 5),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white.withValues(alpha: 0.95),
+                                                        borderRadius: BorderRadius.circular(8),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Colors.black.withValues(alpha: 0.15),
+                                                            blurRadius: 4,
+                                                            offset: const Offset(0, 2),
                                                           ),
-                                                        ),
-                                                        const SizedBox(height: 4),
-                                                        ...List.generate(
-                                                          5,
-                                                          (i) => Container(
-                                                            width: i == 4 ? 24 : 35, // Last line shorter
-                                                            height: 2,
-                                                            margin: const EdgeInsets.symmetric(vertical: 2),
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.grey[350],
-                                                              borderRadius: BorderRadius.circular(1),
+                                                        ],
+                                                      ),
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.all(6),
+                                                        child: Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Container(
+                                                              width: 26,
+                                                              height: 3,
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.black,
+                                                                borderRadius: BorderRadius.circular(1.5),
+                                                              ),
                                                             ),
-                                                          ),
+                                                            const SizedBox(height: 4),
+                                                            ...List.generate(
+                                                              5,
+                                                              (i) => Container(
+                                                                width: i == 4 ? 24 : 35, // Last line shorter
+                                                                height: 2,
+                                                                margin: const EdgeInsets.symmetric(vertical: 2),
+                                                                decoration: BoxDecoration(
+                                                                  color: Colors.grey[350],
+                                                                  borderRadius: BorderRadius.circular(1),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
                                                         ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              }),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
+                                                      ),
+                                                    );
+                                                  }),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    ),
                                   ),
+                                ),
+                              ],
+                            ),
+                            Positioned(
+                              left: (MediaQuery.of(context).size.width - 120) / 2,
+                              top: 5,
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.blue.withValues(alpha: 0.4),
+                                      blurRadius: 20,
+                                      spreadRadius: 3,
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child: Image.asset(Assets.images.omiWithoutRope.path, fit: BoxFit.cover),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        Positioned(
-                          left: (MediaQuery.of(context).size.width - 120) / 2,
-                          top: 5,
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(color: Colors.blue.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 3),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const FaIcon(FontAwesomeIcons.crown, color: Colors.yellow, size: 20),
+                                const SizedBox(width: 8),
+                                Builder(
+                                  builder: (context) {
+                                    final hasScheduledUpgrade = _hasScheduledUpgrade();
+                                    if (hasScheduledUpgrade) {
+                                      return Text(
+                                        context.l10n.upgradeScheduled,
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      );
+                                    } else {
+                                      return Text(
+                                        isUnlimited ? context.l10n.changePlan : context.l10n.upgradeYourPlan,
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      );
+                                    }
+                                  },
+                                ),
                               ],
                             ),
-                            child: ClipOval(child: Image.asset(Assets.images.omiWithoutRope.path, fit: BoxFit.cover)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const FaIcon(FontAwesomeIcons.crown, color: Colors.yellow, size: 20),
-                            const SizedBox(width: 8),
+                            const SizedBox(height: 8),
                             Builder(
                               builder: (context) {
                                 final hasScheduledUpgrade = _hasScheduledUpgrade();
                                 if (hasScheduledUpgrade) {
                                   return Text(
-                                    context.l10n.upgradeScheduled,
-                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                    context.l10n.upgradeAlreadyScheduled,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
                                   );
                                 } else {
+                                  final response = provider.subscription;
+                                  if (response != null && isUnlimited) {
+                                    final view = currentPlanView(
+                                      subscription: response.subscription,
+                                      catalog: response.availablePlans,
+                                    );
+                                    return Text(
+                                      view.titled(legacySuffix: context.l10n.legacyPlanTitleSuffix),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                                    );
+                                  }
                                   return Text(
-                                    isUnlimited ? context.l10n.changePlan : context.l10n.upgradeYourPlan,
-                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                    isUnlimited ? context.l10n.youAreOnAPaidPlan : context.l10n.planSheetChooseYourPlan,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
                                   );
                                 }
                               },
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Builder(
-                          builder: (context) {
-                            final hasScheduledUpgrade = _hasScheduledUpgrade();
-                            if (hasScheduledUpgrade) {
-                              return Text(
-                                context.l10n.upgradeAlreadyScheduled,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
-                              );
-                            } else {
-                              return Text(
-                                isUnlimited ? context.l10n.youAreOnAPaidPlan : context.l10n.planSheetChooseYourPlan,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
-                              );
-                            }
-                          },
-                        ),
-                        if (isUnlimited && isCancelled) ...[
-                          const SizedBox(height: 8),
-                          Builder(
-                            builder: (context) {
-                              // Check if subscription period has ended
-                              final sub = provider.subscription?.subscription;
-                              final periodEnded = sub?.currentPeriodEnd != null &&
-                                  DateTime.fromMillisecondsSinceEpoch(
-                                    sub!.currentPeriodEnd! * 1000,
-                                  ).isBefore(DateTime.now());
+                            if (isUnlimited && isCancelled) ...[
+                              const SizedBox(height: 8),
+                              Builder(
+                                builder: (context) {
+                                  // Check if subscription period has ended
+                                  final sub = provider.subscription?.subscription;
+                                  final periodEnded = sub?.currentPeriodEnd != null &&
+                                      DateTime.fromMillisecondsSinceEpoch(
+                                        sub!.currentPeriodEnd! * 1000,
+                                      ).isBefore(DateTime.now());
 
-                              if (periodEnded) {
-                                // Scenario B: Must create new subscription
-                                return Text(
-                                  context.l10n.planEndedOn(renewalDate),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 14, color: Colors.orange.shade400),
-                                );
-                              } else {
-                                // Scenario A: Can reactivate without charge
-                                return Text(
-                                  context.l10n.planSetToCancelOn(renewalDate),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 14, color: Colors.blue.shade400),
-                                );
-                              }
-                            },
-                          ),
-                        ] else if (isUnlimited && !isCancelled) ...[
-                          const SizedBox(height: 8),
-                          Builder(
-                            builder: (context) {
-                              final hasScheduledUpgrade = _hasScheduledUpgrade();
-                              if (hasScheduledUpgrade) {
-                                return Text(
-                                  context.l10n.annualPlanStartsAutomatically,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.deepPurple.shade400, fontSize: 14),
-                                );
-                              } else {
-                                return Text(
-                                  context.l10n.planRenewsOn(renewalDate),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
-                                );
-                              }
-                            },
-                          ),
-                        ],
-                        const SizedBox(height: 24),
-                        // Features list - shown to all users
-                        ...[
-                          Column(
-                            children: [
-                              _buildFeatureItem(
-                                faIcon: FontAwesomeIcons.infinity,
-                                text: context.l10n.unlimitedConversations,
+                                  if (periodEnded) {
+                                    // Scenario B: Must create new subscription
+                                    return Text(
+                                      context.l10n.planEndedOn(renewalDate),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, color: Colors.orange.shade400),
+                                    );
+                                  } else {
+                                    // Scenario A: Can reactivate without charge
+                                    return Text(
+                                      context.l10n.planSetToCancelOn(renewalDate),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, color: Colors.blue.shade400),
+                                    );
+                                  }
+                                },
                               ),
-                              const SizedBox(height: 16),
-                              _buildFeatureItem(
-                                faIcon: FontAwesomeIcons.solidComments,
-                                text: context.l10n.askOmiAnything,
-                              ),
-                              const SizedBox(height: 16),
-                              _buildFeatureItem(
-                                faIcon: FontAwesomeIcons.brain,
-                                text: context.l10n.unlockOmiInfiniteMemory,
-                              ),
-                              const SizedBox(height: 16),
-                              _buildFeatureItem(
-                                faIcon: FontAwesomeIcons.globe,
-                                text: context.l10n.availableOnMacMobileWeb,
+                            ] else if (isUnlimited && !isCancelled) ...[
+                              const SizedBox(height: 8),
+                              Builder(
+                                builder: (context) {
+                                  final hasScheduledUpgrade = _hasScheduledUpgrade();
+                                  if (hasScheduledUpgrade) {
+                                    return Text(
+                                      context.l10n.annualPlanStartsAutomatically,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: Colors.deepPurple.shade400, fontSize: 14),
+                                    );
+                                  } else {
+                                    return Text(
+                                      context.l10n.planRenewsOn(renewalDate),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                                    );
+                                  }
+                                },
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 32),
-                        ],
-
-                        // Training Data Opt-in Option - only show after plans are loaded
-                        Consumer2<UsageProvider, UserProvider>(
-                          builder: (context, usageProvider, userProvider, child) {
-                            final shouldShowTrainingOption = _showTrainingDataOptIn &&
-                                !usageProvider.isLoadingPlans &&
-                                usageProvider.availablePlans != null;
-
-                            if (!shouldShowTrainingOption) {
-                              return const SizedBox.shrink();
-                            }
-
-                            final optedIn = userProvider.trainingDataOptedIn;
-                            final status = userProvider.trainingDataStatus;
-                            final isLoading = userProvider.isLoading;
-
-                            return Container(
-                              margin: const EdgeInsets.only(top: 24, bottom: 18),
-                              child: _buildTrainingDataOption(optedIn: optedIn, status: status, isLoading: isLoading),
-                            );
-                          },
-                        ),
-
-                        // Check if user is on annual plan
-                        if (isUnlimited && !isCancelled) ...[
-                          // Get current plan details to check if it's annual
-                          Builder(
-                            builder: (context) {
-                              final currentPlan = _getCurrentPlanDetails();
-                              final isOnAnnualPlan = currentPlan?['interval'] == 'year';
-                              final hasScheduledUpgrade = _hasScheduledUpgrade();
-
-                              if (hasScheduledUpgrade) {
-                                // User has a scheduled upgrade - show upgrade info
-                                return Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.deepPurple.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.deepPurple.withValues(alpha: 0.3)),
-                                  ),
+                            Builder(
+                              builder: (context) {
+                                final response = provider.subscription;
+                                if (response == null) return const SizedBox.shrink();
+                                final view = currentPlanView(
+                                  subscription: response.subscription,
+                                  catalog: response.availablePlans,
+                                );
+                                final showDescription = view.description.isNotEmpty;
+                                if (!showDescription && !view.isKeepUntilCancel) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 16),
                                   child: Column(
                                     children: [
-                                      const Icon(Icons.schedule, color: Colors.deepPurple, size: 32),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        context.l10n.upgradeScheduled,
-                                        style: TextStyle(
-                                          color: Colors.deepPurple.shade300,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
+                                      if (showDescription)
+                                        Text(
+                                          view.description,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
                                         ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        context.l10n.annualPlanStartsAutomatically,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(color: Colors.deepPurple.shade400, fontSize: 14),
-                                      ),
+                                      if (view.isKeepUntilCancel) ...[
+                                        if (showDescription) const SizedBox(height: 8),
+                                        Text(
+                                          context.l10n.legacyPlanSupporterNote,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 );
-                              } else if (isOnAnnualPlan) {
-                                // User is on annual plan - only show cancel option
-                                return Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                              },
+                            ),
+                            const SizedBox(height: 24),
+                            // Features list - shown to all users
+                            ...[
+                              Column(
+                                children: [
+                                  _buildFeatureItem(
+                                    faIcon: FontAwesomeIcons.infinity,
+                                    text: context.l10n.unlimitedConversations,
                                   ),
-                                  child: Column(
-                                    children: [
-                                      const Icon(Icons.check_circle_outline, color: Colors.blue, size: 32),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        context.l10n.youreOnAnnualPlan,
-                                        style: TextStyle(
-                                          color: Colors.blue.shade300,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        context.l10n.alreadyBestValuePlan,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(color: Colors.blue.shade400, fontSize: 14),
-                                      ),
-                                    ],
+                                  const SizedBox(height: 16),
+                                  _buildFeatureItem(
+                                    faIcon: FontAwesomeIcons.solidComments,
+                                    text: context.l10n.askOmiAnything,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildFeatureItem(
+                                    faIcon: FontAwesomeIcons.brain,
+                                    text: context.l10n.unlockOmiInfiniteMemory,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildFeatureItem(
+                                    faIcon: FontAwesomeIcons.globe,
+                                    text: context.l10n.availableOnMacMobileWeb,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 32),
+                            ],
+
+                            // Training Data Opt-in Option - only show after plans are loaded
+                            Consumer2<UsageProvider, UserProvider>(
+                              builder: (context, usageProvider, userProvider, child) {
+                                final shouldShowTrainingOption = _showTrainingDataOptIn &&
+                                    !usageProvider.isLoadingPlans &&
+                                    usageProvider.availablePlans != null;
+
+                                if (!shouldShowTrainingOption) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                final optedIn = userProvider.trainingDataOptedIn;
+                                final status = userProvider.trainingDataStatus;
+                                final isLoading = userProvider.isLoading;
+
+                                return Container(
+                                  margin: const EdgeInsets.only(top: 24, bottom: 18),
+                                  child: _buildTrainingDataOption(
+                                    optedIn: optedIn,
+                                    status: status,
+                                    isLoading: isLoading,
                                   ),
                                 );
-                              } else {
-                                // User is on monthly plan - show upgrade options
-                                return Consumer<UsageProvider>(
-                                  builder: (context, usageProvider, child) {
-                                    if (usageProvider.isLoadingPlans) {
-                                      return Column(
+                              },
+                            ),
+
+                            // Check if user is on annual plan
+                            if (isUnlimited && !isCancelled) ...[
+                              // Get current plan details to check if it's annual
+                              Builder(
+                                builder: (context) {
+                                  final currentPlan = _getCurrentPlanDetails();
+                                  final isOnAnnualPlan = currentPlan?['interval'] == 'year';
+                                  final hasScheduledUpgrade = _hasScheduledUpgrade();
+
+                                  if (hasScheduledUpgrade) {
+                                    // User has a scheduled upgrade - show upgrade info
+                                    return Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.deepPurple.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: Colors.deepPurple.withValues(alpha: 0.3)),
+                                      ),
+                                      child: Column(
                                         children: [
-                                          _buildShimmerPlanOption(),
-                                          const SizedBox(height: 18),
-                                          _buildShimmerPlanOption(),
+                                          const Icon(Icons.schedule, color: Colors.deepPurple, size: 32),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            context.l10n.upgradeScheduled,
+                                            style: TextStyle(
+                                              color: Colors.deepPurple.shade300,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            context.l10n.annualPlanStartsAutomatically,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(color: Colors.deepPurple.shade400, fontSize: 14),
+                                          ),
                                         ],
-                                      );
-                                    }
-                                    if (usageProvider.availablePlans != null) {
-                                      return _buildTierPlanCards(availablePlans: usageProvider.availablePlans!);
-                                    }
-                                    return _buildPlansErrorCard();
-                                  },
-                                );
-                              }
-                            },
-                          ),
-                        ] else if (isUnlimited && isCancelled) ...[
-                          // User has canceled subscription - show available plans to resubscribe
-                          Consumer<UsageProvider>(
-                            builder: (context, usageProvider, child) {
-                              if (usageProvider.isLoadingPlans) {
-                                return Column(
-                                  children: [
-                                    _buildShimmerPlanOption(),
-                                    const SizedBox(height: 18),
-                                    _buildShimmerPlanOption(),
-                                  ],
-                                );
-                              }
-                              if (usageProvider.availablePlans != null) {
-                                return _buildTierPlanCards(availablePlans: usageProvider.availablePlans!);
-                              }
-                              return _buildPlansErrorCard();
-                            },
-                          ),
-                        ] else if (!isUnlimited) ...[
-                          // User is on basic plan - show upgrade options
-                          Consumer<UsageProvider>(
-                            builder: (context, usageProvider, child) {
-                              if (usageProvider.isLoadingPlans) {
-                                return Column(
-                                  children: [
-                                    _buildShimmerPlanOption(),
-                                    const SizedBox(height: 18),
-                                    _buildShimmerPlanOption(),
-                                  ],
-                                );
-                              }
-                              if (usageProvider.availablePlans != null) {
-                                return _buildTierPlanCards(availablePlans: usageProvider.availablePlans!);
-                              }
-                              return _buildPlansErrorCard();
-                            },
-                          ),
-                        ],
-
-                        const SizedBox(height: 24),
-
-                        _buildPromoCodeField(),
-                        const SizedBox(height: 16),
-
-                        // Continue/Upgrade — hidden for same-tier annual (nothing to
-                        // change) and for desktop-plan → mobile-tier switches.
-                        Builder(
-                          builder: (context) {
-                            final currentPlan = _getCurrentPlanDetails();
-                            final isOnAnnualPlan = currentPlan?['interval'] == 'year';
-                            final hasScheduledUpgrade = _hasScheduledUpgrade();
-                            final usageProvider = context.read<UsageProvider>();
-                            final currentSub = usageProvider.subscription?.subscription;
-                            final shouldShowContinueButton = shouldShowPlanContinueButton(
-                              isOnAnnualPlan: isOnAnnualPlan,
-                              hasScheduledUpgrade: hasScheduledUpgrade,
-                              isCancelled: isCancelled,
-                              plansLoaded: !usageProvider.isLoadingPlans && usageProvider.availablePlans != null,
-                              selectedTierId: selectedTierId,
-                              currentTierId: currentSub?.plan.wireName,
-                              currentGrantsDesktop: currentSub?.plan.grantsDesktop ?? false,
-                            );
-
-                            if (!shouldShowContinueButton) {
-                              return const SizedBox.shrink();
-                            }
-
-                            final isLoading = _isUpgrading;
-                            // For basic users, show "Upgrade". For paid users upgrading, show "Continue"
-                            final buttonText = isUnlimited ? context.l10n.continueText : context.l10n.upgrade;
-
-                            return SizedBox(
-                              width: double.infinity,
-                              height: 56,
-                              child: ElevatedButton(
-                                key: const ValueKey('plans_sheet_upgrade_button'),
-                                onPressed: isLoading
-                                    ? null
-                                    : () {
-                                        HapticFeedback.mediumImpact();
-                                        _handleUpgradeWithSelectedPlan();
-                                      },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isLoading ? Colors.grey : Colors.white,
-                                  foregroundColor: isLoading ? Colors.white : Colors.black,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    if (isLoading) ...[
-                                      const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                       ),
-                                    ] else ...[
-                                      Text(
-                                        buttonText,
-                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                                    );
+                                  } else if (isOnAnnualPlan) {
+                                    // User is on annual plan - only show cancel option
+                                    return Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
                                       ),
-                                      const SizedBox(width: 8),
-                                      AnimatedBuilder(
-                                        animation: widget.arrowAnimation,
-                                        builder: (context, child) {
-                                          return Transform.translate(
-                                            offset: Offset(widget.arrowAnimation.value, 0),
-                                            child: const Icon(Icons.arrow_forward, size: 20),
+                                      child: Column(
+                                        children: [
+                                          const Icon(Icons.check_circle_outline, color: Colors.blue, size: 32),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            context.l10n.youreOnAnnualPlan,
+                                            style: TextStyle(
+                                              color: Colors.blue.shade300,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            context.l10n.alreadyBestValuePlan,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(color: Colors.blue.shade400, fontSize: 14),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  } else {
+                                    // User is on monthly plan - show upgrade options
+                                    return Consumer<UsageProvider>(
+                                      builder: (context, usageProvider, child) {
+                                        if (usageProvider.isLoadingPlans) {
+                                          return Column(
+                                            children: [
+                                              _buildShimmerPlanOption(),
+                                              const SizedBox(height: 18),
+                                              _buildShimmerPlanOption(),
+                                            ],
                                           );
-                                        },
-                                      ),
-                                    ],
-                                  ],
-                                ),
+                                        }
+                                        if (usageProvider.availablePlans != null) {
+                                          return _buildTierPlanCards(availablePlans: usageProvider.availablePlans!);
+                                        }
+                                        return _buildPlansErrorCard();
+                                      },
+                                    );
+                                  }
+                                },
                               ),
-                            );
-                          },
-                        ),
-
-                        // Freemium limitations warning - only show for basic users before downgrade option
-                        if (!isUnlimited) ...[
-                          const SizedBox(height: 32),
-                          Text(
-                            context.l10n.freemiumLimitsIntro,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey.shade400, fontSize: 14, fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 16),
-                          Column(
-                            children: [
-                              _buildLimitationItem(
-                                icon: FontAwesomeIcons.carBattery,
-                                text: context.l10n.downgradeLimitBattery,
+                            ] else if (isUnlimited && isCancelled) ...[
+                              // User has canceled subscription - show available plans to resubscribe
+                              Consumer<UsageProvider>(
+                                builder: (context, usageProvider, child) {
+                                  if (usageProvider.isLoadingPlans) {
+                                    return Column(
+                                      children: [
+                                        _buildShimmerPlanOption(),
+                                        const SizedBox(height: 18),
+                                        _buildShimmerPlanOption(),
+                                      ],
+                                    );
+                                  }
+                                  if (usageProvider.availablePlans != null) {
+                                    return _buildTierPlanCards(availablePlans: usageProvider.availablePlans!);
+                                  }
+                                  return _buildPlansErrorCard();
+                                },
                               ),
-                              const SizedBox(height: 12),
-                              _buildLimitationItem(
-                                icon: FontAwesomeIcons.triangleExclamation,
-                                text: context.l10n.downgradeLimitQuality,
-                              ),
-                              const SizedBox(height: 12),
-                              _buildLimitationItem(
-                                icon: FontAwesomeIcons.clock,
-                                text: context.l10n.downgradeLimitDelayNotRealTime,
-                              ),
-                              const SizedBox(height: 12),
-                              _buildLimitationItem(
-                                icon: FontAwesomeIcons.userSlash,
-                                text: context.l10n.downgradeLimitSpeakers,
+                            ] else if (!isUnlimited) ...[
+                              // User is on basic plan - show upgrade options
+                              Consumer<UsageProvider>(
+                                builder: (context, usageProvider, child) {
+                                  if (usageProvider.isLoadingPlans) {
+                                    return Column(
+                                      children: [
+                                        _buildShimmerPlanOption(),
+                                        const SizedBox(height: 18),
+                                        _buildShimmerPlanOption(),
+                                      ],
+                                    );
+                                  }
+                                  if (usageProvider.availablePlans != null) {
+                                    return _buildTierPlanCards(availablePlans: usageProvider.availablePlans!);
+                                  }
+                                  return _buildPlansErrorCard();
+                                },
                               ),
                             ],
-                          ),
-                        ],
 
-                        // Downgrade to Freemium button - only show for basic users
-                        if (!isUnlimited)
-                          Builder(
-                            builder: (context) {
-                              final usageProvider = context.read<UsageProvider>();
-                              final shouldShowDowngradeButton =
-                                  !usageProvider.isLoadingPlans && usageProvider.availablePlans != null;
+                            const SizedBox(height: 24),
 
-                              if (!shouldShowDowngradeButton) {
-                                return const SizedBox.shrink();
-                              }
+                            _buildPromoCodeField(),
+                            const SizedBox(height: 16),
 
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 12),
-                                child: SizedBox(
+                            // Continue/Upgrade — hidden for same-tier annual (nothing to
+                            // change) and for desktop-plan → mobile-tier switches.
+                            Builder(
+                              builder: (context) {
+                                final currentPlan = _getCurrentPlanDetails();
+                                final isOnAnnualPlan = currentPlan?['interval'] == 'year';
+                                final hasScheduledUpgrade = _hasScheduledUpgrade();
+                                final usageProvider = context.read<UsageProvider>();
+                                final currentSub = usageProvider.subscription?.subscription;
+                                final shouldShowContinueButton = shouldShowPlanContinueButton(
+                                  isOnAnnualPlan: isOnAnnualPlan,
+                                  hasScheduledUpgrade: hasScheduledUpgrade,
+                                  isCancelled: isCancelled,
+                                  plansLoaded: !usageProvider.isLoadingPlans && usageProvider.availablePlans != null,
+                                  selectedTierId: selectedTierId,
+                                  currentTierId: currentSub?.plan.wireName,
+                                  currentPlanIsMobileManageOnly: currentSub?.plan.isMobileManageOnly ?? false,
+                                );
+
+                                if (!shouldShowContinueButton) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                final isLoading = _isUpgrading;
+                                // For basic users, show "Upgrade". For paid users upgrading, show "Continue"
+                                final buttonText = isUnlimited ? context.l10n.continueText : context.l10n.upgrade;
+
+                                return SizedBox(
                                   width: double.infinity,
-                                  height: 50,
-                                  child: OutlinedButton(
-                                    onPressed: _isSwitchingToFree ? null : _handleDowngradeToFreemium,
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.grey.shade400,
-                                      side: BorderSide(color: Colors.grey.shade600, width: 1),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  height: 56,
+                                  child: ElevatedButton(
+                                    key: const ValueKey('plans_sheet_upgrade_button'),
+                                    onPressed: isLoading
+                                        ? null
+                                        : () {
+                                            HapticFeedback.mediumImpact();
+                                            _handleUpgradeWithSelectedPlan();
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: isLoading ? Colors.grey : Colors.white,
+                                      foregroundColor: isLoading ? Colors.white : Colors.black,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                     ),
-                                    child: _isSwitchingToFree
-                                        ? const SizedBox(
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        if (isLoading) ...[
+                                          const SizedBox(
                                             height: 20,
                                             width: 20,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey),
-                                          )
-                                        : Text(
-                                            context.l10n.downgradeToFreemiumAction,
-                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                           ),
+                                        ] else ...[
+                                          Text(
+                                            buttonText,
+                                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          AnimatedBuilder(
+                                            animation: widget.arrowAnimation,
+                                            builder: (context, child) {
+                                              return Transform.translate(
+                                                offset: Offset(widget.arrowAnimation.value, 0),
+                                                child: const Icon(Icons.arrow_forward, size: 20),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                );
+                              },
+                            ),
 
-                        // Continue button for canceled subscriptions
-                        Builder(
-                          builder: (context) {
-                            final usageProvider = context.read<UsageProvider>();
-                            final shouldShowResubscribeButton =
-                                isCancelled && !usageProvider.isLoadingPlans && usageProvider.availablePlans != null;
-
-                            if (!shouldShowResubscribeButton) {
-                              return const SizedBox.shrink();
-                            }
-
-                            return SizedBox(
-                              width: double.infinity,
-                              height: 56,
-                              child: ElevatedButton(
-                                onPressed: _isUpgrading
-                                    ? null
-                                    : () {
-                                        HapticFeedback.mediumImpact();
-                                        _handleUpgradeWithSelectedPlan();
-                                      },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isUpgrading ? Colors.grey : Colors.white,
-                                  foregroundColor: _isUpgrading ? Colors.white : Colors.black,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    if (_isUpgrading) ...[
-                                      const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                      ),
-                                    ] else ...[
-                                      Text(
-                                        context.l10n.resubscribe,
-                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      AnimatedBuilder(
-                                        animation: widget.arrowAnimation,
-                                        builder: (context, child) {
-                                          return Transform.translate(
-                                            offset: Offset(widget.arrowAnimation.value, 0),
-                                            child: const Icon(Icons.arrow_forward, size: 20),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ],
+                            // Freemium limitations warning - only show for basic users before downgrade option
+                            if (!isUnlimited) ...[
+                              const SizedBox(height: 32),
+                              Text(
+                                context.l10n.freemiumLimitsIntro,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        if (isUnlimited == true || sub?.stripeSubscriptionId?.isNotEmpty == true) ...[
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                final navigator = Navigator.of(context);
-                                final provider = context.read<UsageProvider>();
-                                final l10n = context.l10n;
-                                final portalData = await provider.openCustomerPortal();
-                                if (portalData != null && portalData['url'] != null && mounted) {
-                                  await navigator.push(
-                                    MaterialPageRoute(
-                                      builder: (context) => PaymentWebViewPage(
-                                        checkoutUrl: portalData['url']!,
-                                        title: context.l10n.managePaymentMethod,
+                              const SizedBox(height: 16),
+                              Column(
+                                children: [
+                                  _buildLimitationItem(
+                                    icon: FontAwesomeIcons.carBattery,
+                                    text: context.l10n.downgradeLimitBattery,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildLimitationItem(
+                                    icon: FontAwesomeIcons.triangleExclamation,
+                                    text: context.l10n.downgradeLimitQuality,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildLimitationItem(
+                                    icon: FontAwesomeIcons.clock,
+                                    text: context.l10n.downgradeLimitDelayNotRealTime,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildLimitationItem(
+                                    icon: FontAwesomeIcons.userSlash,
+                                    text: context.l10n.downgradeLimitSpeakers,
+                                  ),
+                                ],
+                              ),
+                            ],
+
+                            // Downgrade to Freemium button - only show for basic users
+                            if (!isUnlimited)
+                              Builder(
+                                builder: (context) {
+                                  final usageProvider = context.read<UsageProvider>();
+                                  final shouldShowDowngradeButton =
+                                      !usageProvider.isLoadingPlans && usageProvider.availablePlans != null;
+
+                                  if (!shouldShowDowngradeButton) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 12),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      height: 50,
+                                      child: OutlinedButton(
+                                        onPressed: _isSwitchingToFree ? null : _handleDowngradeToFreemium,
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.grey.shade400,
+                                          side: BorderSide(color: Colors.grey.shade600, width: 1),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                        child: _isSwitchingToFree
+                                            ? const SizedBox(
+                                                height: 20,
+                                                width: 20,
+                                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey),
+                                              )
+                                            : Text(
+                                                context.l10n.downgradeToFreemiumAction,
+                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                              ),
                                       ),
                                     ),
                                   );
-                                  // The user may have paid an overdue invoice or
-                                  // recovered a canceled plan inside the portal, so
-                                  // refresh subscription state on return instead of
-                                  // leaving the UI showing Free until a manual reload.
-                                  await provider.fetchSubscription();
-                                  await provider.loadAvailablePlans();
-                                } else {
-                                  AppSnackbar.showSnackbarError(l10n.couldNotOpenPaymentSettings);
+                                },
+                              ),
+
+                            // Continue button for canceled subscriptions
+                            Builder(
+                              builder: (context) {
+                                final usageProvider = context.read<UsageProvider>();
+                                final shouldShowResubscribeButton = isCancelled &&
+                                    !usageProvider.isLoadingPlans &&
+                                    usageProvider.availablePlans != null;
+
+                                if (!shouldShowResubscribeButton) {
+                                  return const SizedBox.shrink();
                                 }
+
+                                return SizedBox(
+                                  width: double.infinity,
+                                  height: 56,
+                                  child: ElevatedButton(
+                                    onPressed: _isUpgrading
+                                        ? null
+                                        : () {
+                                            HapticFeedback.mediumImpact();
+                                            _handleUpgradeWithSelectedPlan();
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _isUpgrading ? Colors.grey : Colors.white,
+                                      foregroundColor: _isUpgrading ? Colors.white : Colors.black,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        if (_isUpgrading) ...[
+                                          const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                          ),
+                                        ] else ...[
+                                          Text(
+                                            context.l10n.resubscribe,
+                                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          AnimatedBuilder(
+                                            animation: widget.arrowAnimation,
+                                            builder: (context, child) {
+                                              return Transform.translate(
+                                                offset: Offset(widget.arrowAnimation.value, 0),
+                                                child: const Icon(Icons.arrow_forward, size: 20),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                );
                               },
-                              icon: const Icon(Icons.credit_card, size: 20),
-                              label: Text(context.l10n.managePaymentMethod),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: const BorderSide(color: Colors.white, width: 1),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          if (isUnlimited == true && !isCancelled) ...[
-                            TextButton(
-                              onPressed: () {
-                                _handleCancelSubscription();
-                              },
-                              child: Text(
-                                context.l10n.cancelSubscription,
-                                style: const TextStyle(color: Colors.red, fontSize: 16),
+                            const SizedBox(height: 16),
+                            if (isUnlimited == true || sub?.stripeSubscriptionId?.isNotEmpty == true) ...[
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final navigator = Navigator.of(context);
+                                    final provider = context.read<UsageProvider>();
+                                    final l10n = context.l10n;
+                                    final portalData = await provider.openCustomerPortal();
+                                    if (portalData != null && portalData['url'] != null && mounted) {
+                                      await navigator.push(
+                                        MaterialPageRoute(
+                                          builder: (context) => PaymentWebViewPage(
+                                            checkoutUrl: portalData['url']!,
+                                            title: context.l10n.managePaymentMethod,
+                                          ),
+                                        ),
+                                      );
+                                      // The user may have paid an overdue invoice or
+                                      // recovered a canceled plan inside the portal, so
+                                      // refresh subscription state on return instead of
+                                      // leaving the UI showing Free until a manual reload.
+                                      await provider.fetchSubscription();
+                                      await provider.loadAvailablePlans();
+                                    } else {
+                                      AppSnackbar.showSnackbarError(l10n.couldNotOpenPaymentSettings);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.credit_card, size: 20),
+                                  label: Text(context.l10n.managePaymentMethod),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    side: const BorderSide(color: Colors.white, width: 1),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 12),
+                              if (isUnlimited == true && !isCancelled) ...[
+                                TextButton(
+                                  onPressed: () {
+                                    _handleCancelSubscription();
+                                  },
+                                  child: Text(
+                                    context.l10n.cancelSubscription,
+                                    style: const TextStyle(color: Colors.red, fontSize: 16),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                            ],
                           ],
-                          const SizedBox(height: 8),
-                        ],
-                      ],
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
+                  const PlansSheetCloseButton(),
                 ],
               ),
             );
@@ -1574,7 +1646,7 @@ class _PlansSheetState extends State<PlansSheet> {
     }
 
     // Tier ordering
-    const tierOrder = ['plus', 'unlimited_v2', 'unlimited', 'operator', 'architect'];
+    const tierOrder = ['plus', 'pro_v2', 'unlimited_v2', 'unlimited', 'operator', 'architect'];
     final sortedTierIds = grouped.keys.toList()
       ..sort((a, b) {
         final ai = tierOrder.indexOf(a);
@@ -1685,7 +1757,9 @@ class _PlansSheetState extends State<PlansSheet> {
           // Look up plan display name from subscription's available_plans
           final subPlans = context.read<UsageProvider>().subscription?.availablePlans ?? [];
           final matchingPlan = subPlans.firstWhereOrNull((sp) => sp.id == tierId);
-          final displayTitle = matchingPlan?.title ?? planForPeriod['title'] as String;
+          final displayTitle = matchingPlan != null
+              ? catalogPlanDisplayTitle(matchingPlan, legacySuffix: context.l10n.legacyPlanTitleSuffix)
+              : planForPeriod['title'] as String;
 
           // Override title with plan name for tier display
           final planDataWithName = Map<String, dynamic>.from(planForPeriod);
@@ -1693,7 +1767,10 @@ class _PlansSheetState extends State<PlansSheet> {
 
           // Get features from subscription's available_plans
           final planFeatures = matchingPlan?.features ?? [];
-          final planSubtitle = planForPeriod['subtitle'] as String?;
+          final catalogDescription = matchingPlan?.description?.trim();
+          final planSubtitle = (catalogDescription != null && catalogDescription.isNotEmpty)
+              ? catalogDescription
+              : planForPeriod['subtitle'] as String?;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -2086,16 +2163,19 @@ class _PlansSheetState extends State<PlansSheet> {
     );
   }
 
-  /// Whether a plan tier includes the desktop (macOS) app. Neo (unlimited) is
-  /// mobile/web only; Operator and Architect include desktop. Keep in sync with
-  /// backend `DESKTOP_ENTITLED_PLAN_TYPES`. Returns null for unknown tiers.
+  /// Whether a plan tier includes the desktop (macOS) app. Plus and Pro
+  /// (`pro_v2`) include desktop; Neo and Unlimited-v2 do not. Operator and
+  /// Architect remain desktop-entitled for keep-until-cancel subscribers.
+  /// Keep in sync with backend `DESKTOP_ENTITLED_PLAN_TYPES`. Returns null
+  /// for unknown tiers.
   bool? _tierGrantsDesktop(String tierId) {
     switch (tierId) {
       case 'operator':
       case 'architect':
+      case 'plus':
+      case 'pro_v2':
         return true;
       case 'unlimited':
-      case 'plus':
       case 'unlimited_v2':
         return false;
       default:

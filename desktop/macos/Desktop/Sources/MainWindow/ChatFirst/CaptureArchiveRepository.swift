@@ -1,4 +1,5 @@
 import Foundation
+import OmiSupport
 
 /// Adapts an Omi-capture deep link to the canonical Conversations detail.
 /// The capture repository resolves provenance; this policy keeps focus
@@ -142,12 +143,10 @@ final class CaptureArchiveRepository: ObservableObject {
   ) {
     self.remote = remote
     self.local = local
-    ownerChangeObserver = NotificationCenter.default.addObserver(
-      forName: .runtimeOwnerDidChange, object: nil, queue: nil
-    ) { [weak self] _ in
-      MainActor.assumeIsolated {
-        self?.resetForRuntimeOwnerChange()
-      }
+    ownerChangeObserver = NotificationCenter.default.addMainActorObserver(
+      forName: .runtimeOwnerDidChange
+    ) { [weak self] in
+      self?.resetForRuntimeOwnerChange()
     }
   }
 

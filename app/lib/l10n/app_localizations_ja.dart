@@ -2004,7 +2004,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get memoryDeleted => '記憶を削除しました';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => '一部の記憶履歴は利用できません。これまでに受信した履歴を表示しています。';
 
   @override
   String get undo => '元に戻す';
@@ -9748,11 +9748,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get transcriptionNoAudio => '文字起こしが音声を受信していません';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => '+をタップして録音を開始';
 
   @override
   String get couldNotLoadMemories => '記憶を読み込めませんでした';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'ナレッジグラフを読み込めませんでした';
+
+  @override
+  String get legacyPlanTitleSuffix => '（旧プラン）';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omiの初期サポーターになっていただきありがとうございます。旧プランは無期限で継続できます。ただし、これらの旧プランは販売終了しており、別のプランに切り替えたあとに選び直すことはできません。';
+
+  @override
+  String get planIssueContactSupport => 'ご利用のプランに問題がある可能性があります。サービスが中断しないよう、サポートまでお問い合わせください。';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'プランは$dateに終了します。それまでは引き続きすべての機能をご利用いただけます。';
+  }
+
+  @override
+  String get planLapseAccessEnded => '有料アクセスが終了しました。';
 }

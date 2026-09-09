@@ -2056,7 +2056,8 @@ class AppLocalizationsHu extends AppLocalizations {
   String get memoryDeleted => 'Emlék törölve.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Az emlékek előzményeinek egy része nem érhető el. A mostanáig kapott előzmények láthatók.';
 
   @override
   String get undo => 'Visszavonás';
@@ -9958,11 +9959,30 @@ class AppLocalizationsHu extends AppLocalizations {
   String get transcriptionNoAudio => 'Az átírás nem kap hangot';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Koppintson a + gombra a felvétel indításához';
 
   @override
   String get couldNotLoadMemories => 'Nem sikerült betölteni az emlékeket';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Nem sikerült betölteni a tudásgráfot';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (korábbi csomag)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Köszönjük, hogy az omi korai támogatója vagy! A korábbi csomagodon korlátlan ideig maradhatsz. Vedd figyelembe azonban, hogy ezeket a korábbi csomagokat már nem áruljuk, és másik csomagra váltás után nem választhatók újra.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Lehet, hogy probléma van a csomagoddal. Kérjük, lépj kapcsolatba az ügyfélszolgálattal, hogy a szolgáltatásod ne szakadjon meg.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Az előfizetésed $date-n ér véget. Addig teljes hozzáférésed megmarad.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'A fizetős hozzáférésed lejárt.';
 }

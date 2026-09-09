@@ -2026,7 +2026,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get memoryDeleted => 'Recuerdo borrado.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Parte del historial de recuerdos no está disponible. Se muestra el historial recibido hasta ahora.';
 
   @override
   String get undo => 'Deshacer';
@@ -9941,11 +9942,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get transcriptionNoAudio => 'La transcripción no recibe audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Toca + para empezar a grabar';
 
   @override
   String get couldNotLoadMemories => 'No se pudieron cargar los recuerdos';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'No se pudo cargar el grafo de conocimiento';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (plan heredado)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      '¡Gracias por ser uno de los primeros en apoyar a omi! Puedes quedarte en tu plan heredado de forma indefinida. Ten en cuenta, eso sí, que estos planes heredados ya no se venden y no se pueden elegir si cambias a otro plan.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Puede que haya un problema con tu plan. Ponte en contacto con el soporte para asegurarte de que no haya interrupciones en tu servicio.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Tu plan finalizará el $date. Mantendrás acceso completo hasta entonces.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Tu acceso de pago ha finalizado.';
 }

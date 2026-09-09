@@ -2059,7 +2059,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get memoryDeleted => 'Erinnerung gelöscht.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Ein Teil des Erinnerungsverlaufs ist nicht verfügbar. Es wird der bisher empfangene Verlauf angezeigt.';
 
   @override
   String get undo => 'Rückgängig';
@@ -10000,11 +10001,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkription empfängt kein Audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Tippe auf +, um die Aufnahme zu starten';
 
   @override
   String get couldNotLoadMemories => 'Erinnerungen konnten nicht geladen werden';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Wissensgraph konnte nicht geladen werden';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Legacy-Plan)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Danke, dass du omi von Anfang an unterstützt hast! Du kannst unbegrenzt auf deinem Legacy-Plan bleiben. Bitte beachte jedoch, dass diese Legacy-Pläne nicht mehr verkauft werden und nach einem Wechsel nicht erneut gewählt werden können.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Möglicherweise liegt ein Problem mit deinem Tarif vor. Bitte wende dich an den Support, damit dein Dienst nicht unterbrochen wird.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Dein Plan endet am $date. Bis dahin behältst du vollen Zugriff.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Dein bezahlter Zugriff ist beendet.';
 }

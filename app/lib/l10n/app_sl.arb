@@ -10802,5 +10802,18 @@
     "conversationsNotCapturedCount": "Ni posneto ({count})",
     "transcriptionNoAudio": "Transkripcija ne prejema zvoka",
     "couldNotLoadMemories": "Spominov ni bilo mogoče naložiti",
-    "couldNotLoadKnowledgeGraph": "Grafa znanja ni bilo mogoče naložiti"
+    "couldNotLoadKnowledgeGraph": "Grafa znanja ni bilo mogoče naložiti",
+    "legacyPlanTitleSuffix": " (podedovani paket)",
+    "@legacyPlanTitleSuffix": {
+        "description": "Suffix appended to keep-until-cancel plan titles in Settings"
+    },
+    "legacyPlanSupporterNote": "Hvala, ker ste zgodnji podpornik omi! Na podedovanem paketu lahko ostanete neomejeno dolgo. Upoštevajte pa, da se ti podedovani paketi ne prodajajo več in jih po prehodu na drug paket ni mogoče znova izbrati.",
+    "@legacyPlanSupporterNote": {
+        "description": "Shown on the current-plan card for keep-until-cancel subscribers"
+    },
+    "planIssueContactSupport": "Morda je prišlo do težave z vašim paketom. Obrnite se na podporo, da ne pride do prekinitve storitve.",
+    "planLapseCancellationScheduled": "Vaš načrt se bo končal {date}. Do takrat boste ohranili popoln dostop.",
+    "planLapseAccessEnded": "Vaš plačani dostop je potekel.",
+    "memoryHistoryPartial": "Del zgodovine spominov ni na voljo. Prikazana je zgodovina, prejeta do zdaj.",
+    "tapPlusToStartRecording": "Dotaknite se +, da začnete snemanje"
 }

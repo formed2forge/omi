@@ -86,9 +86,7 @@ def test_java_present_when_the_binary_reports_a_version(monkeypatch: pytest.Monk
     assert cli._java_runtime_present() is True
 
 
-def test_missing_java_runtime_is_reported_as_a_prerequisite(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_missing_java_runtime_is_reported_as_a_prerequisite(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("PROVIDER_MODE", "offline")
     monkeypatch.setenv("OMI_LOCAL_STATE_ROOT", str(tmp_path / "state"))
     monkeypatch.setattr(cli, "_java_runtime_present", lambda: False)
@@ -142,21 +140,46 @@ def test_current_node_on_path_is_not_reported_as_missing(monkeypatch: pytest.Mon
     assert not any(item.startswith("node >=") for item in missing)
 
 
-def test_npx_firebase_tools_does_not_wait_on_an_install_prompt(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_npx_firebase_tools_does_not_wait_on_an_install_prompt(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Without --yes, npx asks "Ok to proceed? (y)" on a pipe nothing can answer.
 
     The emulator runs detached with stdout redirected to a log file, so the prompt
     blocks forever and the failure presents as a health-check timeout instead.
     """
     monkeypatch.setenv("OMI_LOCAL_STATE_ROOT", str(tmp_path / "state"))
-    monkeypatch.setattr(cli, "_which", lambda name: None if name == "firebase" else f"/usr/bin/{name}")
     cfg = config.load_config(REPO_ROOT, create_layout=True)
 
     command = cli._firebase_command(cfg)
+    pinned = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))["devDependencies"]["firebase-tools"]
 
-    assert command[:3] == ["npx", "--yes", "firebase-tools"]
+    assert command[:5] == ["npx", "--prefix", str(REPO_ROOT), "--yes", f"firebase-tools@{pinned}"]
+
+
+def test_firebase_command_ignores_global_cli_and_uses_repo_pin(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("OMI_LOCAL_STATE_ROOT", str(tmp_path / "state"))
+    monkeypatch.setattr(cli, "_which", lambda name: "/opt/homebrew/bin/firebase" if name == "firebase" else None)
+    cfg = config.load_config(REPO_ROOT, create_layout=True)
+
+    command = cli._firebase_command(cfg)
+    pinned = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))["devDependencies"]["firebase-tools"]
+
+    assert command[:5] == ["npx", "--prefix", str(REPO_ROOT), "--yes", f"firebase-tools@{pinned}"]
+    assert "firebase" not in command[:5]
+
+
+def test_firebase_command_rejects_a_ranged_firebase_tools_pin(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("OMI_LOCAL_STATE_ROOT", str(tmp_path / "state"))
+    monkeypatch.setattr(
+        cli,
+        "_load_json",
+        lambda path, default: (
+            {"devDependencies": {"firebase-tools": "^15.22.0"}} if path.name == "package.json" else default
+        ),
+    )
+    cfg = config.load_config(REPO_ROOT, create_layout=True)
+
+    with pytest.raises(RuntimeError, match="exact firebase-tools version"):
+        cli._firebase_command(cfg)
 
 
 def test_firebase_command_writes_the_configured_emulator_ports(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -276,9 +299,7 @@ def test_wait_health_returns_services_that_exhaust_their_deadlines(
     ]
 
 
-def test_wait_health_discards_transient_failure_after_recovery(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_wait_health_discards_transient_failure_after_recovery(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("PROVIDER_MODE", "offline")
     monkeypatch.setenv("OMI_LOCAL_STATE_ROOT", str(tmp_path / "state"))
     cfg = config.load_config(REPO_ROOT)
@@ -306,8 +327,7 @@ def test_status_health_label_uses_http_probe_and_preserves_degraded(
 
     monkeypatch.setattr(cli, "_http_ok", lambda _url, headers=None: (False, "connection refused"))
     assert (
-        cli._status_health_label(cfg, "backend", alive=True, port=cfg.backend_port)
-        == "degraded (connection refused)"
+        cli._status_health_label(cfg, "backend", alive=True, port=cfg.backend_port) == "degraded (connection refused)"
     )
 
     monkeypatch.setattr(cli, "_port_open", lambda _host, _port: False)

@@ -45,6 +45,16 @@ export interface SubscriptionFetch {
 /**
  * The Omi subscription plans. Metrics count these products and nothing else: the same Stripe
  * account also holds marketplace apps and internal test products. Launching a plan adds a line.
+ *
+ * This mirrors `backend/config/plan_catalog.json`'s `recognized_stripe_products` (product_id ->
+ * plan_id) and `PLAN_DISPLAY_NAMES` (plan_id -> display name) — the catalog's identity ledger,
+ * not this map, is the source of truth for which products exist. There is no generated
+ * client/admin projection of that catalog yet (see `docs/agents/plan-source-of-truth.md`, work
+ * item C8), and this Next.js app has no build-time or runtime path to the backend's Python
+ * catalog, so the two are kept in sync by hand. `__tests__/stripe-subscriptions.catalogParity.test.ts`
+ * reads `plan_catalog.json` directly at test time and fails if this map's product IDs drift from
+ * the catalog's, so an out-of-sync edit here (or there) is caught mechanically rather than by
+ * memory.
  */
 export const OMI_PLAN_PRODUCTS: Record<string, string> = {
   prod_SmpevIU38nIEUO: 'Omi Unlimited',

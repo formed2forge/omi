@@ -21,8 +21,11 @@ Inherits all rules from the root [`../AGENTS.md`](../AGENTS.md). This file adds 
 ### Setup Sequence
 ```bash
 bash setup.sh ios    # or: bash setup.sh android
+# Personal/community Apple team (not BasedHardware 9536L8KLMP):
+APPLE_DEVELOPMENT_TEAM=XXXXXXXXXX bash setup.sh ios
 ```
 This handles: pub get, build_runner, gen-l10n, and flavor configuration.
+Dev signing uses team-and-machine-scoped app/widget/group identifiers for non-Omi teams and excludes the Omi watch companion; prod/beta/raybanDat retain their Omi signing configuration.
 
 For physical-device builds, use the wrapper: it owns `dev + local_dev` and
 `prod + mobile_beta` pairing plus auth env setup. Direct builds must first run
@@ -124,19 +127,15 @@ PR CI runs `flutter test` and an analyzer ratchet (`app/scripts/analyze_ratchet.
 - Google Sign In (`google_sign_in` package)
 - Apple Sign In (`sign_in_with_apple` package, includes PKCE via nonce+sha256)
 - Firebase Auth as the identity layer
+- Local emulator sign-in: [pricing harness](../scripts/dev-harness/PRICING_SCENARIOS.md).
 
 ### Request Headers
 All API requests include: X-Request-Start-Time, X-App-Platform, X-Device-Id-Hash, X-App-Version, plus Bearer token.
-
-### API Base URLs
-- Dev: configured in `.dev.env` → `Env.apiBaseUrl`
-- Prod: configured in `.prod.env` → `Env.apiBaseUrl`
 
 ## Codegen Rules
 
 - Run `flutter pub run build_runner build` after changing: env files, model annotations, pigeon contracts, or pubspec assets
 - Run `flutter gen-l10n` after changing ARB files
-- Never edit files ending in `.g.dart` or `.gen.dart`
 - If build_runner fails with conflicts: `flutter pub run build_runner build --delete-conflicting-outputs`
 
 ## App Flows & E2E

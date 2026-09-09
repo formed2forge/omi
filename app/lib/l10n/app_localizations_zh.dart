@@ -2000,7 +2000,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryDeleted => '记忆已删除。';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => '部分记忆历史不可用。显示的是目前已收到的历史记录。';
 
   @override
   String get undo => '撤销';
@@ -9729,11 +9729,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transcriptionNoAudio => '转录未接收到音频';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => '点击 + 开始录音';
 
   @override
   String get couldNotLoadMemories => '无法加载回忆';
 
   @override
   String get couldNotLoadKnowledgeGraph => '无法加载知识图谱';
+
+  @override
+  String get legacyPlanTitleSuffix => '（旧套餐）';
+
+  @override
+  String get legacyPlanSupporterNote => '感谢你从一开始就支持 omi！你可以无限期留在旧套餐上。请注意，这些旧套餐已不再出售，换成其他套餐后也无法再选回来。';
+
+  @override
+  String get planIssueContactSupport => '您的套餐可能存在问题，请联系客服，以确保您的服务不会中断。';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return '您的套餐将于$date到期。在此之前您仍可完整使用所有功能。';
+  }
+
+  @override
+  String get planLapseAccessEnded => '您的付费访问权限已结束。';
 }

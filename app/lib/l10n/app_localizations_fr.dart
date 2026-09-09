@@ -2060,7 +2060,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get memoryDeleted => 'Mémoire supprimée.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Une partie de l\'historique des souvenirs n\'est pas disponible. L\'historique reçu jusqu\'à présent est affiché.';
 
   @override
   String get undo => 'Annuler';
@@ -10004,11 +10005,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String get transcriptionNoAudio => 'La transcription ne reçoit pas d\'audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Appuyez sur + pour commencer l\'enregistrement';
 
   @override
   String get couldNotLoadMemories => 'Impossible de charger les souvenirs';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Impossible de charger le graphe de connaissances';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (ancien forfait)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Merci d\'être un des premiers soutiens d\'omi ! Vous pouvez rester sur votre ancien forfait indéfiniment. Notez toutefois que ces anciens forfaits ne sont plus vendus et ne peuvent pas être choisis si vous passez à un autre forfait.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Il se peut qu\'il y ait un problème avec votre forfait. Veuillez contacter le support afin d\'éviter toute interruption de votre service.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Votre forfait se terminera le $date. Vous conserverez un accès complet jusque-là.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Votre accès payant a pris fin.';
 }

@@ -1,7 +1,8 @@
 import { resolve } from 'path'
-import { defineConfig } from 'electron-vite'
+import { defineConfig, loadEnv } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import { resolveDevInstance } from './src/main/devInstance'
+import { localDevConnectSrcOrigins, widenConnectSrcForLocalDev } from './src/shared/localDevCsp'
 
 // Resolve THIS checkout's dev instance from the worktree it lives in. The primary
 // checkout stays on 5179 with the default profile (zero change). A linked worktree
@@ -16,6 +17,19 @@ if (!devInstance.isPrimary && !process.env.OMI_SANDBOX) {
   // Auto-isolate the linked worktree's userData (dev/bench.ts reads OMI_SANDBOX).
   process.env.OMI_SANDBOX = devInstance.name
 }
+
+// Local-dev-only CSP widening (scripts/dev-harness/PRICING_WINDOWS.md, and see
+// src/shared/localDevCsp.ts for the full why). Every value here comes from the
+// SAME VITE_-prefixed vars the app itself gates on (shared/environmentProfile.ts)
+// — outside local_dev, or when it's misconfigured, this resolves to an empty
+// list and every renderer HTML entry is emitted byte-identical to today.
+const localDevEnv = loadEnv('development', __dirname)
+const localDevOrigins = localDevConnectSrcOrigins({
+  profile: localDevEnv.VITE_OMI_APP_PROFILE,
+  apiBase: localDevEnv.VITE_OMI_API_BASE,
+  authEmulatorHost: localDevEnv.VITE_FIREBASE_AUTH_EMULATOR_HOST,
+  authEmulatorPort: localDevEnv.VITE_FIREBASE_AUTH_EMULATOR_PORT
+})
 
 export default defineConfig({
   main: {
@@ -154,6 +168,14 @@ export default defineConfig({
           for (const key of Object.keys(bundle)) {
             if (/ort-wasm.*\.wasm$/.test(key)) delete bundle[key]
           }
+        }
+      },
+      {
+        // Widen every HTML entry's CSP connect-src for local_dev — see
+        // localDevOrigins above and src/shared/localDevCsp.ts.
+        name: 'local-dev-csp-connect-src',
+        transformIndexHtml(html): string {
+          return widenConnectSrcForLocalDev(html, localDevOrigins)
         }
       }
     ]

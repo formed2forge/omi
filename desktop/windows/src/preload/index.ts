@@ -187,6 +187,7 @@ const omi: OmiBridgeApi = {
   kgExecuteSql: (sql) => ipcRenderer.invoke('kg:executeSql', sql),
   readStickyNotes: () => ipcRenderer.invoke('integrations:stickyNotes:read'),
   signInWithProvider: (provider: SignInProvider) => ipcRenderer.invoke('auth:signIn', provider),
+  signInWithLocalDevToken: (uid: string) => ipcRenderer.invoke('auth:signInLocalDev', uid),
   googleConnect: () => ipcRenderer.invoke('integrations:google:connect'),
   googleDisconnect: () => ipcRenderer.invoke('integrations:google:disconnect'),
   googleStatus: () => ipcRenderer.invoke('integrations:google:status'),

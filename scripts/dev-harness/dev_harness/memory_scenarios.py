@@ -11,19 +11,22 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
-import socket
 import sys
 import time
-import urllib.error
-import urllib.request
-from dataclasses import asdict, dataclass, field, is_dataclass
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Literal, Mapping, Sequence
-from urllib.parse import quote
 
-from . import config, safety
+from . import config, emulator_seeding, safety
+from .emulator_seeding import (  # noqa: F401 - re-exported for existing tests
+    FileSeed,
+    FirestoreSeed,
+    LocalReportMetadata,
+    RedisSeed,
+    ScenarioUser,
+    SeedManifest,
+    SeedOperation,
+)
 
 SCHEMA_VERSION = 1
 EVIDENCE_CLASS = "LOCAL_EMULATOR_DEV"
@@ -37,10 +40,11 @@ CHAT_FIRST_E2E_DISABLED_CONTROL_USER_ID = "omi-local-emulator-chat-first-disable
 # Short-term seeds must stay visible across long local-dev sessions.
 SHORT_TERM_EXPIRES_AT = "2027-12-31T23:59:59Z"
 SYNTHETIC_SOURCE_VERSION = "memory-local-synthetic-source-1"
-AUTH_UID_MANIFEST = "canonical-auth-uids.json"
-LOCAL_DEV_PROJECT_ID = safety.DEFAULT_LOCAL_FIREBASE_PROJECT_ID
-LOCAL_DEV_DATABASE_ID = safety.DEFAULT_FIRESTORE_DATABASE_ID
+AUTH_UID_MANIFEST = emulator_seeding.AUTH_UID_MANIFEST
+LOCAL_DEV_PROJECT_ID = emulator_seeding.LOCAL_DEV_PROJECT_ID
+LOCAL_DEV_DATABASE_ID = emulator_seeding.LOCAL_DEV_DATABASE_ID
 GLOBAL_READ_GATE_PATH = "memory_control/global_read_gate"
+SCENARIO_KIND = "memory"
 
 RouteDecision = Literal["disabled", "legacy_primary", "memory_read", "fail_closed"]
 
@@ -55,33 +59,6 @@ class DeterministicContext:
     cursor_ttl_seconds: int
     ids: Mapping[str, str]
     cursors: Mapping[str, str]
-
-
-@dataclass(frozen=True)
-class ScenarioUser:
-    uid: str
-    email: str
-    display_name: str
-    password: str
-
-
-@dataclass(frozen=True)
-class FirestoreSeed:
-    path: str
-    data: Mapping[str, object]
-    protected: bool = False
-
-
-@dataclass(frozen=True)
-class RedisSeed:
-    key: str
-    value: str
-
-
-@dataclass(frozen=True)
-class FileSeed:
-    relative_path: str
-    content: str
 
 
 @dataclass(frozen=True)
@@ -115,15 +92,6 @@ class ExpectedFailClosedBehavior:
 
 
 @dataclass(frozen=True)
-class LocalReportMetadata:
-    evidence_class: str = EVIDENCE_CLASS
-    activation_eligible: bool = ACTIVATION_ELIGIBLE
-    watermark: str = WATERMARK
-    firebase_project_id: str = LOCAL_DEV_PROJECT_ID
-    firestore_database_id: str = LOCAL_DEV_DATABASE_ID
-
-
-@dataclass(frozen=True)
 class MemoryScenario:
     schema_version: int
     scenario_id: str
@@ -141,28 +109,6 @@ class MemoryScenario:
     expected_protected_collection_changes: tuple[ExpectedProtectedCollectionChange, ...]
     expected_fail_closed: ExpectedFailClosedBehavior
     report_metadata: LocalReportMetadata = field(default_factory=LocalReportMetadata)
-
-
-@dataclass(frozen=True)
-class SeedOperation:
-    kind: Literal["auth", "firestore", "redis", "file", "metadata"]
-    action: Literal["upsert", "delete", "write"]
-    target: str
-    payload: Mapping[str, object] | str | None = None
-    protected: bool = False
-
-
-@dataclass(frozen=True)
-class SeedManifest:
-    schema_version: int
-    scenario_id: str
-    scenario_digest: str
-    generated_at: str
-    dry_run: bool
-    applied: bool
-    emulator_available: Mapping[str, bool]
-    report_metadata: LocalReportMetadata
-    operations: tuple[SeedOperation, ...]
 
 
 def _iso(ts: str) -> str:
@@ -907,13 +853,7 @@ SCENARIOS = _build_scenarios()
 
 
 def _jsonable(value: object) -> object:
-    if is_dataclass(value):
-        return {k: _jsonable(v) for k, v in asdict(value).items()}  # type: ignore[arg-type]
-    if isinstance(value, Mapping):
-        return {str(k): _jsonable(v) for k, v in value.items()}
-    if isinstance(value, tuple | list):
-        return [_jsonable(v) for v in value]
-    return value
+    return emulator_seeding.jsonable(value)
 
 
 def scenario_digest(scenario: MemoryScenario) -> str:
@@ -975,7 +915,7 @@ def validate_all_scenarios() -> None:
 
 
 def _now() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    return emulator_seeding.now_iso()
 
 
 def _metadata_operation(scenario: MemoryScenario) -> SeedOperation:
@@ -993,78 +933,35 @@ def _metadata_operation(scenario: MemoryScenario) -> SeedOperation:
 
 
 def _lookup_auth_uid(cfg: config.HarnessConfig, email: str, password: str) -> str:
-    url = f"http://{cfg.auth_host}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=local-dev-harness"
-    status, body = _request_json(
-        "POST",
-        url,
-        {"email": email, "password": password, "returnSecureToken": True},
-    )
-    if status >= 400:
-        raise RuntimeError(f"Auth uid lookup failed for {email}: HTTP {status} {body[:200]}")
-    payload = json.loads(body)
-    local_id = payload.get("localId")
-    if not isinstance(local_id, str) or not local_id.strip():
-        raise RuntimeError(f"Auth uid lookup for {email} returned no localId")
-    return local_id
+    return emulator_seeding.lookup_auth_uid(cfg, email, password)
 
 
 def _resolve_auth_uid_map(cfg: config.HarnessConfig, users: Sequence[ScenarioUser]) -> dict[str, str]:
-    return {user.uid: _lookup_auth_uid(cfg, user.email, user.password) for user in users}
+    return emulator_seeding.resolve_auth_uid_map(cfg, users)
 
 
 def _remap_firestore_seed(seed: FirestoreSeed, uid_map: Mapping[str, str]) -> FirestoreSeed:
-    parts = seed.path.split("/")
-    if len(parts) >= 2 and parts[0] == "users" and parts[1] in uid_map:
-        parts[1] = uid_map[parts[1]]
-        data = dict(seed.data)
-        uid_value = data.get("uid")
-        if isinstance(uid_value, str) and uid_value in uid_map:
-            data["uid"] = uid_map[uid_value]
-        return FirestoreSeed(path="/".join(parts), protected=seed.protected, data=data)
-    return seed
+    return emulator_seeding.remap_firestore_seed(seed, uid_map)
 
 
 def _remap_auth_operation(op: SeedOperation, uid_map: Mapping[str, str]) -> SeedOperation:
-    if op.kind != "auth":
-        return op
-    resolved = uid_map.get(op.target, op.target)
-    return SeedOperation(op.kind, op.action, resolved, op.payload, op.protected)
+    return emulator_seeding.remap_auth_operation(op, uid_map)
 
 
 def _remap_seed_operation(op: SeedOperation, uid_map: Mapping[str, str]) -> SeedOperation:
-    if op.kind != "firestore" or not isinstance(op.payload, Mapping):
-        return op
-    remapped = _remap_firestore_seed(FirestoreSeed(path=op.target, data=op.payload, protected=op.protected), uid_map)
-    return SeedOperation(op.kind, op.action, remapped.path, remapped.data, remapped.protected)
+    return emulator_seeding.remap_seed_operation(op, uid_map)
 
 
 def _auth_uid_manifest_path(cfg: config.HarnessConfig) -> Path:
-    return cfg.layout.state_root / "manifests" / AUTH_UID_MANIFEST
+    return emulator_seeding.auth_uid_manifest_path(cfg)
 
 
 def write_auth_uid_manifest(cfg: config.HarnessConfig, uid_map: Mapping[str, str]) -> Path:
-    path = _auth_uid_manifest_path(cfg)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "schema_version": 1,
-        "generated_at": _now(),
-        "users": dict(uid_map),
-        "canonical_users": [uid_map[ALICE_USER_ID], uid_map[BOB_USER_ID]],
-        "selected_user": uid_map[ALICE_USER_ID],
-    }
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
+    return emulator_seeding.write_auth_uid_manifest(cfg, uid_map, selected_user=ALICE_USER_ID)
 
 
 def read_auth_uid_manifest(cfg: config.HarnessConfig) -> dict[str, object]:
-    path = _auth_uid_manifest_path(cfg)
-    if not path.is_file():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+    return emulator_seeding.read_auth_uid_manifest(cfg)
 
 
 def canonical_users_from_manifest(cfg: config.HarnessConfig) -> str | None:
@@ -1085,24 +982,23 @@ def canonical_users_from_manifest(cfg: config.HarnessConfig) -> str | None:
     return None
 
 
-def _apply_seed_operations(
-    cfg: config.HarnessConfig, scenario: MemoryScenario, ops: tuple[SeedOperation, ...]
-) -> dict[str, str] | None:
-    auth_ops = [op for op in ops if op.kind == "auth"]
-    other_ops = [op for op in ops if op.kind != "auth"]
-    for op in auth_ops:
-        _apply_operation(cfg, op)
-    uid_map = _resolve_auth_uid_map(cfg, scenario.users)
-    write_auth_uid_manifest(cfg, uid_map)
-    for op in other_ops:
-        _apply_operation(cfg, _remap_seed_operation(op, uid_map))
-    return uid_map
+def _fixed_uid(local_id: object) -> bool:
+    return str(local_id) in {CHAT_FIRST_E2E_ENABLED_USER_ID, CHAT_FIRST_E2E_DISABLED_CONTROL_USER_ID}
 
 
 def build_seed_operations(scenario: MemoryScenario) -> tuple[SeedOperation, ...]:
     validate_scenario(scenario)
     ops: list[SeedOperation] = [_metadata_operation(scenario)]
-    ops.extend(SeedOperation("auth", "upsert", str(user["localId"]), user) for user in scenario.auth_seed)
+    ops.extend(
+        SeedOperation(
+            "auth",
+            "upsert",
+            str(user["localId"]),
+            user,
+            requires_fixed_uid=_fixed_uid(user.get("localId")),
+        )
+        for user in scenario.auth_seed
+    )
     ops.extend(
         SeedOperation("firestore", "upsert", seed.path, seed.data, seed.protected) for seed in scenario.profile_seed
     )
@@ -1117,7 +1013,10 @@ def build_seed_operations(scenario: MemoryScenario) -> tuple[SeedOperation, ...]
 def build_reset_operations(scenario: MemoryScenario) -> tuple[SeedOperation, ...]:
     validate_scenario(scenario)
     ops: list[SeedOperation] = []
-    ops.extend(SeedOperation("auth", "delete", str(user["localId"])) for user in scenario.auth_seed)
+    ops.extend(
+        SeedOperation("auth", "delete", str(user["localId"]), requires_fixed_uid=_fixed_uid(user.get("localId")))
+        for user in scenario.auth_seed
+    )
     ops.extend(
         SeedOperation("firestore", "delete", seed.path, protected=seed.protected)
         for seed in (*scenario.profile_seed, *scenario.firestore_seed)
@@ -1129,219 +1028,35 @@ def build_reset_operations(scenario: MemoryScenario) -> tuple[SeedOperation, ...
 
 
 def _port_open(hostport: str, timeout: float = 0.2) -> bool:
-    host, raw_port = hostport.rsplit(":", 1)
-    try:
-        with socket.create_connection((host, int(raw_port)), timeout=timeout):
-            return True
-    except OSError:
-        return False
+    return emulator_seeding.port_open(hostport, timeout=timeout)
 
 
 def emulator_availability(cfg: config.HarnessConfig) -> dict[str, bool]:
-    return {
-        "firestore": _port_open(cfg.firestore_host),
-        "auth": _port_open(cfg.auth_host),
-        "redis": _port_open(f"{cfg.redis_host}:{cfg.redis_port}"),
-    }
-
-
-def _firestore_value(value: object) -> dict[str, object]:
-    if value is None:
-        return {"nullValue": None}
-    if isinstance(value, bool):
-        return {"booleanValue": value}
-    if isinstance(value, int) and not isinstance(value, bool):
-        return {"integerValue": str(value)}
-    if isinstance(value, float):
-        return {"doubleValue": value}
-    if isinstance(value, str):
-        if value.endswith("Z"):
-            try:
-                datetime.fromisoformat(value.replace("Z", "+00:00"))
-                return {"timestampValue": value}
-            except ValueError:
-                pass
-        return {"stringValue": value}
-    if isinstance(value, Mapping):
-        return {"mapValue": {"fields": {str(k): _firestore_value(v) for k, v in value.items()}}}
-    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
-        return {"arrayValue": {"values": [_firestore_value(v) for v in value]}}
-    return {"stringValue": str(value)}
-
-
-def _firestore_document_payload(data: Mapping[str, object]) -> dict[str, object]:
-    return {"fields": {str(k): _firestore_value(v) for k, v in data.items()}}
+    return emulator_seeding.emulator_availability(cfg)
 
 
 def _request_json(method: str, url: str, payload: Mapping[str, object] | None = None) -> tuple[int, str]:
-    data = None if payload is None else json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, method=method, headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=2) as response:
-            return int(response.status), response.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as exc:
-        return int(exc.code), exc.read().decode("utf-8", "replace")
+    return emulator_seeding.request_json(method, url, payload)
 
 
 def _apply_firestore_admin_sdk(cfg: config.HarnessConfig, op: SeedOperation) -> bool:
-    """Apply Firestore seed/reset through emulator Admin-style credentials when available.
-
-    The repo's Firestore rules intentionally deny all client writes to memory
-    protected collections. For live local emulator seeding, use the Python
-    Firestore client with AnonymousCredentials against FIRESTORE_EMULATOR_HOST,
-    which bypasses rules like backend/Admin tooling. If the dependency is not
-    installed, return False and let the REST fallback produce an actionable
-    error.
-    """
-
-    try:
-        from google.auth.credentials import AnonymousCredentials
-        from google.cloud import firestore
-    except Exception:
-        return False
-
-    old_host = os.environ.get("FIRESTORE_EMULATOR_HOST")
-    os.environ["FIRESTORE_EMULATOR_HOST"] = cfg.firestore_host
-    try:
-        client = firestore.Client(project=cfg.project_id, credentials=AnonymousCredentials())
-        document = client.document(op.target)
-        if op.action == "upsert":
-            payload = dict(op.payload if isinstance(op.payload, Mapping) else {})
-            document.set(payload)
-        elif op.action == "delete":
-            document.delete()
-        else:
-            raise RuntimeError(f"Unsupported Firestore scenario action: {op.action}")
-        return True
-    finally:
-        if old_host is None:
-            os.environ.pop("FIRESTORE_EMULATOR_HOST", None)
-        else:
-            os.environ["FIRESTORE_EMULATOR_HOST"] = old_host
-
-
-_AUTH_EMULATOR_APP_NAME = 'omi-local-dev-harness-auth-emulator'
+    return emulator_seeding.apply_firestore_admin_sdk(cfg, op)
 
 
 def _apply_auth_admin_sdk(cfg: config.HarnessConfig, op: SeedOperation) -> bool:
-    """Seed fixed Auth-emulator UIDs through the Firebase Admin API.
-
-    The client sign-up endpoint chooses a random ``localId``.  The Admin API
-    accepts the operation target as ``uid``, which gives every fixture a stable
-    authenticated identity while product capability comes from server control.
-    """
-
-    try:
-        import firebase_admin
-        from firebase_admin import auth as firebase_auth
-    except ImportError:
-        return False
-
-    old_host = os.environ.get('FIREBASE_AUTH_EMULATOR_HOST')
-    os.environ['FIREBASE_AUTH_EMULATOR_HOST'] = cfg.auth_host
-    try:
-        try:
-            app = firebase_admin.get_app(_AUTH_EMULATOR_APP_NAME)
-        except ValueError:
-            app = firebase_admin.initialize_app(
-                options={'projectId': cfg.project_id},
-                name=_AUTH_EMULATOR_APP_NAME,
-            )
-        if op.action == 'upsert':
-            payload = dict(op.payload if isinstance(op.payload, Mapping) else {})
-            try:
-                firebase_auth.get_user(op.target, app=app)
-            except firebase_auth.UserNotFoundError:
-                firebase_auth.create_user(
-                    uid=op.target,
-                    email=str(payload['email']),
-                    password=str(payload['password']),
-                    display_name=str(payload.get('displayName', '')),
-                    email_verified=bool(payload.get('emailVerified', False)),
-                    disabled=bool(payload.get('disabled', False)),
-                    app=app,
-                )
-        elif op.action == 'delete':
-            try:
-                firebase_auth.delete_user(op.target, app=app)
-            except firebase_auth.UserNotFoundError:
-                pass
-        else:
-            raise RuntimeError(f'Unsupported Auth scenario action: {op.action}')
-        return True
-    finally:
-        if old_host is None:
-            os.environ.pop('FIREBASE_AUTH_EMULATOR_HOST', None)
-        else:
-            os.environ['FIREBASE_AUTH_EMULATOR_HOST'] = old_host
+    return emulator_seeding.apply_auth_admin_sdk(cfg, op)
 
 
 def _apply_operation(cfg: config.HarnessConfig, op: SeedOperation) -> None:
-    if op.kind == "file":
-        target = cfg.layout.state_root / "files" / op.target
-        safety.validate_destructive_target(target.parent, state_root=cfg.layout.state_root, repo_root=cfg.repo_root)
-        if op.action == "write":
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(str(op.payload), encoding="utf-8")
-        elif target.exists():
-            safety.validate_destructive_target(target, state_root=cfg.layout.state_root, repo_root=cfg.repo_root)
-            target.unlink()
-        return
-    if op.kind == "metadata":
-        target = cfg.layout.state_root / "manifests" / "memory-scenario-current.json"
-        if op.action == "write":
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(json.dumps(op.payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        elif target.exists():
-            target.unlink()
-        return
-    if op.kind == "firestore":
-        if _apply_firestore_admin_sdk(cfg, op):
-            return
-        encoded_path = "/".join(quote(part, safe="") for part in op.target.split("/"))
-        url = f"http://{cfg.firestore_host}/v1/projects/{cfg.project_id}/databases/{quote(cfg.database_id, safe='')}/documents/{encoded_path}"
-        if op.action == "upsert":
-            status, body = _request_json(
-                "PATCH", url, _firestore_document_payload(op.payload if isinstance(op.payload, Mapping) else {})
-            )
-            if status >= 400:
-                raise RuntimeError(f"Firestore emulator write failed for {op.target}: HTTP {status} {body[:200]}")
-        elif op.action == "delete":
-            status, body = _request_json("DELETE", url)
-            if status not in {200, 404}:
-                raise RuntimeError(f"Firestore emulator delete failed for {op.target}: HTTP {status} {body[:200]}")
-        return
-    if op.kind == "auth":
-        if _apply_auth_admin_sdk(cfg, op):
-            return
-        if op.target in {CHAT_FIRST_E2E_ENABLED_USER_ID, CHAT_FIRST_E2E_DISABLED_CONTROL_USER_ID}:
-            raise RuntimeError('Chat-first E2E fixtures require Firebase Admin Auth to preserve their fixed UIDs')
-        # Firebase Auth emulator supports account creation via identitytoolkit and
-        # deletion via emulator admin endpoints. If an existing user causes a 400
-        # on upsert, the seed remains idempotent for local QA purposes.
-        if op.action == "upsert":
-            payload = dict(op.payload if isinstance(op.payload, Mapping) else {})
-            url = f"http://{cfg.auth_host}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=local-dev-harness"
-            status, body = _request_json("POST", url, payload)
-            if status >= 400 and "UNEXPECTED_PARAMETER : User ID" in body:
-                # The Auth emulator signUp endpoint rejects caller-specified
-                # localId values. Retry without localId so a live manual-QA
-                # seed still succeeds; the deterministic user IDs remain in
-                # the scenario manifest and desktop placeholder contract.
-                payload.pop("localId", None)
-                status, body = _request_json("POST", url, payload)
-            if status >= 400 and "EMAIL_EXISTS" not in body:
-                raise RuntimeError(f"Auth emulator user seed failed for {op.target}: HTTP {status} {body[:200]}")
-        elif op.action == "delete":
-            url = f"http://{cfg.auth_host}/emulator/v1/projects/{cfg.project_id}/accounts?localId={quote(op.target, safe='')}"
-            status, body = _request_json("DELETE", url)
-            if status not in {200, 404}:
-                raise RuntimeError(f"Auth emulator user reset failed for {op.target}: HTTP {status} {body[:200]}")
-        return
-    if op.kind == "redis":
-        # Avoid mutating arbitrary shared Redis here. Live Redis seeding is a later
-        # harness integration; the manifest records the intended namespace.
-        return
+    emulator_seeding.apply_operation(cfg, op, kind=SCENARIO_KIND)
+
+
+def _apply_seed_operations(
+    cfg: config.HarnessConfig, scenario: MemoryScenario, ops: tuple[SeedOperation, ...]
+) -> dict[str, str] | None:
+    return emulator_seeding.apply_seed_operations(
+        cfg, scenario.users, ops, kind=SCENARIO_KIND, selected_user=scenario.selected_user
+    )
 
 
 def build_manifest(
@@ -1366,11 +1081,7 @@ def build_manifest(
 
 
 def write_manifest(cfg: config.HarnessConfig, manifest: SeedManifest, *, reset: bool = False) -> Path:
-    cfg.layout.process_manifest.parent.mkdir(parents=True, exist_ok=True)
-    name = f"memory-scenario-{manifest.scenario_id}-{'reset' if reset else 'seed'}.json"
-    path = cfg.layout.process_manifest.parent / name
-    path.write_text(json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
+    return emulator_seeding.write_manifest(cfg, manifest, kind=SCENARIO_KIND, reset=reset)
 
 
 def seed_scenario(scenario_id: str, cfg: config.HarnessConfig, *, dry_run: bool | None = None) -> SeedManifest:
@@ -1384,8 +1095,6 @@ def seed_scenario(scenario_id: str, cfg: config.HarnessConfig, *, dry_run: bool 
         _apply_seed_operations(cfg, scenario, ops)
         applied = True
     else:
-        # Still materialize local metadata/file intent under sentinel-owned state
-        # only when the layout exists; this keeps dry runs useful in temp-state tests.
         if cfg.layout.sentinel_path.exists():
             for op in ops:
                 if op.kind in {"metadata", "file"}:
@@ -1403,20 +1112,7 @@ def reset_scenario(scenario_id: str, cfg: config.HarnessConfig, *, dry_run: bool
     applied = False
     if not effective_dry_run:
         safety.read_and_validate_sentinel(cfg.layout.state_root, repo_root=cfg.repo_root, instance=cfg.instance)
-        uid_map = read_auth_uid_manifest(cfg).get("users")
-        if not isinstance(uid_map, dict):
-            uid_map = _resolve_auth_uid_map(cfg, scenario.users)
-        typed_uid_map = {str(k): str(v) for k, v in uid_map.items()}
-        for op in ops:
-            remapped = (
-                _remap_auth_operation(op, typed_uid_map)
-                if op.kind == "auth"
-                else _remap_seed_operation(op, typed_uid_map)
-            )
-            _apply_operation(cfg, remapped)
-        manifest_path = _auth_uid_manifest_path(cfg)
-        if manifest_path.exists():
-            manifest_path.unlink()
+        emulator_seeding.apply_reset_operations(cfg, scenario.users, ops, kind=SCENARIO_KIND)
         applied = True
     else:
         if cfg.layout.sentinel_path.exists():

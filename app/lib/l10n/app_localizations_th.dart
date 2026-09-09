@@ -2031,7 +2031,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get memoryDeleted => 'ลบความทรงจำแล้ว';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'ประวัติความทรงจำบางส่วนไม่พร้อมใช้งาน กำลังแสดงประวัติที่ได้รับมาจนถึงตอนนี้';
 
   @override
   String get undo => 'เลิกทำ';
@@ -9860,11 +9860,30 @@ class AppLocalizationsTh extends AppLocalizations {
   String get transcriptionNoAudio => 'การถอดเสียงไม่ได้รับเสียง';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'แตะ + เพื่อเริ่มบันทึก';
 
   @override
   String get couldNotLoadMemories => 'ไม่สามารถโหลดความทรงจำได้';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'ไม่สามารถโหลดกราฟความรู้ได้';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (แพ็กเกจเดิม)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'ขอบคุณที่เป็นผู้สนับสนุน omi ตั้งแต่แรก! คุณสามารถใช้แพ็กเกจเดิมได้ไม่จำกัดระยะเวลา อย่างไรก็ตาม แพ็กเกจเดิมเหล่านี้ไม่ได้จำหน่ายแล้ว และเลือกอีกไม่ได้หากคุณย้ายไปแพ็กเกจอื่น';
+
+  @override
+  String get planIssueContactSupport =>
+      'อาจมีปัญหากับแพ็กเกจของคุณ โปรดติดต่อฝ่ายสนับสนุนเพื่อให้แน่ใจว่าบริการของคุณจะไม่หยุดชะงัก';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'แผนของคุณจะสิ้นสุดในวันที่ $date คุณจะยังคงเข้าถึงได้เต็มรูปแบบจนถึงตอนนั้น';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'การเข้าถึงแบบชำระเงินของคุณสิ้นสุดลงแล้ว';
 }

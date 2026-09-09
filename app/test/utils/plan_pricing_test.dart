@@ -151,21 +151,21 @@ void main() {
       );
     });
 
-    test('shows for annual Plus selecting Unlimited — do not restore !isOnAnnualPlan', () {
+    test('shows for annual Plus selecting Pro — do not restore !isOnAnnualPlan', () {
       expect(
         shouldShowPlanContinueButton(
           isOnAnnualPlan: true,
           hasScheduledUpgrade: false,
           isCancelled: false,
           plansLoaded: true,
-          selectedTierId: 'unlimited_v2',
+          selectedTierId: 'pro_v2',
           currentTierId: 'plus',
         ),
         isTrue,
       );
     });
 
-    test('hides desktop-plan Continue onto a mobile tier (manage-only)', () {
+    test('hides desktop-only legacy-plan Continue onto a mobile tier (manage-only)', () {
       expect(
         shouldShowPlanContinueButton(
           isOnAnnualPlan: false,
@@ -174,13 +174,13 @@ void main() {
           plansLoaded: true,
           selectedTierId: 'plus',
           currentTierId: 'architect',
-          currentGrantsDesktop: true,
+          currentPlanIsMobileManageOnly: true,
         ),
         isFalse,
       );
     });
 
-    test('still shows monthly→annual Continue on a desktop plan', () {
+    test('still shows monthly→annual Continue for a mobile manage-only plan', () {
       expect(
         shouldShowPlanContinueButton(
           isOnAnnualPlan: false,
@@ -189,13 +189,13 @@ void main() {
           plansLoaded: true,
           selectedTierId: 'architect',
           currentTierId: 'architect',
-          currentGrantsDesktop: true,
+          currentPlanIsMobileManageOnly: true,
         ),
         isTrue,
       );
     });
 
-    test('hides same-tier annual Continue on a desktop plan', () {
+    test('hides same-tier annual Continue for a mobile manage-only plan', () {
       expect(
         shouldShowPlanContinueButton(
           isOnAnnualPlan: true,
@@ -204,9 +204,24 @@ void main() {
           plansLoaded: true,
           selectedTierId: 'architect',
           currentTierId: 'architect',
-          currentGrantsDesktop: true,
+          currentPlanIsMobileManageOnly: true,
         ),
         isFalse,
+      );
+    });
+
+    test('allows Plus and Pro to switch on mobile despite their desktop access', () {
+      expect(
+        shouldShowPlanContinueButton(
+          isOnAnnualPlan: false,
+          hasScheduledUpgrade: false,
+          isCancelled: false,
+          plansLoaded: true,
+          selectedTierId: 'pro_v2',
+          currentTierId: 'plus',
+          currentPlanIsMobileManageOnly: false,
+        ),
+        isTrue,
       );
     });
   });

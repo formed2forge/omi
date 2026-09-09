@@ -2040,7 +2040,8 @@ class AppLocalizationsFi extends AppLocalizations {
   String get memoryDeleted => 'Muisto poistettu.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Osa muistihistoriasta ei ole saatavilla. Näytetään toistaiseksi vastaanotettu historia.';
 
   @override
   String get undo => 'Kumoa';
@@ -9918,11 +9919,30 @@ class AppLocalizationsFi extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkriptio ei vastaanota ääntä';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Aloita tallennus napauttamalla +';
 
   @override
   String get couldNotLoadMemories => 'Muistoja ei voitu ladata';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Tietograafia ei voitu ladata';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (vanha tilaus)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Kiitos, että olet omi:n varhainen tukija! Voit pysyä vanhalla tilauksellasi toistaiseksi. Huomaa kuitenkin, että näitä vanhoja tilauksia ei enää myydä, eikä niitä voi valita, jos vaihdat toiseen tilaukseen.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Tilauksessasi saattaa olla ongelma. Ota yhteyttä tukeen, jotta palvelusi ei keskeydy.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Tilauksesi päättyy $date. Säilytät täyden käyttöoikeuden siihen asti.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Maksullinen käyttöoikeutesi on päättynyt.';
 }

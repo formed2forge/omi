@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from models.users import PlanType
+from models.users import PlanType, Subscription, SubscriptionStatus, UserSubscriptionResponse
 from testing.import_isolation import load_module_fresh, stub_modules
 
 _BACKEND = Path(__file__).resolve().parents[2]
@@ -334,7 +334,19 @@ def test_plus_is_capped_unlimited_v2_is_unlimited(subscription_module):
     assert subscription_module.is_paid_plan(PlanType.unlimited_v2) is True
 
 
-def test_wire_plan_remaps_mobile_tiers_only_for_clients_without_the_enum(monkeypatch, subscription_module):
+def _released_subscription_response(plan: PlanType) -> UserSubscriptionResponse:
+    return UserSubscriptionResponse(
+        subscription=Subscription(plan=plan),
+        transcription_seconds_used=0,
+        transcription_seconds_limit=0,
+        words_transcribed_used=0,
+        words_transcribed_limit=0,
+        insights_gained_used=0,
+        insights_gained_limit=0,
+    )
+
+
+def test_wire_plan_remaps_fallback_tiers_for_clients_without_the_enum(monkeypatch, subscription_module):
     # The module fixture stubs compare_versions to a no-op; use a real semver
     # comparator so the version floor actually gates the remap.
     def _cmp(a, b):
@@ -345,13 +357,21 @@ def test_wire_plan_remaps_mobile_tiers_only_for_clients_without_the_enum(monkeyp
     monkeypatch.setattr(subscription_module, 'compare_versions', _cmp)
     wire = subscription_module.wire_plan_for_client
     # Current clients (below the plus/unlimited_v2-aware floor) must see a known paid label.
+    # unlimited_v2 is keep-until-cancel, not a sold mobile SKU — still remap it.
+    # Leaving it on the wire 500s UserSubscriptionResponse and Settings shows Free.
     assert wire(PlanType.plus, 'ios', '1.0.600') == PlanType.unlimited
+    assert wire(PlanType.pro_v2, 'ios', '1.0.600') == PlanType.unlimited
     assert wire(PlanType.unlimited_v2, 'android', '1.0.600') == PlanType.unlimited
+    assert wire(PlanType.unlimited_v2, 'ios', '1.0.600') == PlanType.unlimited
     assert wire(PlanType.plus, 'macos', '0.12.0') == PlanType.unlimited
+    assert wire(PlanType.unlimited_v2, 'macos', '0.12.0') == PlanType.unlimited
+    assert _released_subscription_response(wire(PlanType.unlimited_v2, 'ios', '1.0.600')).subscription.plan == (
+        PlanType.unlimited
+    )
     # A plus/unlimited_v2-aware client (at/above the floor) receives the real plan.
     assert wire(PlanType.plus, 'ios', '999.0.0') == PlanType.plus
     assert wire(PlanType.unlimited_v2, 'ios', '999.0.0') == PlanType.unlimited_v2
-    # Non-mobile plans are never remapped.
+    # Plans already on the released wire are never remapped.
     assert wire(PlanType.unlimited, 'ios', '1.0.600') == PlanType.unlimited
     assert wire(PlanType.operator, 'ios', '1.0.600') == PlanType.operator
 
@@ -382,3 +402,153 @@ def test_basic_feature_defaults_project_from_plan_limits(monkeypatch, subscripti
     assert '10 minutes of listening per month' in features
     assert '7 words transcribed per month' in features
     assert '9 insights per month' in features
+
+
+# ---------------------------------------------------------------------------
+# resolve_subscription_lapse — "this account's paid access is ending or over"
+#
+# Every case below is built from a stored-row shape a real Stripe flow actually
+# produces, and asserts through the pure resolver's injectable ``now`` seam.
+# ---------------------------------------------------------------------------
+
+_NOW = 1_700_000_000
+
+
+def _paid_active(**overrides) -> Subscription:
+    fields = {
+        'plan': PlanType.plus,
+        'status': SubscriptionStatus.active,
+        'current_period_end': _NOW + 86_400,
+        'stripe_subscription_id': 'sub_live_1',
+        'current_price_id': 'price_plus_month',
+    }
+    fields.update(overrides)
+    return Subscription(**fields)
+
+
+def test_legacy_row_with_no_lapse_fields_resolves_exactly_as_today(subscription_module):
+    """An unmigrated account whose stored subscription is only {plan, status}.
+
+    This is the shape that predates every period/Stripe field, so there is no
+    evidence of anything ending and the endpoint must behave as it does today.
+    """
+    legacy = Subscription(plan=PlanType.basic, status=SubscriptionStatus.active)
+
+    assert legacy.current_period_end is None and legacy.stripe_subscription_id is None
+    assert subscription_module.resolve_subscription_lapse(legacy, legacy, now=_NOW) is None
+
+
+def test_never_subscribed_free_account_is_never_lapsed(subscription_module):
+    """The provisioned default Free row, and a Free row that merely says 'free'.
+
+    A Free plan or label is not evidence of a transition, so no amount of time
+    passing may turn it into a lapse.
+    """
+    default_free = subscription_module.get_default_basic_subscription()
+
+    assert subscription_module.resolve_subscription_lapse(default_free, default_free, now=_NOW) is None
+    # Even a decade later: there is nothing that ended.
+    assert subscription_module.resolve_subscription_lapse(default_free, default_free, now=_NOW + 10**9) is None
+    # A Free row that somehow carries a past period end but no paid history at
+    # all still is not a lapse — the guard is evidence, not the timestamp.
+    stale_free = Subscription(plan=PlanType.basic, current_period_end=_NOW - 86_400)
+    assert subscription_module.resolve_subscription_lapse(stale_free, stale_free, now=_NOW) is None
+
+
+def test_active_paid_plan_has_no_lapse_state(subscription_module):
+    active = _paid_active()
+
+    assert subscription_module.resolve_subscription_lapse(active, active, now=_NOW) is None
+
+
+def test_scheduled_cancellation_reports_user_requested_without_ending_access(subscription_module):
+    """cancel_at_period_end + a future period end is written only by a cancel request.
+
+    The user is still entitled here (get_user_valid_subscription returns the paid
+    plan), so this state exists to say when access will end — it must not claim
+    access is over, and it grants nothing either way.
+    """
+    scheduled = _paid_active(cancel_at_period_end=True)
+
+    lapse = subscription_module.resolve_subscription_lapse(scheduled, scheduled, now=_NOW)
+
+    assert lapse is not None
+    assert lapse.state.value == 'cancellation_scheduled'
+    assert lapse.reason.value == 'user_requested'
+    assert lapse.recovery_action.value == 'keep_subscription'
+    assert lapse.effective_at == _NOW + 86_400
+
+
+def test_paid_row_whose_period_end_passed_reports_access_ended(subscription_module):
+    """The 'expired' shape: a paid row that simply aged out (no webhook landed).
+
+    ``get_user_valid_subscription`` resolves such an account to a fresh Free
+    plan, so ``resolved`` is Free while ``stored`` still proves the paid period.
+    """
+    expired = _paid_active(current_period_end=_NOW - 1)
+    resolved_free = subscription_module.get_default_basic_subscription()
+
+    lapse = subscription_module.resolve_subscription_lapse(expired, resolved_free, now=_NOW)
+
+    assert lapse is not None
+    assert lapse.state.value == 'access_ended'
+    assert lapse.recovery_action.value == 'resubscribe'
+    assert lapse.effective_at == _NOW - 1
+    # The resolved entitlement is untouched by the projection.
+    assert resolved_free.plan is PlanType.basic
+
+
+def test_webhook_downgraded_row_reports_access_ended_with_an_unknown_reason(subscription_module):
+    """The row `_build_subscription_from_stripe_object` writes for every terminal status.
+
+    A Stripe ``canceled``, ``unpaid``, ``past_due``, or ``incomplete_expired``
+    subscription all produce this identical Free row (plan basic, status active,
+    cancel_at_period_end False, the final period end, the subscription id kept,
+    price dropped). The reason is therefore not recoverable from stored state and
+    must be reported as ``unknown`` rather than guessed — see
+    ``models.users.SubscriptionLapseReason``.
+    """
+    cancelled_row = Subscription(
+        plan=PlanType.basic,
+        status=SubscriptionStatus.active,
+        current_period_end=_NOW - 3_600,
+        stripe_subscription_id='sub_cancelled_1',
+        cancel_at_period_end=False,
+    )
+    payment_failed_row = cancelled_row.model_copy(update={'stripe_subscription_id': 'sub_unpaid_1'})
+
+    cancelled = subscription_module.resolve_subscription_lapse(cancelled_row, cancelled_row, now=_NOW)
+    payment_failed = subscription_module.resolve_subscription_lapse(payment_failed_row, payment_failed_row, now=_NOW)
+
+    assert cancelled is not None and payment_failed is not None
+    assert cancelled.state.value == payment_failed.state.value == 'access_ended'
+    assert cancelled.reason.value == payment_failed.reason.value == 'unknown'
+    # The two rows are indistinguishable by construction; asserting they resolve
+    # identically is the guard against a future 'reason' that pretends otherwise.
+    assert cancelled.model_dump() == payment_failed.model_dump()
+    assert {reason.value for reason in subscription_module.SubscriptionLapseReason} == {'user_requested', 'unknown'}
+
+
+def test_a_resubscribed_account_is_not_reported_as_lapsed(subscription_module):
+    """Reconciliation heals the row before the projection runs.
+
+    ``reconcile_basic_plan_with_stripe`` can return the live paid subscription
+    without mutating the stale stored object, so the resolver must decide
+    liveness from the resolved entitlement, not from the stale stored row.
+    """
+    stale_stored = Subscription(
+        plan=PlanType.basic,
+        current_period_end=_NOW - 86_400,
+        stripe_subscription_id='sub_old_1',
+    )
+
+    assert subscription_module.resolve_subscription_lapse(stale_stored, _paid_active(), now=_NOW) is None
+
+
+def test_lapse_boundary_is_the_period_end_instant(subscription_module):
+    """At exactly current_period_end access has not ended yet — the same
+    inclusive rule get_user_valid_subscription applies to paid validity."""
+    expiring = _paid_active(current_period_end=_NOW)
+
+    assert subscription_module.resolve_subscription_lapse(expiring, expiring, now=_NOW) is None
+    assert subscription_module.resolve_subscription_lapse(expiring, None, now=_NOW + 1) is not None

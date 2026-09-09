@@ -2054,7 +2054,8 @@ class AppLocalizationsTl extends AppLocalizations {
   String get memoryDeleted => 'Ang Alaala ay Natanggal.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'May bahagi ng history ng memorya na hindi available. Ipinapakita ang history na natanggap sa ngayon.';
 
   @override
   String get undo => 'Undo';
@@ -10008,11 +10009,30 @@ class AppLocalizationsTl extends AppLocalizations {
   String get transcriptionNoAudio => 'Hindi tumatanggap ng audio ang transkripsyon';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'I-tap ang + upang simulan ang pag-record';
 
   @override
   String get couldNotLoadMemories => 'Hindi ma-load ang mga alaala';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Hindi ma-load ang knowledge graph';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Dating Plano)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Salamat sa pagiging maagang tagasuporta ng omi! Maaari kang manatili sa dating plano nang walang takdang panahon. Tandaan na ang mga dating planong ito ay hindi na ibinebenta at hindi na mapipili kung lilipat ka sa ibang plano.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Maaaring may problema sa iyong plan. Mangyaring makipag-ugnayan sa suporta upang matiyak na walang maantala sa iyong serbisyo.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Magtatapos ang iyong plano sa $date. Mananatili ang buong access mo hanggang doon.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Natapos na ang iyong bayad na access.';
 }

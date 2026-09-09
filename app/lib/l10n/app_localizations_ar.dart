@@ -2026,7 +2026,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get memoryDeleted => 'تم حذف الذكرى.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'بعض سجل الذكريات غير متوفر. يتم عرض السجل الذي تم استلامه حتى الآن.';
 
   @override
   String get undo => 'تراجع';
@@ -9859,11 +9859,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get transcriptionNoAudio => 'النسخ لا يستلم الصوت';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'اضغط على + لبدء التسجيل';
 
   @override
   String get couldNotLoadMemories => 'تعذر تحميل الذكريات';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'تعذر تحميل الرسم البياني للمعرفة';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (خطة قديمة)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'شكرًا لكونك من أوائل داعمِي omi! يمكنك البقاء على خطتك القديمة إلى أجل غير مسمى. يرجى ملاحظة أن هذه الخطط القديمة لم تعد تُباع ولا يمكن اختيارها إذا انتقلت إلى خطة أخرى.';
+
+  @override
+  String get planIssueContactSupport => 'قد تكون هناك مشكلة في خطتك، يرجى التواصل مع الدعم لضمان عدم انقطاع خدمتك.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'ستنتهي خطتك في $date. ستحتفظ بكامل الوصول حتى ذلك الحين.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'لقد انتهى وصولك المدفوع.';
 }

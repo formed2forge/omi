@@ -2047,7 +2047,7 @@ class AppLocalizationsLv extends AppLocalizations {
   String get memoryDeleted => 'Atmiņa izdzēsta.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Daļa atmiņu vēstures nav pieejama. Tiek rādīta līdz šim saņemtā vēsture.';
 
   @override
   String get undo => 'Atsaukt';
@@ -9941,11 +9941,30 @@ class AppLocalizationsLv extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripcija nesaņem audio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Pieskarieties +, lai sāktu ierakstīšanu';
 
   @override
   String get couldNotLoadMemories => 'Neizdevās ielādēt atmiņas';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Neizdevās ielādēt zināšanu grafu';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (iepriekšējais plāns)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Paldies, ka esi omi agrīnais atbalstītājs! Savā iepriekšējā plānā vari palikt nenoteiktu laiku. Ņem vērā, ka šie iepriekšējie plāni vairs netiek pārdoti un tos nevar izvēlēties, ja pārej uz citu plānu.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Iespējams, ar jūsu plānu ir radusies problēma. Lūdzu, sazinieties ar atbalsta dienestu, lai jūsu pakalpojumā nerastos pārtraukumi.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Jūsu plāns beigsies $date. Līdz tam saglabāsiet pilnu piekļuvi.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Jūsu apmaksātā piekļuve ir beigusies.';
 }

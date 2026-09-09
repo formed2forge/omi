@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "rule": "local-dev onboarding bypass gate and fixture identity",
+  "fixture_identity": {
+    "uid": "local_dev_fixture",
+    "display_name": "Local Dev",
+    "given_name": "Local",
+    "family_name": "Dev",
+    "notes": "A single non-privileged, never-pricing-seeded uid reused across every platform. It carries no Stripe/subscription document, so it resolves to Free/no-entitlement through the same code path as any brand-new never-subscribed account — no plan-specific fixture wiring needed. It is distinct from the pricing_* fixtures (scripts/dev-harness/PRICING_SCENARIOS.md) — see identity_semantics for how those compose with this bypass."
+  },
+  "gate_semantics": {
+    "description": "The bypass is active only when BOTH an explicit local-dev profile/config gate AND a SEPARATE explicit bypass flag are set. Neither condition alone is sufficient. The bypass must never be inferred from build type (debug/release), persisted state (a prior onboarding-complete flag), or merely having an existing signed-in session — it requires the flag to be truthy on THIS run, and the signed-in identity must match fixture_identity.uid before onboarding is treated as satisfied.",
+    "requires_local_dev_profile": true,
+    "requires_explicit_bypass_flag": true,
+    "bypass_flag_true_value": "1",
+    "onboarding_marked_complete_only_when_bypass_active_and_identity_matches_fixture": true,
+    "onboarding_remains_incomplete_when_bypass_inactive": true,
+    "disable_path": "Unset (or set to any value other than \"1\") the bypass flag; the local-dev profile/config gate may remain set. A fresh run then falls back to the platform's normal manual local-dev sign-in (still profile-gated) and onboarding is not skipped."
+  },
+  "platform_flag_names": {
+    "windows": "VITE_OMI_LOCAL_DEV_ONBOARDING_BYPASS",
+    "mobile": "OMI_LOCAL_DEV_ONBOARDING_BYPASS",
+    "macos": "OMI_LOCAL_DEV_ONBOARDING_BYPASS"
+  },
+  "identity_semantics": {
+    "description": "Onboarding is treated as satisfied when the bypass is active (gate_semantics above) AND the signed-in uid is either the fixture_identity.uid OR any uid carrying the pricing_uid_prefix below (the seeded pricing QA fixtures — scripts/dev-harness/PRICING_SCENARIOS.md — e.g. pricing_plus, pricing_unlimited_v2). This is a prefix rule, not an enumerated list: the harness seeds pricing fixtures dynamically per scenario (scripts/dev-harness/dev_harness/pricing_scenarios.py), so a fixed list would drift. A uid is never treated as satisfying onboarding merely because the bypass flag is set — the identity check always runs too, and a uid outside both categories (e.g. a real Google/Apple-signed-in account, or 'alice') still runs the real onboarding wizard even with the flag on.",
+    "pricing_uid_prefix": "pricing_",
+    "fixture_uid_satisfies_onboarding": true,
+    "pricing_prefix_satisfies_onboarding": true,
+    "windows_and_mobile_require_bypass_flag_for_pricing_prefix": true,
+    "macos_pricing_prefix_skip_is_a_separate_always_on_mechanism": "macOS's pricing_* onboarding-skip is unconditional on the local_dev harness profile alone (scripts/dev-harness/dev_harness/desktop_profile.py's _is_pricing_harness_launch sets OMI_SKIP_ONBOARDING=1 for any pricing_-prefixed launch uid, decided before the app even starts) — it predates this bypass and does not read this bypass's flag at all. Windows and mobile have no launch-time hook (their local-dev sign-in is typed at runtime in a running app), so they gate the SAME pricing_* identity rule behind this bypass's flag instead, by user decision (2026-09-07): keeps the flag-off path able to still exercise the real onboarding wizard against a preset pricing uid on those two platforms."
+  },
+  "identity_cases": [
+    { "name": "fixture_uid_matches", "uid": "local_dev_fixture", "expected_identity_match": true },
+    { "name": "pricing_plus_matches", "uid": "pricing_plus", "expected_identity_match": true },
+    {
+      "name": "pricing_unlimited_v2_matches",
+      "uid": "pricing_unlimited_v2",
+      "expected_identity_match": true
+    },
+    {
+      "name": "pricing_prefix_arbitrary_scenario_uid_matches",
+      "uid": "pricing_unlimited_grandfathered",
+      "expected_identity_match": true
+    },
+    { "name": "non_pricing_uid_rejected", "uid": "alice", "expected_identity_match": false },
+    {
+      "name": "similar_but_unprefixed_uid_rejected",
+      "uid": "pricingsomething",
+      "expected_identity_match": false
+    },
+    { "name": "empty_uid_rejected", "uid": "", "expected_identity_match": false },
+    { "name": "null_uid_rejected", "uid": null, "expected_identity_match": false }
+  ],
+  "gate_cases": [
+    {
+      "name": "production_default",
+      "local_dev_profile_active": false,
+      "bypass_flag_value": null,
+      "expected_bypass_active": false
+    },
+    {
+      "name": "local_dev_no_flag",
+      "local_dev_profile_active": true,
+      "bypass_flag_value": null,
+      "expected_bypass_active": false
+    },
+    {
+      "name": "local_dev_flag_explicit_off",
+      "local_dev_profile_active": true,
+      "bypass_flag_value": "0",
+      "expected_bypass_active": false
+    },
+    {
+      "name": "local_dev_flag_on",
+      "local_dev_profile_active": true,
+      "bypass_flag_value": "1",
+      "expected_bypass_active": true
+    },
+    {
+      "name": "production_flag_on_is_still_refused",
+      "local_dev_profile_active": false,
+      "bypass_flag_value": "1",
+      "expected_bypass_active": false
+    },
+    {
+      "name": "malformed_flag_value_refused",
+      "local_dev_profile_active": true,
+      "bypass_flag_value": "yes",
+      "expected_bypass_active": false
+    },
+    {
+      "name": "whitespace_flag_value_refused",
+      "local_dev_profile_active": true,
+      "bypass_flag_value": "  1  ",
+      "expected_bypass_active": false
+    }
+  ]
+}

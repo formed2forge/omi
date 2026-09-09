@@ -2040,7 +2040,8 @@ class AppLocalizationsNo extends AppLocalizations {
   String get memoryDeleted => 'Minne slettet.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Noe av minnehistorikken er ikke tilgjengelig. Viser historikken mottatt så langt.';
 
   @override
   String get undo => 'Angre';
@@ -9915,11 +9916,30 @@ class AppLocalizationsNo extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripsjon mottar ikke lyd';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Trykk på + for å starte opptak';
 
   @override
   String get couldNotLoadMemories => 'Kunne ikke laste minner';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Kunne ikke laste kunnskapsgrafen';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (eldre abonnement)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Takk for at du er en tidlig støttespiller av omi! Du kan bli på det eldre abonnementet ditt på ubestemt tid. Merk at disse eldre abonnementene ikke lenger selges og ikke kan velges hvis du bytter til et annet abonnement.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Det kan være et problem med abonnementet ditt. Kontakt support for å sikre at tjenesten din ikke blir avbrutt.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Abonnementet ditt utløper $date. Du beholder full tilgang frem til da.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Din betalte tilgang har utløpt.';
 }

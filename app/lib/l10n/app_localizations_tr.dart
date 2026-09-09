@@ -2047,7 +2047,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get memoryDeleted => 'Anı Silindi.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial => 'Bazı anı geçmişi kullanılamıyor. Şimdiye kadar alınan geçmiş gösteriliyor.';
 
   @override
   String get undo => 'Geri Al';
@@ -9929,11 +9929,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get transcriptionNoAudio => 'Transkripsiyon ses almıyor';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Kayda başlamak için + öğesine dokunun';
 
   @override
   String get couldNotLoadMemories => 'Anılar yüklenemedi';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Bilgi grafiği yüklenemedi';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (Eski Plan)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'omi\'nin erken destekçilerinden olduğunuz için teşekkürler! Eski planınızda süresiz kalabilirsiniz. Ancak bu eski planlar artık satılmıyor ve başka bir plana geçerseniz yeniden seçilemez.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Planınızla ilgili bir sorun olabilir. Hizmetinizde kesinti yaşanmaması için lütfen destek ekibiyle iletişime geçin.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Planınız $date tarihinde sona erecek. O zamana kadar tam erişiminiz devam edecek.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Ücretli erişiminiz sona erdi.';
 }

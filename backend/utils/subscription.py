@@ -15,17 +15,29 @@ from database._client import get_customer_firestore_client
 from database.announcements import compare_versions
 from config.plan_catalog import (
     DESKTOP_ENTITLED_PLAN_TYPES,
-    MOBILE_PLAN_TYPES,
     PAID_PLAN_TYPES,
     PLAN_DISPLAY_NAMES,
+    PLAN_STOREFRONTS,
     PRIMARY_BILLING_ENV_VARS,
     RECOGNIZED_STRIPE_PRICE_INTERVALS,
+    WIRE_FALLBACK_PLAN_TYPES,
     allocation_limit,
     get_plan_allocation,
+    is_keep_until_cancel_plan,
     plan_uses_overage,
     resolve_stripe_price_plan,
 )
-from models.users import PlanType, SubscriptionStatus, Subscription, PlanLimits, TrialMetadata
+from models.users import (
+    PlanType,
+    SubscriptionStatus,
+    Subscription,
+    SubscriptionLapse,
+    SubscriptionLapseReason,
+    SubscriptionLapseRecovery,
+    SubscriptionLapseState,
+    PlanLimits,
+    TrialMetadata,
+)
 from utils.byok import get_byok_key, get_byok_uid, get_cached_byok_state, has_validated_byok_keys
 from utils.log_sanitizer import sanitize
 from utils.observability.fallback import record_fallback
@@ -79,9 +91,19 @@ def effective_desktop_access_tier(plan: PlanType, subscription: Optional[Subscri
     Free is the minimum Desktop tier. A Neo (``unlimited``) subscriber who is
     not in the full-Desktop grandfather period therefore receives
     ``desktop_free`` rather than no Desktop access. Operator and grandfathered
-    Neo receive ``desktop_full``; Architect receives its separate premium tier.
+    Neo receive ``desktop_full``; Architect and Pro (`pro_v2`) receive the
+    separate premium tier (matches their shared ``desktop_architect`` catalog
+    profile).
+
+    This pair is intentionally still hardcoded rather than read generically off
+    each plan's ``desktop_profile`` field: Neo's grandfather is a *conditional*
+    override declared in the catalog (`conditional_desktop_profiles`), not its
+    static profile, so a naive "just read desktop_profile" rewrite would lose
+    that special case. Generalizing this into one catalog-driven capability
+    evaluator (including the conditional-profile grandfather) is tracked as W1
+    in .github/agent-docs/plan-source-of-truth.md, not done here.
     """
-    if plan == PlanType.architect:
+    if plan in (PlanType.architect, PlanType.pro_v2):
         return DESKTOP_ACCESS_TIER_ARCHITECT
     if plan_grants_desktop(plan, subscription):
         return DESKTOP_ACCESS_TIER_FULL
@@ -506,14 +528,19 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
     Unlimited is kept as legacy so existing subscribers keep their access
     and Stripe webhooks still resolve, but it's filtered out of the "new user"
     purchase catalog via `filter_plans_for_user`.
+
+    The ``legacy`` key on these dicts stays False so unknown-platform
+    ``filter_plans_for_user`` fail-open is unchanged. Wire ``SubscriptionPlan.legacy``
+    is set separately from ``is_keep_until_cancel_plan`` (catalog lifecycle /
+    empty storefronts).
     """
-    return [
+    definitions = [
         {
             "plan_type": PlanType.unlimited,
             "plan_id": "unlimited",
             "title": "Neo",
             "subtitle": f"{_chat_allowance_text(PlanType.unlimited)}",
-            "description": f"{_chat_allowance_text(PlanType.unlimited)}. Shared with mobile and web.",
+            "description": _plan_storefront_description(PlanType.unlimited),
             "eyebrow": "Starter",
             "monthly_price_id": _configured_plan_price_id(PlanType.unlimited, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.unlimited, 'year'),
@@ -525,7 +552,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_id": "operator",
             "title": "Operator",
             "subtitle": f"{_chat_allowance_text(PlanType.operator)}",
-            "description": f"{_chat_allowance_text(PlanType.operator)}. Shared with mobile and web.",
+            "description": _plan_storefront_description(PlanType.operator),
             "eyebrow": "Most popular",
             "monthly_price_id": _configured_plan_price_id(PlanType.operator, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.operator, 'year'),
@@ -537,7 +564,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_id": "architect",
             "title": "Architect",
             "subtitle": "Power-user AI — thousands of chats + agentic automations",
-            "description": "Power-user AI for heavy agentic workflows and vibe coding.",
+            "description": _plan_storefront_description(PlanType.architect),
             "eyebrow": "Automation + coding",
             "monthly_price_id": _configured_plan_price_id(PlanType.architect, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.architect, 'year'),
@@ -548,11 +575,23 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_type": PlanType.plus,
             "plan_id": "plus",
             "title": "Plus",
-            "subtitle": f"{_transcription_allowance_text(PlanType.plus)}",
-            "description": f"{_transcription_allowance_text(PlanType.plus)}.",
+            "subtitle": f"{_chat_allowance_text(PlanType.plus)}",
+            "description": _plan_storefront_description(PlanType.plus),
             "eyebrow": "For everyday use",
             "monthly_price_id": _configured_plan_price_id(PlanType.plus, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.plus, 'year'),
+            "annual_description": "Save with annual billing.",
+            "legacy": False,
+        },
+        {
+            "plan_type": PlanType.pro_v2,
+            "plan_id": "pro_v2",
+            "title": "Pro",
+            "subtitle": f"{_chat_allowance_text(PlanType.pro_v2)}",
+            "description": _plan_storefront_description(PlanType.pro_v2),
+            "eyebrow": "For power users",
+            "monthly_price_id": _configured_plan_price_id(PlanType.pro_v2, 'month'),
+            "annual_price_id": _configured_plan_price_id(PlanType.pro_v2, 'year'),
             "annual_description": "Save with annual billing.",
             "legacy": False,
         },
@@ -561,7 +600,7 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "plan_id": "unlimited_v2",
             "title": "Unlimited",
             "subtitle": "Unlimited transcription",
-            "description": "Unlimited transcription — record all day.",
+            "description": _plan_storefront_description(PlanType.unlimited_v2),
             "eyebrow": "Most popular",
             "monthly_price_id": _configured_plan_price_id(PlanType.unlimited_v2, 'month'),
             "annual_price_id": _configured_plan_price_id(PlanType.unlimited_v2, 'year'),
@@ -569,44 +608,64 @@ def get_paid_plan_definitions() -> List[Dict[str, Any]]:
             "legacy": False,
         },
     ]
+    for definition in definitions:
+        definition["keep_until_cancel"] = is_keep_until_cancel_plan(cast(PlanType, definition["plan_type"]))
+    return definitions
 
 
 # Platform identifiers for the two mobile clients (X-App-Platform header).
 _MOBILE_PLATFORM_TOKENS = {'ios', 'android'}
 
 # The web storefront (X-App-Platform: web). It's an always-latest client that
-# renders the full new catalog (Plus + Unlimited + Operator + Architect) and is
-# the primary Stripe checkout surface; only deprecated Neo is hidden there.
+# renders the full new catalog and is the primary Stripe checkout surface.
 WEB_PLATFORMS = {'web'}
+
+
+def _storefront_token(platform: Optional[str]) -> Optional[str]:
+    """Map an X-App-Platform header value onto the catalog's storefront vocabulary.
+
+    Mobile/desktop/web platform tokens already match the catalog's own
+    storefront names (`android`, `ios`, `macos`, `windows`, `web`) one-for-one;
+    this indirection is the single seam to fix if that ever stops being true.
+    An unrecognized/missing platform has no storefront (returns None).
+    """
+    p = (platform or '').lower()
+    if p in _MOBILE_PLATFORM_TOKENS or p in DESKTOP_PLATFORMS or p in WEB_PLATFORMS:
+        return p
+    return None
 
 
 def _platform_hidden_plans(platform: Optional[str]) -> Set[PlanType]:
     """Plans hidden from the purchase catalog per platform.
 
-    Mobile sells Plus + Unlimited; desktop sells Operator + Architect; web sells
-    all four. Neo is deprecated everywhere and hidden on every platform. A
-    subscriber on a hidden plan still sees it via `filter_plans_for_user`'s
-    current-plan escape (Neo) or the mobile manage-only fast path (Operator /
-    Architect). See .github/agent-docs/plan-catalog.md.
+    Derived directly from each plan's catalog-declared `storefronts`
+    (`PLAN_STOREFRONTS`) rather than a hand-maintained per-platform set: a plan
+    is hidden on a platform iff that platform's storefront token is absent from
+    its `storefronts` list. This is the storefront-audience rewrite for Free /
+    Plus / Pro unification — Plus and Pro (`pro_v2`) now sell on every
+    storefront (mobile, desktop, web); Operator, Architect, Neo, and
+    Unlimited-v2 sunset to an empty storefront list (no longer sold to new
+    users anywhere). An unrecognized/missing platform hides nothing
+    (fail-open, matching prior behavior). A subscriber on a hidden plan still
+    sees it via `filter_plans_for_user`'s current-plan escape or the mobile
+    manage-only fast path (Operator / Architect — the only plans left that are
+    desktop-entitled but not mobile-sold). See .github/agent-docs/plan-catalog.md.
     """
-    p = (platform or '').lower()
-    if p in _MOBILE_PLATFORM_TOKENS:
-        return {PlanType.unlimited, PlanType.operator, PlanType.architect}
-    if p in DESKTOP_PLATFORMS:
-        return {PlanType.unlimited, PlanType.plus, PlanType.unlimited_v2}
-    if p in WEB_PLATFORMS:
-        return {PlanType.unlimited}
-    return set()
+    storefront = _storefront_token(platform)
+    if storefront is None:
+        return set()
+    return {plan for plan in PlanType if storefront not in PLAN_STOREFRONTS.get(plan, ())}
 
 
 def desktop_to_consumer_plan_change_error(current_plan: PlanType, target_plan: PlanType) -> Optional[str]:
-    """Error text if a desktop-entitled plan would be swapped onto a consumer tier.
+    """Error text if a desktop-entitled plan would be swapped onto a non-desktop-entitled tier.
 
-    Operator and Architect are manage-only from mobile: cancel or wait out the
-    period. Immediate proration onto Plus / Unlimited / Neo strips desktop.
-    Same-family desktop changes (Operator ↔ Architect) stay allowed for the
-    desktop and web storefronts. Do not add a "user confirmed in the app"
-    exception — confirmation is not this boundary. See .github/agent-docs/plan-catalog.md.
+    Any desktop-entitled plan (Operator, Architect, Plus, Pro) switching onto a
+    plan without desktop entitlement is blocked: immediate proration would
+    strip desktop access. Switches between two desktop-entitled plans (Operator
+    <-> Architect, Plus <-> Pro, etc.) stay allowed for every storefront that
+    sells the target. Do not add a "user confirmed in the app" exception —
+    confirmation is not this boundary. See .github/agent-docs/plan-catalog.md.
     """
     if current_plan in DESKTOP_ENTITLED_PLAN_TYPES and target_plan not in DESKTOP_ENTITLED_PLAN_TYPES:
         return (
@@ -627,17 +686,31 @@ def filter_plans_for_user(
 
     1. Neo (`unlimited`) is shown only when `current_plan` is already Neo
        (active or cancel-at-period-end). Never gate it on "has ever paid".
-    2. On mobile, Operator / Architect are manage-only: return *only* the
-       current desktop plan so cheaper mobile tiers cannot be purchased
-       from the phone. Desktop and web keep selling both.
-    3. Fully churned ex-Neo users are `basic` and receive Plus + Unlimited,
-       the replacement catalog, not the deprecated Neo SKU.
+    2. On mobile, a desktop-entitled plan that is not itself sold on mobile
+       (Operator / Architect — the two sunset desktop-only plans) is
+       manage-only: return *only* the current plan so a cheaper mobile tier
+       cannot be purchased from the phone, which would immediately strip
+       desktop entitlement via proration. Plus and Pro are desktop-entitled
+       *and* mobile-sold, so this does not apply to them: a Plus/Pro
+       subscriber on mobile sees the normal purchase catalog. Desktop and web
+       keep selling every plan sold there.
+    3. Fully churned ex-Neo users are `basic` and receive the current catalog
+       (Plus, Pro), not the deprecated Neo or Unlimited-v2 SKUs.
+    4. Operator, Architect, and Unlimited-v2 are sunset: no longer offered to
+       new users on any storefront, and no longer cross-shown to each other's
+       existing subscribers — each is now visible only to its own current
+       subscriber, the same "deprecated, current-subscriber-only" shape Neo
+       already had.
 
-    The current-plan escape still applies on desktop/web so a Neo subscriber
-    opening those surfaces can manage/cancel.
+    The current-plan escape still applies on desktop/web so a subscriber on
+    any deprecated legacy plan can open those surfaces to manage/cancel.
     """
     is_mobile = (platform or '').lower() in _MOBILE_PLATFORM_TOKENS
-    if is_mobile and current_plan in DESKTOP_ENTITLED_PLAN_TYPES:
+    if (
+        is_mobile
+        and current_plan in DESKTOP_ENTITLED_PLAN_TYPES
+        and not _MOBILE_PLATFORM_TOKENS & set(PLAN_STOREFRONTS.get(current_plan, ()))
+    ):
         return [d for d in definitions if d.get('plan_type') == current_plan]
 
     hidden = _platform_hidden_plans(platform)
@@ -714,9 +787,9 @@ def should_show_new_plans(platform: Optional[str], app_version: Optional[str]) -
     return False
 
 
-# Minimum client build whose plan enum includes `plus`/`max`. Defaulted ahead of
-# any shipped build so every current client is remapped today (see
-# wire_plan_for_client); lower once a plus/unlimited_v2-aware client ships.
+# Minimum client build whose plan enum includes `plus`/`pro_v2`. Defaulted ahead
+# of any shipped build so every current client is remapped today (see
+# wire_plan_for_client); lower once a plus/pro_v2-aware client ships.
 PLUS_UNLIMITED_V2_MIN_MOBILE_VERSION = os.getenv('PLUS_UNLIMITED_V2_MIN_MOBILE_VERSION', '99.0.0')
 PLUS_UNLIMITED_V2_MIN_DESKTOP_VERSION = os.getenv('PLUS_UNLIMITED_V2_MIN_DESKTOP_VERSION', '99.0.0')
 
@@ -738,13 +811,17 @@ def client_understands_plus_unlimited_v2(platform: Optional[str], app_version: O
 
 
 def wire_plan_for_client(plan: PlanType, platform: Optional[str], app_version: Optional[str]) -> PlanType:
-    """Serialize `plus`/`max` as `unlimited` for clients whose enum predates them.
+    """Serialize plans outside the released OpenAPI enum as their wire fallback.
 
+    `plus` / `pro_v2` / `unlimited_v2` are catalog identities, but
+    `UserSubscriptionResponse` still rejects them. Current clients (below the
+    version floor) must receive `unlimited` so Settings does not 500 into Free.
     Only the label is remapped — real entitlement/limits are computed from the
     true plan before this is called. Mirrors the `operator`→`unlimited` remap.
     """
-    if plan in MOBILE_PLAN_TYPES and not client_understands_plus_unlimited_v2(platform, app_version):
-        return PlanType.unlimited
+    fallback = WIRE_FALLBACK_PLAN_TYPES.get(plan)
+    if fallback is not None and not client_understands_plus_unlimited_v2(platform, app_version):
+        return fallback
     return plan
 
 
@@ -753,13 +830,15 @@ def adapt_plans_for_legacy_client(definitions: List[Dict[str, Any]]) -> List[Dic
     so older clients (mobile, stable desktop) keep showing the old plan titles
     and don't see desktop-only plans.
 
-    Hides Operator and Architect (pro) entirely — both are desktop-only.
+    Hides Operator, Architect (pro), and Pro (`pro_v2`) entirely —
+    Operator/Architect are desktop-only (now sunset), and Pro postdates this
+    pre-0.11.324 client shape entirely, same reasoning as excluding Operator.
     Drops the legacy suffix + flag from Unlimited so pre-rollout clients
     still see it as "Omi Unlimited".
     """
     out: List[Dict[str, Any]] = []
     for d in definitions:
-        if d['plan_id'] in ('operator', 'pro'):
+        if d['plan_id'] in ('operator', 'pro', 'pro_v2'):
             continue
         adapted = dict(d)
         if d['plan_id'] == 'architect':
@@ -1043,6 +1122,28 @@ def _transcription_allowance_text(plan: PlanType) -> str:
     if limit is None:
         return 'Unlimited transcription'
     return f'{limit // 60:,} minutes of transcription per month'
+
+
+def _plan_storefront_description(plan: PlanType) -> str:
+    """User-visible description of what the plan includes, for current-plan and storefront cards."""
+
+    chat = _chat_allowance_text(plan)
+    transcription = _transcription_allowance_text(plan)
+    if plan == PlanType.basic:
+        return f'{chat}. {transcription}, then on-device. Shared with mobile and web.'
+    if plan == PlanType.plus:
+        return f'{chat}. {transcription}, then on-device. Full desktop, mobile, and web access.'
+    if plan == PlanType.pro_v2:
+        return f'{chat}. Full desktop, mobile, and web access.'
+    if plan == PlanType.unlimited:
+        return f'{chat}. Unlimited transcription. Desktop capture with Free-tier allowance.'
+    if plan == PlanType.operator:
+        return f'{chat}. Shared with mobile and web.'
+    if plan == PlanType.architect:
+        return 'Power-user AI for heavy agentic workflows and vibe coding.'
+    if plan == PlanType.unlimited_v2:
+        return f'{transcription} — record all day.'
+    return chat
 
 
 # Compatibility names for callers and fixtures still importing the old
@@ -1476,6 +1577,77 @@ def is_pending_cancellation(subscription: Optional[Subscription], now: Optional[
     if not subscription.current_period_end:
         return True
     return subscription.current_period_end > (now or int(time.time()))
+
+
+def _is_entitled_paid_subscription(subscription: Optional[Subscription], now: int) -> bool:
+    """The same paid-plan validity rule ``get_user_valid_subscription`` applies.
+
+    A paid plan with no ``current_period_end``, or one already past, is not
+    provably entitled — ``database.users.get_user_valid_subscription`` hands
+    such a row back as a fresh basic subscription rather than paid access.
+    """
+    if subscription is None or not is_paid_plan(subscription.plan):
+        return False
+    if subscription.status != SubscriptionStatus.active:
+        return False
+    return bool(subscription.current_period_end) and subscription.current_period_end >= now
+
+
+def resolve_subscription_lapse(
+    stored: Optional[Subscription],
+    resolved: Optional[Subscription],
+    *,
+    now: Optional[int] = None,
+) -> Optional[SubscriptionLapse]:
+    """Report whether this account's *real* paid access is ending or over.
+
+    Pure and read-only: it reads no Firestore, calls no Stripe, writes nothing,
+    and its result is never consulted when computing plan, limits, features, or
+    the transcription allowance. ``now`` is injectable so the boundary between
+    "ending" and "ended" is testable.
+
+    ``stored`` is the account's persisted subscription row (post-reconciliation)
+    and is the only source of lapse *evidence*. ``resolved`` is the entitlement
+    the request actually resolved to (``database.users.get_user_valid_subscription``,
+    or the default Free plan when there is none) and is what decides whether
+    access is still live.
+
+    A lapse is never inferred from a Free plan or label. ``access_ended``
+    requires the stored row to prove a paid period that this account really had
+    and that has since passed:
+
+    * ``current_period_end`` present and in the past, **and**
+    * a paid ``plan`` (the webhook never landed; the paid row simply aged out)
+      **or** a ``stripe_subscription_id`` (the webhook downgraded the row to
+      Free but kept the subscription id it downgraded from).
+
+    An account that was always Free has neither, so it can never reach this
+    state. See ``models.users.SubscriptionLapseReason`` for why ``access_ended``
+    cannot honestly carry a more specific reason than ``unknown``.
+    """
+    current_time = now if now is not None else int(time.time())
+
+    if _is_entitled_paid_subscription(resolved, current_time):
+        if is_pending_cancellation(resolved, now=current_time):
+            return SubscriptionLapse(
+                state=SubscriptionLapseState.cancellation_scheduled,
+                reason=SubscriptionLapseReason.user_requested,
+                recovery_action=SubscriptionLapseRecovery.keep_subscription,
+                effective_at=cast(Subscription, resolved).current_period_end,
+            )
+        return None
+
+    if stored is None or not stored.current_period_end or stored.current_period_end >= current_time:
+        return None
+    if not is_paid_plan(stored.plan) and not stored.stripe_subscription_id:
+        return None
+
+    return SubscriptionLapse(
+        state=SubscriptionLapseState.access_ended,
+        reason=SubscriptionLapseReason.unknown,
+        recovery_action=SubscriptionLapseRecovery.resubscribe,
+        effective_at=stored.current_period_end,
+    )
 
 
 def can_user_make_payment(uid: str, target_price_id: Optional[str] = None) -> Tuple[bool, str]:

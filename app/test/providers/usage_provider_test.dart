@@ -79,5 +79,20 @@ void main() {
 
       expect(provider.canAccessPhoneCalls, isFalse);
     });
+
+    test('unknown plan preserves the raw wire value and isUnknown flag', () {
+      // Regression: unknown plans must not silently degrade to basic/free,
+      // and must preserve the raw wire value for proper error handling.
+      final unknownPlan = PlanType.unknown('future_plan_123');
+      expect(unknownPlan.isUnknown, isTrue);
+      expect(unknownPlan.wireName, equals('future_plan_123'));
+      expect(unknownPlan.isPaid, isFalse); // Unknown plans fail closed to unpaid
+      expect(unknownPlan.hasUnlimitedTranscription, isFalse); // Do not infer entitlements
+
+      final provider = UsageProvider();
+      provider.debugSetSubscription(_subscriptionOn(unknownPlan, used: 0, limit: 0));
+      expect(provider.subscription?.subscription.plan.isUnknown, isTrue);
+      expect(provider.subscription?.subscription.plan.wireName, equals('future_plan_123'));
+    });
   });
 }

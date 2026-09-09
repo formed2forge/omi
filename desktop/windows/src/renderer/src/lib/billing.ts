@@ -3,6 +3,7 @@ import type {
   UserSubscriptionResponse,
   Subscription,
   SubscriptionPlan,
+  SubscriptionLapse,
   PricingOption,
   ChatUsageQuota,
   TrialMetadata,
@@ -55,11 +56,11 @@ export function fetchOverageInfo(): Promise<OverageInfoResponse> {
 
 // ── Legacy-catalog canary ────────────────────────────────────────────────────
 // The backend version-gates the plan catalog on X-App-Platform/X-App-Version. If
-// it doesn't recognize this client's platform it serves the pre-Operator/Architect
+// it doesn't recognize this client's platform it serves the pre-Plus/Pro
 // LEGACY catalog (adapt_plans_for_legacy_client in backend/utils/subscription.py):
-// it DROPS the operator + pro plans entirely and RENAMES titles to "Unlimited
-// Plan"/"Omi Pro". A desktop client must always get the new catalog (Neo /
-// Operator / Architect); the legacy shape means our platform identity wasn't
+// it DROPS operator / architect-as-pro / pro_v2 and RENAMES titles to
+// "Unlimited Plan"/"Omi Pro". A desktop client must always get the new-buyer
+// ladder (Plus + Pro); the legacy shape means our platform identity wasn't
 // recognized — the exact class of defect that once rendered as "real live data".
 // We do NOT block rendering (fail-open UX — the catalog still renders), the canary
 // just makes the divergence impossible to miss in logs/verification.
@@ -69,9 +70,10 @@ const LEGACY_PLAN_TITLES = new Set(['Omi Pro', 'Unlimited Plan'])
 
 /**
  * Mechanical legacy-shape detection, derived from adapt_plans_for_legacy_client.
- * A correct desktop catalog always contains an 'operator' plan and never uses the
- * legacy titles; the adapter guarantees the inverse. An empty catalog is NOT
- * legacy (nothing served yet) — only a populated, legacy-shaped one trips it.
+ * A correct desktop catalog always contains Plus and Pro (`pro_v2`) and never
+ * uses the legacy titles; the adapter guarantees the inverse. An empty catalog
+ * is NOT legacy (nothing served yet) — only a populated, legacy-shaped one
+ * trips it. Keep-until-cancel catalogs may also include Operator/Architect.
  */
 export function detectLegacyCatalog(plans: SubscriptionPlan[] | undefined): {
   legacy: boolean
@@ -80,7 +82,10 @@ export function detectLegacyCatalog(plans: SubscriptionPlan[] | undefined): {
   const list = plans ?? []
   if (list.length === 0) return { legacy: false, reasons: [] }
   const reasons: string[] = []
-  if (!list.some((p) => p.id === 'operator')) reasons.push("no 'operator' plan in catalog")
+  const ids = new Set(list.map((p) => p.id))
+  if (!ids.has('plus') || !ids.has('pro_v2')) {
+    reasons.push("missing Plus/Pro (`plus`/`pro_v2`) in catalog")
+  }
   const legacyTitles = list.map((p) => p.title).filter((t) => LEGACY_PLAN_TITLES.has(t))
   if (legacyTitles.length > 0)
     reasons.push(`legacy plan titles present: ${legacyTitles.join(', ')}`)
@@ -107,8 +112,8 @@ export function reportLegacyCatalog(plans: SubscriptionPlan[] | undefined): bool
   if (!legacy) return false
   console.error(
     '[billing:legacy-catalog] Legacy plan catalog served to the Windows desktop client — ' +
-      'backend did not recognize this platform/version, so it returned the pre-Operator/' +
-      'Architect catalog instead of Operator/Architect. The plan grid is rendering the wrong ' +
+      'backend did not recognize this platform/version, so it returned the pre-Plus/Pro ' +
+      'catalog instead of Plus + Pro (`pro_v2`). The plan grid is rendering the wrong ' +
       `catalog. Signals: ${reasons.join('; ')}.`,
     { plan_ids: plans?.map((p) => p.id), plan_titles: plans?.map((p) => p.title) }
   )
@@ -141,6 +146,26 @@ function captureLegacyCatalog(reasons: string[], plans: SubscriptionPlan[] | und
 
 // ── Plan-name resolution (BillingHelpers.currentPlanTitle) ──────────────────
 
+export const LEGACY_PLAN_TITLE_SUFFIX = ' (Legacy Plan)'
+export const LEGACY_SUPPORTER_NOTE =
+  'Thank you for being an early supporter of omi! You can stay on your legacy plan indefinitely. Please note, though, these legacy plans are no longer being sold and cannot be chosen if you switch to another plan.'
+
+/**
+ * Shown when the plan identity cannot be resolved — a plan newer than this
+ * build, or the backend's `unknown` sentinel for a stored plan it could not
+ * resolve either. The account may still be actively paying, so this must never
+ * imply cancellation or invite a second purchase.
+ */
+export const UNKNOWN_PLAN_SUPPORT_NOTE =
+  'There may be an issue with your plan, please contact support to ensure there is no interruption in your service.'
+
+const KEEP_UNTIL_CANCEL_PLAN_IDS = new Set([
+  'unlimited',
+  'unlimited_v2',
+  'operator',
+  'architect'
+])
+
 /**
  * Whether the current subscription is really Operator. The backend serializes
  * Operator as plan='unlimited' for old-mobile compatibility; Mac disambiguates
@@ -159,6 +184,32 @@ export function isCurrentSubscriptionOperator(
     .some((p) => (p.prices ?? []).some((price) => price.id === priceId))
 }
 
+/** The catalog plan that owns the current price (for the billing-detail subtitle). */
+function owningCatalogPlan(
+  sub: Pick<BillingSubscription, 'current_price_id'>,
+  availablePlans: SubscriptionPlan[] | undefined
+): SubscriptionPlan | undefined {
+  const priceId = sub.current_price_id
+  if (!priceId) return undefined
+  return (availablePlans ?? []).find((p) => (p.prices ?? []).some((price) => price.id === priceId))
+}
+
+export function isKeepUntilCancelPlan(
+  sub: Pick<BillingSubscription, 'plan' | 'current_price_id' | 'features'>,
+  availablePlans: SubscriptionPlan[] | undefined
+): boolean {
+  if ((sub.features ?? []).includes('byok')) return false
+  const owning = owningCatalogPlan(sub, availablePlans)
+  if (owning?.legacy === true) return true
+  const id = owning?.id ?? canonicalPlanId(sub.plan)
+  return id !== undefined && KEEP_UNTIL_CANCEL_PLAN_IDS.has(id)
+}
+
+function withLegacyPlanSuffix(title: string, isLegacy: boolean): string {
+  if (!isLegacy) return title
+  return title.endsWith(LEGACY_PLAN_TITLE_SUFFIX) ? title : `${title}${LEGACY_PLAN_TITLE_SUFFIX}`
+}
+
 /**
  * Display name for the current subscription. BYOK always wins (checked first,
  * as on Mac). Then CATALOG-FIRST: if the current price belongs to a catalog
@@ -167,6 +218,7 @@ export function isCurrentSubscriptionOperator(
  * enum names would mismatch). This price-id match also subsumes Mac's
  * Operator-as-unlimited disambiguation. Fall back to the Mac enum names only
  * when there's no catalog match (empty catalog / legacy price id).
+ * Keep-until-cancel plans append " (Legacy Plan)".
  */
 export function resolvePlanTitle(
   sub: Pick<BillingSubscription, 'plan' | 'current_price_id' | 'features'>,
@@ -176,8 +228,8 @@ export function resolvePlanTitle(
   if (!planId) return planDisplayName(sub.plan)
   if ((sub.features ?? []).includes('byok')) return 'Free (BYOK)'
   const owning = owningCatalogPlan(sub, availablePlans)
-  if (owning) return owning.title
-  return planDisplayName(planId)
+  const title = owning ? owning.title : planDisplayName(planId)
+  return withLegacyPlanSuffix(title, isKeepUntilCancelPlan(sub, availablePlans))
 }
 
 /** BillingHelpers.hasPaidSubscription — BYOK is never "paid". */
@@ -186,16 +238,6 @@ export function hasPaidSubscription(
 ): boolean {
   if ((sub.features ?? []).includes('byok')) return false
   return isPaidPlanValue(sub.plan) && sub.status === 'active'
-}
-
-/** The catalog plan that owns the current price (for the billing-detail subtitle). */
-function owningCatalogPlan(
-  sub: Pick<BillingSubscription, 'current_price_id'>,
-  availablePlans: SubscriptionPlan[] | undefined
-): SubscriptionPlan | undefined {
-  const priceId = sub.current_price_id
-  if (!priceId) return undefined
-  return (availablePlans ?? []).find((p) => (p.prices ?? []).some((price) => price.id === priceId))
 }
 
 /**
@@ -217,6 +259,34 @@ export function currentPlanSubtitle(
   return paid ? 'Your paid plan is active.' : 'You are currently on the free tier.'
 }
 
+export function currentPlanDescription(
+  sub: Pick<BillingSubscription, 'plan' | 'current_price_id' | 'features'>,
+  availablePlans: SubscriptionPlan[] | undefined
+): string {
+  if ((sub.features ?? []).includes('byok')) {
+    return 'Your own API keys. Cloud transcription and chat still follow the Free plan.'
+  }
+  const owning = owningCatalogPlan(sub, availablePlans)
+  if (owning) {
+    const description = planDescription(owning).trim()
+    if (description) return description
+  }
+  const planId = owning?.id ?? canonicalPlanId(sub.plan)
+  if (!planId) return UNKNOWN_PLAN_SUPPORT_NOTE
+  return PLAN_FALLBACKS[planId]?.description ?? ''
+}
+
+export function currentPlanFeatures(
+  sub: Pick<BillingSubscription, 'plan' | 'current_price_id'>,
+  availablePlans: SubscriptionPlan[] | undefined
+): string[] {
+  const owning = owningCatalogPlan(sub, availablePlans)
+  if (owning) return planFeatures(owning)
+  const planId = canonicalPlanId(sub.plan)
+  if (!planId) return []
+  return (PLAN_FALLBACKS[planId]?.features ?? []).slice(0, 4)
+}
+
 /**
  * "Renews on <date>" / "Access ends on <date>" for paid plans with a period end
  * (BillingHelpers.currentPlanPeriodText). Medium date style, no time.
@@ -234,6 +304,51 @@ export function formatMediumDate(epochSeconds: number | null | undefined): strin
     month: 'short',
     day: 'numeric'
   })
+}
+
+// ── Subscription lapse notice (main Plan & Usage card) ──────────────────────
+// The backend only reports `lapse` when the account's stored data proves a
+// real paid period actually ended or is ending (see
+// backend/utils/subscription.py's resolve_subscription_lapse docstring) — it
+// is never inferred client-side from a Free label. Copy is deliberately
+// identical to the Flutter app's (same feature, same platform-agnostic
+// product decision).
+export type LapseNoticeCopy = {
+  /** Short label for the notice card's title slot. */
+  title: string
+  /** Full sentence — what must match the Flutter copy verbatim. */
+  subtitle: string
+  /** Label for the single recovery action button. */
+  actionLabel: string
+}
+
+/**
+ * Copy for the cancellation/access-ended notice. `access_ended` is
+ * deliberately neutral — the backend's `reason` is always `unknown` for that
+ * state (the terminal Stripe status is collapsed into an indistinguishable
+ * row before the contract sees it) — never claim a specific cause here.
+ */
+const LAPSE_ACCESS_ENDED_MESSAGE = 'Your paid access has ended.'
+
+export function lapseNoticeCopy(lapse: SubscriptionLapse): LapseNoticeCopy {
+  if (lapse.state === 'cancellation_scheduled') {
+    // No date proof — fall back to the neutral copy rather than guess one.
+    // Matches Flutter (subscription_lapse_notice_card.dart) and macOS
+    // (BillingHelpers.lapseNoticeMessage): this is one product decision
+    // shared across platforms, not per-platform wording.
+    return {
+      title: 'Plan Ending',
+      subtitle: lapse.effective_at
+        ? `Your plan will end on ${formatMediumDate(lapse.effective_at)}. You'll keep full access until then.`
+        : LAPSE_ACCESS_ENDED_MESSAGE,
+      actionLabel: 'Keep My Plan'
+    }
+  }
+  return {
+    title: 'Access Ended',
+    subtitle: LAPSE_ACCESS_ENDED_MESSAGE,
+    actionLabel: 'Resubscribe'
+  }
 }
 
 // ── Chat usage / quota (AccountBilling chat-usage card) ─────────────────────
@@ -308,15 +423,15 @@ export function quotaResetText(resetAtSeconds: number | null, now: Date = new Da
 
 // ── Plan catalog (AccountBilling plan grid) ─────────────────────────────────
 
-// Mac ordering: Neo(unlimited) → Operator → Architect. Unknown ids sort last.
-// Plus/Unlimited-v2 are included for lossless catalog fixtures even though
-// Windows' current storefront normally serves the desktop plans only.
+// New-buyer order: Plus → Pro. Keep-until-cancel identities sort after.
+// Unknown ids sort last.
 const PLAN_ORDER: Record<string, number> = {
-  unlimited: 0,
-  operator: 1,
-  architect: 2,
-  plus: 3,
-  unlimited_v2: 4
+  plus: 0,
+  pro_v2: 1,
+  unlimited: 2,
+  operator: 3,
+  architect: 4,
+  unlimited_v2: 5
 }
 
 /** True if this catalog plan is the one the user is currently on (operator↔
@@ -353,20 +468,70 @@ export function orderedCatalog(
     .map(({ p }) => p)
 }
 
+// Single edit point for the Operator price quoted in the deprecation-banner
+// fallback (used only when the API omits `deprecation_message`).
+export const OPERATOR_DEPRECATION_FALLBACK_PRICE = '$49/mo'
+
 // Per-plan-id fallbacks (BillingHelpers planEyebrow/planSubtitle/planDescription/
 // fallback features), used only when the catalog omits the field.
 const PLAN_FALLBACKS: Record<
   string,
   { eyebrow: string; subtitle: string; description: string; features: string[] }
 > = {
+  plus: {
+    eyebrow: 'For everyday use',
+    subtitle: '200 questions per month',
+    description:
+      '200 chat questions per month. 1,500 minutes of transcription per month, then on-device. Full desktop, mobile, and web access.',
+    features: [
+      '200 chat questions per month',
+      '1,500 minutes of cloud transcription, then on-device',
+      'Unlimited memories and insights',
+      'Shared with mobile and web'
+    ]
+  },
+  pro_v2: {
+    eyebrow: 'For power users',
+    subtitle: '1,000 questions per month',
+    description: '1,000 chat questions per month. Full desktop, mobile, and web access.',
+    features: [
+      '1,000 chat questions per month',
+      'Unlimited cloud transcription',
+      'Unlimited memories and insights',
+      'Priority desktop AI features'
+    ]
+  },
   unlimited: {
     eyebrow: 'Starter',
     subtitle: '200 questions per month',
-    description: '100 chat questions per month. Shared with mobile and web.',
+    description:
+      '200 chat questions per month. Unlimited transcription. Desktop capture with Free-tier allowance.',
     features: [
       '200 chat questions per month',
       'Unlimited listening and transcription',
       'Unlimited memories and insights',
+      'Desktop capture with Free-tier allowance'
+    ]
+  },
+  unlimited_v2: {
+    eyebrow: 'Most popular',
+    subtitle: 'Unlimited transcription',
+    description: 'Unlimited transcription — record all day.',
+    features: [
+      'Unlimited transcription',
+      'Unlimited memories and insights',
+      'Shared with mobile and web'
+    ]
+  },
+  basic: {
+    eyebrow: 'Plan',
+    subtitle: '30 questions per month',
+    description:
+      '30 chat questions per month. 300 minutes of transcription per month, then on-device. Shared with mobile and web.',
+    features: [
+      '30 chat questions per month',
+      '300 minutes of cloud transcription, then on-device',
+      'Unlimited memories',
       'Shared with mobile and web'
     ]
   },
@@ -439,7 +604,7 @@ export function canPurchasePlan(
 
 /** Architect stays neutral (Mac purple → white per INV-UI-1); others green. */
 export function planAccent(plan: SubscriptionPlan): 'neutral' | 'green' {
-  return plan.id === 'architect' ? 'neutral' : 'green'
+  return plan.id === 'architect' || plan.id === 'pro_v2' ? 'neutral' : 'green'
 }
 
 // ── Trial (AccountBilling trial card) ────────────────────────────────────────

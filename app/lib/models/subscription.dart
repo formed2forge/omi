@@ -15,12 +15,13 @@ class PlanType {
   static const PlanType architect = PlanType._('architect', 'architect', 'architect');
   static const PlanType operator = PlanType._('operator', 'operator', 'operator');
   static const PlanType plus = PlanType._('plus', 'plus', 'plus');
+  static const PlanType proV2 = PlanType._('proV2', 'pro_v2', 'pro_v2');
   static const PlanType unlimitedV2 = PlanType._('unlimitedV2', 'unlimited_v2', 'unlimited_v2');
 
   /// The canonical catalog identities known by this client.
   ///
   /// Legacy aliases and future identities are deliberately not included.
-  static const List<PlanType> values = <PlanType>[basic, unlimited, architect, operator, plus, unlimitedV2];
+  static const List<PlanType> values = <PlanType>[basic, unlimited, architect, operator, plus, proV2, unlimitedV2];
 
   /// Dart-style identifier used by existing analytics and UI call sites.
   final String name;
@@ -56,6 +57,8 @@ class PlanType {
         return PlanType.operator;
       case 'plus':
         return PlanType.plus;
+      case 'pro_v2':
+        return PlanType.proV2;
       case 'unlimited_v2':
         return PlanType.unlimitedV2;
       case 'pro':
@@ -81,11 +84,28 @@ class PlanType {
       _canonicalWireName == PlanType.unlimited.wireName ||
       _canonicalWireName == PlanType.operator.wireName ||
       _canonicalWireName == PlanType.architect.wireName ||
+      _canonicalWireName == PlanType.proV2.wireName ||
       _canonicalWireName == PlanType.unlimitedV2.wireName;
 
   /// Mirrors backend DESKTOP_ENTITLED_PLAN_TYPES.
   bool get grantsDesktop =>
-      _canonicalWireName == PlanType.operator.wireName || _canonicalWireName == PlanType.architect.wireName;
+      _canonicalWireName == PlanType.operator.wireName ||
+      _canonicalWireName == PlanType.architect.wireName ||
+      _canonicalWireName == PlanType.plus.wireName ||
+      _canonicalWireName == PlanType.proV2.wireName;
+
+  /// Mirrors catalog storefront eligibility for the mobile purchase sheet.
+  ///
+  /// Free is an always-available floor rather than a purchasable SKU. Neo and
+  /// Unlimited-v2 are current-subscriber-only, so they are not mobile purchase
+  /// targets either.
+  bool get isSoldOnMobile =>
+      _canonicalWireName == PlanType.plus.wireName || _canonicalWireName == PlanType.proV2.wireName;
+
+  /// A desktop-only legacy subscriber can manage, but cannot switch plans, on
+  /// mobile because immediate proration would remove desktop entitlement.
+  /// Unknown identities fail closed until this client learns their storefront.
+  bool get isMobileManageOnly => isUnknown || (grantsDesktop && !isSoldOnMobile);
 
   @override
   bool operator ==(Object other) {
@@ -244,10 +264,23 @@ class PricingOption {
 class SubscriptionPlan {
   final String id;
   final String title;
+  final String? subtitle;
+  final String? description;
+  final String? eyebrow;
   final List<String> features;
   final List<PricingOption> prices;
+  final bool legacy;
 
-  SubscriptionPlan({required this.id, required this.title, this.features = const [], this.prices = const []});
+  SubscriptionPlan({
+    required this.id,
+    required this.title,
+    this.subtitle,
+    this.description,
+    this.eyebrow,
+    this.features = const [],
+    this.prices = const [],
+    this.legacy = false,
+  });
 
   factory SubscriptionPlan.fromJson(Map<String, dynamic> json) {
     return SubscriptionPlan.fromGenerated(wire.GeneratedSubscriptionPlan.fromJson(json));
@@ -257,8 +290,12 @@ class SubscriptionPlan {
     return SubscriptionPlan(
       id: generated.id,
       title: generated.title,
+      subtitle: generated.subtitle,
+      description: generated.description,
+      eyebrow: generated.eyebrow,
       features: generated.features,
       prices: generated.prices.map(PricingOption.fromGenerated).toList(),
+      legacy: generated.legacy,
     );
   }
 
@@ -266,8 +303,12 @@ class SubscriptionPlan {
     return wire.GeneratedSubscriptionPlan(
       id: id,
       title: title,
+      subtitle: subtitle,
+      description: description,
+      eyebrow: eyebrow,
       features: features,
       prices: prices.map((price) => price.toGenerated()).toList(),
+      legacy: legacy,
     );
   }
 
@@ -328,6 +369,125 @@ class PhoneCallQuota {
   Map<String, dynamic> toJson() => toGenerated().toJson();
 }
 
+/// Where an account stands relative to the end of a *real* paid subscription.
+///
+/// Mirrors `models.users.SubscriptionLapseState`. Never persisted client-side
+/// and never an entitlement input — it is read-only projection data for the
+/// Plan & Usage notice.
+enum SubscriptionLapseState { cancellationScheduled, accessEnded }
+
+SubscriptionLapseState? _lapseStateFromWire(String? value) {
+  switch (value) {
+    case 'cancellation_scheduled':
+      return SubscriptionLapseState.cancellationScheduled;
+    case 'access_ended':
+      return SubscriptionLapseState.accessEnded;
+    default:
+      return null;
+  }
+}
+
+String _lapseStateToWire(SubscriptionLapseState state) {
+  switch (state) {
+    case SubscriptionLapseState.cancellationScheduled:
+      return 'cancellation_scheduled';
+    case SubscriptionLapseState.accessEnded:
+      return 'access_ended';
+  }
+}
+
+/// Mirrors `models.users.SubscriptionLapseReason`. `unknown` is the honest
+/// default for any reason this client doesn't recognize, matching the
+/// backend's deliberate refusal to guess a specific cause for `accessEnded`.
+enum SubscriptionLapseReason { userRequested, unknown }
+
+SubscriptionLapseReason _lapseReasonFromWire(String? value) {
+  switch (value) {
+    case 'user_requested':
+      return SubscriptionLapseReason.userRequested;
+    default:
+      return SubscriptionLapseReason.unknown;
+  }
+}
+
+String _lapseReasonToWire(SubscriptionLapseReason reason) {
+  switch (reason) {
+    case SubscriptionLapseReason.userRequested:
+      return 'user_requested';
+    case SubscriptionLapseReason.unknown:
+      return 'unknown';
+  }
+}
+
+/// Mirrors `models.users.SubscriptionLapseRecovery` — the one action that
+/// resolves this state.
+enum SubscriptionLapseRecovery { keepSubscription, resubscribe }
+
+SubscriptionLapseRecovery? _lapseRecoveryFromWire(String? value) {
+  switch (value) {
+    case 'keep_subscription':
+      return SubscriptionLapseRecovery.keepSubscription;
+    case 'resubscribe':
+      return SubscriptionLapseRecovery.resubscribe;
+    default:
+      return null;
+  }
+}
+
+String _lapseRecoveryToWire(SubscriptionLapseRecovery recovery) {
+  switch (recovery) {
+    case SubscriptionLapseRecovery.keepSubscription:
+      return 'keep_subscription';
+    case SubscriptionLapseRecovery.resubscribe:
+      return 'resubscribe';
+  }
+}
+
+class SubscriptionLapse {
+  final SubscriptionLapseState state;
+  final SubscriptionLapseReason reason;
+  final SubscriptionLapseRecovery recoveryAction;
+  final int? effectiveAt;
+
+  SubscriptionLapse({
+    required this.state,
+    required this.reason,
+    required this.recoveryAction,
+    this.effectiveAt,
+  });
+
+  static SubscriptionLapse? fromJson(Map<String, dynamic> json) {
+    return SubscriptionLapse.fromGenerated(wire.GeneratedSubscriptionLapse.fromJson(json));
+  }
+
+  /// Returns null when the wire `state`/`recovery_action` is not one this
+  /// client recognizes. This is read-only projection data (never an
+  /// entitlement input), so an unrecognized future value degrades to "no
+  /// notice" rather than crashing or guessing at unfamiliar UI.
+  static SubscriptionLapse? fromGenerated(wire.GeneratedSubscriptionLapse generated) {
+    final state = _lapseStateFromWire(generated.state.value);
+    final recovery = _lapseRecoveryFromWire(generated.recoveryAction.value);
+    if (state == null || recovery == null) return null;
+    return SubscriptionLapse(
+      state: state,
+      reason: _lapseReasonFromWire(generated.reason.value),
+      recoveryAction: recovery,
+      effectiveAt: generated.effectiveAt,
+    );
+  }
+
+  wire.GeneratedSubscriptionLapse toGenerated() {
+    return wire.GeneratedSubscriptionLapse(
+      state: wire.GeneratedSubscriptionLapseState.fromJson(_lapseStateToWire(state)),
+      reason: wire.GeneratedSubscriptionLapseReason.fromJson(_lapseReasonToWire(reason)),
+      recoveryAction: wire.GeneratedSubscriptionLapseRecovery.fromJson(_lapseRecoveryToWire(recoveryAction)),
+      effectiveAt: effectiveAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => toGenerated().toJson();
+}
+
 class UserSubscriptionResponse {
   final Subscription subscription;
   final int transcriptionSecondsUsed;
@@ -345,6 +505,11 @@ class UserSubscriptionResponse {
   final bool chatQuotaAllowed;
   final int? chatQuotaResetAt;
   final PhoneCallQuota? phoneCallQuota;
+  // Read-only projection of "this account's paid access is ending or over".
+  // Null means there is no evidence of a real paid subscription ending: every
+  // always-Free account, every legacy row with no period data, and every
+  // currently-active plan. Never used to compute entitlement client-side.
+  final SubscriptionLapse? lapse;
 
   UserSubscriptionResponse({
     required this.subscription,
@@ -362,6 +527,7 @@ class UserSubscriptionResponse {
     this.chatQuotaAllowed = true,
     this.chatQuotaResetAt,
     this.phoneCallQuota,
+    this.lapse,
   });
 
   factory UserSubscriptionResponse.fromJson(Map<String, dynamic> json) {
@@ -385,6 +551,7 @@ class UserSubscriptionResponse {
       chatQuotaAllowed: generated.chatQuotaAllowed,
       chatQuotaResetAt: generated.chatQuotaResetAt,
       phoneCallQuota: generated.phoneCallQuota == null ? null : PhoneCallQuota.fromGenerated(generated.phoneCallQuota!),
+      lapse: generated.lapse == null ? null : SubscriptionLapse.fromGenerated(generated.lapse!),
     );
   }
 
@@ -405,6 +572,7 @@ class UserSubscriptionResponse {
       chatQuotaAllowed: chatQuotaAllowed,
       chatQuotaResetAt: chatQuotaResetAt,
       phoneCallQuota: phoneCallQuota?.toGenerated(),
+      lapse: lapse?.toGenerated(),
     );
   }
 

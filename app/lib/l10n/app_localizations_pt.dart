@@ -2018,7 +2018,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get memoryDeleted => 'Memória apagada.';
 
   @override
-  String get memoryHistoryPartial => 'Some memory history is unavailable. Showing the history received so far.';
+  String get memoryHistoryPartial =>
+      'Parte do histórico de memórias não está disponível. Mostrando o histórico recebido até agora.';
 
   @override
   String get undo => 'Desfazer';
@@ -9926,11 +9927,30 @@ class AppLocalizationsPt extends AppLocalizations {
   String get transcriptionNoAudio => 'A transcrição não está recebendo áudio';
 
   @override
-  String get tapPlusToStartRecording => 'Tap + to start recording';
+  String get tapPlusToStartRecording => 'Toque em + para começar a gravar';
 
   @override
   String get couldNotLoadMemories => 'Não foi possível carregar as memórias';
 
   @override
   String get couldNotLoadKnowledgeGraph => 'Não foi possível carregar o grafo de conhecimento';
+
+  @override
+  String get legacyPlanTitleSuffix => ' (plano antigo)';
+
+  @override
+  String get legacyPlanSupporterNote =>
+      'Obrigado por ser um dos primeiros a apoiar o omi! Pode permanecer no seu plano antigo indefinidamente. Note, contudo, que estes planos antigos já não são vendidos e não podem ser escolhidos se mudar para outro plano.';
+
+  @override
+  String get planIssueContactSupport =>
+      'Pode haver um problema com o seu plano. Entre em contato com o suporte para garantir que não haja interrupção no seu serviço.';
+
+  @override
+  String planLapseCancellationScheduled(String date) {
+    return 'Seu plano terminará em $date. Você manterá acesso completo até lá.';
+  }
+
+  @override
+  String get planLapseAccessEnded => 'Seu acesso pago terminou.';
 }

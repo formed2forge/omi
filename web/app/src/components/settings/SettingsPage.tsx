@@ -54,6 +54,10 @@ import {
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
 import { cn } from '@/lib/utils';
+import {
+  BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT,
+  BASIC_TIER_TRANSCRIPTION_SECONDS_LIMIT,
+} from '@/lib/basicPlanLimits';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
   CLAUDE_CONNECTOR_OAUTH,
@@ -107,6 +111,7 @@ import type {
   McpApiKey,
   UsageHistoryPoint,
   PricingOption,
+  SubscriptionLapse,
 } from '@/types/user';
 
 // ============================================================================
@@ -891,17 +896,94 @@ function UnknownPlanCard() {
         </div>
         <div>
           <h3 className="text-lg font-semibold text-text-primary">Plan unavailable</h3>
+          {/*
+            The account may still be actively paying, so this must not imply
+            cancellation or invite a second purchase (that risks a double
+            charge). Retrying cannot resolve an unrecognized plan either, so the
+            support link is the real recovery and is always shown.
+          */}
           <p className="text-sm text-text-tertiary mt-1">
-            This account uses a plan that this version of Omi does not recognize yet.
-            Plan features are unavailable until the plan can be identified.
+            There may be an issue with your plan, please contact support to ensure there
+            is no interruption in your service.
           </p>
+          <a
+            href="https://help.omi.me"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors"
+          >
+            Help Center
+            <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
       </div>
     </Card>
   );
 }
 
-function UsageSectionContent({
+/**
+ * The cancellation/access-end notice on the main Plan & Usage card.
+ *
+ * Mirrors UnknownPlanCard's structure but is a different, mutually exclusive
+ * situation: `lapse` is only ever non-null when the stored subscription data
+ * proves a real paid period is ending or has ended (never inferred from a
+ * Free label alone, and never set alongside the unknown-plan sentinel — see
+ * `backend/utils/subscription.py`'s `resolve_subscription_lapse`).
+ *
+ * Two states, each with the one recovery action the backend names
+ * (`SubscriptionLapseRecovery`):
+ * - `cancellation_scheduled` — still entitled; calm copy plus a "Keep My
+ *   Plan" action that reverses the scheduled cancellation.
+ * - `access_ended` — access is over. The backend's `reason` is always
+ *   `unknown` here (the terminal Stripe status is collapsed into an
+ *   indistinguishable Free row before this contract sees it), so this copy
+ *   is deliberately neutral about cause: never "cancelled" / "payment
+ *   failed" / "expired". Different message from UnknownPlanCard's copy,
+ *   which is for a corrupted/unrecognized plan value, not a normal,
+ *   understood lapse.
+ */
+function LapseCard({
+  lapse,
+  busy,
+  onKeepSubscription,
+  onResubscribe,
+}: {
+  lapse: SubscriptionLapse;
+  busy: boolean;
+  onKeepSubscription: () => void;
+  onResubscribe: () => void;
+}) {
+  const isScheduled = lapse.state === 'cancellation_scheduled';
+  const dateStr = lapse.effective_at
+    ? new Date(lapse.effective_at * 1000).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : null;
+
+  // No date proof for the scheduled case falls back to the neutral
+  // access-ended copy rather than guessing a date.
+  const message =
+    isScheduled && dateStr
+      ? `Your plan will end on ${dateStr}. You'll keep full access until then.`
+      : 'Your paid access has ended.';
+
+  return (
+    <Card>
+      <p className="text-sm text-text-secondary leading-relaxed">{message}</p>
+      <button
+        onClick={isScheduled ? onKeepSubscription : onResubscribe}
+        disabled={busy}
+        className="mt-3 w-full py-2.5 rounded-xl font-semibold text-sm text-text-primary border border-white/30 hover:bg-white/[0.06] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isScheduled ? 'Keep My Plan' : 'Resubscribe'}
+      </button>
+    </Card>
+  );
+}
+
+export function UsageSectionContent({
   allUsage,
   subscription,
   onSubscriptionUpdate,
@@ -965,20 +1047,30 @@ function UsageSectionContent({
   const monthlyUsage = allUsage?.monthly;
   const periods: UsagePeriod[] = ['today', 'monthly', 'yearly', 'all_time'];
 
-  // Default limits for basic plan (1200 minutes = 72000 seconds)
+  // Default limits for basic plan. Transcription mirrors the deployed
+  // BASIC_TIER_MINUTES_LIMIT_PER_MONTH — see lib/basicPlanLimits.ts for why this can't be
+  // read live here. The other three limits are a separate, pre-existing hardcoded-vs-catalog
+  // question (backend/utils/subscription.py's legacy 0-means-unlimited overlay) out of scope
+  // for this fix.
   const limits = {
-    transcription_seconds: 72000, // 1200 minutes
+    transcription_seconds: BASIC_TIER_TRANSCRIPTION_SECONDS_LIMIT,
     words_transcribed: 50000,
     insights_gained: 100,
     memories_created: 50,
   };
 
   const planIdentity = subscription
-    ? subscription.plan_identity ?? decodePlan(subscription.plan)
+    ? (subscription.plan_identity ?? decodePlan(subscription.plan))
     : null;
   const isUnlimited = planIdentity ? planGrantsPaidCapability(planIdentity) : false;
   const isUnknownPlan = planIdentity?.kind === 'unknown';
-  const isCancelingSubscription = subscription?.cancel_at_period_end;
+  // Re-keyed off the server's authoritative lapse projection rather than a
+  // separate `cancel_at_period_end` read, so this page and the LapseCard
+  // notice can never disagree about the same fact (see resolve_subscription_lapse
+  // in backend/utils/subscription.py — cancellation_scheduled requires the
+  // resolved plan to still be an entitled paid subscription that is pending
+  // cancellation, which is exactly this flag's prior meaning).
+  const isCancelingSubscription = subscription?.lapse?.state === 'cancellation_scheduled';
 
   // Calculate usage percentages for basic plan
   const getUsagePercent = (used: number, limit: number) => {
@@ -1090,6 +1182,22 @@ function UsageSectionContent({
     }
   };
 
+  // "Keep My Plan" on the LapseCard reuses handleSubscribe — the exact same
+  // call the UNLIMITED PLAN VIEW's "Reactivate Subscription" button already
+  // makes (createCheckoutSession with the current price_id resolves
+  // server-side to _try_reactivate_subscription and clears
+  // cancel_at_period_end with no charge). `selectedPriceId` is kept synced to
+  // `current_price_id` by the effect above, so this is safe to call directly
+  // without duplicating that branch.
+  const handleReactivate = handleSubscribe;
+
+  // "Resubscribe" on the LapseCard (access_ended) opens the same plan-choice
+  // surface the Basic view's "Upgrade to Unlimited" button opens.
+  const handleResubscribe = () => {
+    setActiveTab('plan');
+    setShowUpgradeOptions(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Tab Switcher */}
@@ -1122,6 +1230,19 @@ function UsageSectionContent({
       {activeTab === 'plan' ? (
         /* PLAN TAB - Unknown plans remain neutral; known plans choose Basic vs paid. */
         <div className="space-y-6">
+          {/*
+            Mutually exclusive with the unknown-plan sentinel below: `lapse`
+            is null whenever that sentinel is active (see LapseCard's doc
+            comment), so these never render together.
+          */}
+          {subscription?.lapse && (
+            <LapseCard
+              lapse={subscription.lapse}
+              busy={isLoading}
+              onKeepSubscription={handleReactivate}
+              onResubscribe={handleResubscribe}
+            />
+          )}
           {isUnknownPlan ? (
             <UnknownPlanCard />
           ) : !isUnlimited ? (
@@ -1143,12 +1264,19 @@ function UsageSectionContent({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowUpgradeOptions(true)}
-                      className="px-5 py-2.5 bg-text-primary hover:bg-text-primary/90 text-bg-primary text-sm font-semibold rounded-xl transition-all shadow-lg shadow-black/40"
-                    >
-                      Upgrade to Unlimited
-                    </button>
+                    {/*
+                      Suppressed when the LapseCard above already offers the
+                      identical "Resubscribe" action, so the page never
+                      stacks two near-identical CTAs for the same account.
+                    */}
+                    {subscription?.lapse?.recovery_action !== 'resubscribe' && (
+                      <button
+                        onClick={() => setShowUpgradeOptions(true)}
+                        className="px-5 py-2.5 bg-text-primary hover:bg-text-primary/90 text-bg-primary text-sm font-semibold rounded-xl transition-all shadow-lg shadow-black/40"
+                      >
+                        Upgrade to Unlimited
+                      </button>
+                    )}
                     {subscription?.stripe_subscription_id && (
                       <button
                         onClick={handleManagePayment}
@@ -1175,13 +1303,14 @@ function UsageSectionContent({
                         ? Math.round(monthlyUsage.transcription_seconds / 60)
                         : 0}
                       <span className="text-sm font-normal text-text-tertiary ml-1">
-                        / 1,200 min
+                        / {BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT.toLocaleString()} min
                       </span>
                     </span>
                     <span className="text-sm text-text-tertiary">
                       {monthlyUsage
-                        ? 1200 - Math.round(monthlyUsage.transcription_seconds / 60)
-                        : 1200}{' '}
+                        ? BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT -
+                          Math.round(monthlyUsage.transcription_seconds / 60)
+                        : BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT}{' '}
                       min left
                     </span>
                   </div>
@@ -1207,7 +1336,8 @@ function UsageSectionContent({
                       </div>
                       <span className="text-sm text-text-secondary">
                         <span className="font-medium text-text-primary">
-                          1,200 minutes
+                          {BASIC_TIER_TRANSCRIPTION_MINUTES_LIMIT.toLocaleString()}{' '}
+                          minutes
                         </span>{' '}
                         of listening per month
                         <span className="text-amber-400 text-xs ml-1">(limited)</span>
