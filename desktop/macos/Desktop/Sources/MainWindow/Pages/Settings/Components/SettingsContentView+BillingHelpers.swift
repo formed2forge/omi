@@ -22,6 +22,11 @@ enum SubscriptionPlanPresentation {
   /// never imply cancellation or invite a second purchase.
   static let unknownPlanSupportNote =
     "There may be an issue with your plan, please contact support to ensure there is no interruption in your service."
+  /// Subtitle for the same unknown-plan state as `unknownPlanSupportNote`. Deliberately
+  /// distinct wording — the body already renders the support note directly below this
+  /// subtitle, so repeating that sentence here would read as a stutter on screen. This
+  /// must not assert a Free or paid tier: the plan identity itself could not be resolved.
+  static let unknownPlanSubtitle = "We couldn't confirm your plan."
 
   static func isPurchasablePlan(id: String) -> Bool {
     purchaseOrder[id] != nil
@@ -156,6 +161,33 @@ enum SubscriptionPlanPresentation {
       return fallbackDescription(for: owning.id)
     }
     return fallbackDescription(for: plan.rawValue)
+  }
+
+  /// Mirrors `currentPlanDescription`'s unknown-plan guard: an unresolved plan must not
+  /// be presented as a specific tier (Free or paid) in either the description or the
+  /// subtitle. `plan` is optional because the instance caller has not unwrapped
+  /// `userSubscription?.subscription` yet — passing `nil` (no subscription loaded, not
+  /// loading) intentionally falls through to the pre-existing "free tier" copy, matching
+  /// `currentPlanTitle`'s own no-subscription fallback.
+  static func currentPlanSubtitle(
+    isLoadingSubscription: Bool,
+    plan: SubscriptionPlanType?,
+    billingDetail: String?,
+    hasPaidSubscription: Bool
+  ) -> String {
+    if isLoadingSubscription {
+      return "Fetching subscription details from omi."
+    }
+    if case .unknown = plan {
+      return unknownPlanSubtitle
+    }
+    if let billingDetail {
+      return billingDetail
+    }
+    if hasPaidSubscription {
+      return "Your paid plan is active."
+    }
+    return "You are currently on the free tier."
   }
 
   static func currentPlanFeatures(
@@ -382,16 +414,12 @@ extension SettingsContentView {
   }
 
   var currentPlanSubtitle: String {
-    if isLoadingSubscription {
-      return "Fetching subscription details from omi."
-    }
-    if let detail = currentPlanBillingDetail {
-      return detail
-    }
-    if hasPaidSubscription {
-      return "Your paid plan is active."
-    }
-    return "You are currently on the free tier."
+    SubscriptionPlanPresentation.currentPlanSubtitle(
+      isLoadingSubscription: isLoadingSubscription,
+      plan: userSubscription?.subscription.plan,
+      billingDetail: currentPlanBillingDetail,
+      hasPaidSubscription: hasPaidSubscription
+    )
   }
 
   var currentPlanBillingDetail: String? {

@@ -41,6 +41,63 @@ final class SubscriptionPlanPresentationTests: XCTestCase {
     )
   }
 
+  func testUnknownPlanSubtitleDoesNotClaimFreeTierButRealFreeAccountStillDoes() {
+    // Regression: an unknown plan (newer than this build, or the backend's own
+    // unresolved sentinel) cannot prove Free entitlement, so it must not fall through
+    // to the generic "no billing detail, no paid subscription" branch that claims Free.
+    let unknownSubtitle = SubscriptionPlanPresentation.currentPlanSubtitle(
+      isLoadingSubscription: false,
+      plan: SubscriptionPlanType(rawValue: "future_plan_123"),
+      billingDetail: nil,
+      hasPaidSubscription: false
+    )
+    XCTAssertFalse(unknownSubtitle.lowercased().contains("free tier"))
+    XCTAssertEqual(unknownSubtitle, SubscriptionPlanPresentation.unknownPlanSubtitle)
+
+    // A genuinely-Free account (no unknown plan, no billing detail, no paid
+    // subscription) must keep reading "free tier" — the fix must not touch this path.
+    let freeSubtitle = SubscriptionPlanPresentation.currentPlanSubtitle(
+      isLoadingSubscription: false,
+      plan: .basic,
+      billingDetail: nil,
+      hasPaidSubscription: false
+    )
+    XCTAssertTrue(freeSubtitle.lowercased().contains("free tier"))
+  }
+
+  func testCurrentPlanSubtitlePrefersLoadingThenBillingDetailThenPaidStateOverUnknownFallback() {
+    // Loading still wins over everything, including an unknown plan.
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanSubtitle(
+        isLoadingSubscription: true,
+        plan: SubscriptionPlanType(rawValue: "future_plan_123"),
+        billingDetail: "Pro Monthly • $20.00/month",
+        hasPaidSubscription: true
+      ),
+      "Fetching subscription details from omi."
+    )
+    // A resolved paid plan with billing detail keeps showing that detail.
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanSubtitle(
+        isLoadingSubscription: false,
+        plan: .proV2,
+        billingDetail: "Pro Monthly • $20.00/month",
+        hasPaidSubscription: true
+      ),
+      "Pro Monthly • $20.00/month"
+    )
+    // A resolved paid plan with no catalog-matched billing detail still reads paid.
+    XCTAssertEqual(
+      SubscriptionPlanPresentation.currentPlanSubtitle(
+        isLoadingSubscription: false,
+        plan: .proV2,
+        billingDetail: nil,
+        hasPaidSubscription: true
+      ),
+      "Your paid plan is active."
+    )
+  }
+
   func testPurchasablePlansArePlusAndPro() {
     XCTAssertTrue(SubscriptionPlanPresentation.isPurchasablePlan(id: "plus"))
     XCTAssertTrue(SubscriptionPlanPresentation.isPurchasablePlan(id: "pro_v2"))
