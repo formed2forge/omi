@@ -1078,7 +1078,9 @@ async function doReconcile(): Promise<void> {
  *  ticks are session-gated and throttled, so a signed-out app does nothing. The
  *  interval IS the remote-change visibility bound: adds / deletes / toggles made
  *  on other surfaces appear within one interval; in-place edits appear on the
- *  explicit reconcile. */
+ *  explicit reconcile. The FIRST pull after launch is not this timer — it is
+ *  `onSessionReady` in index.ts, so a Tasks read that beat the renderer relay
+ *  still syncs the moment credentials land. */
 export function startTaskBackgroundSync(): void {
   if (syncTimer) return
   syncTimer = setInterval(() => {

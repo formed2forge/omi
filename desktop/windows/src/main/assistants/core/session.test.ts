@@ -57,6 +57,40 @@ describe('onSessionReset', () => {
   })
 })
 
+describe('onSessionReady', () => {
+  it('fires only on the null → session edge, with the new session', async () => {
+    const s = await freshSession()
+    const ready = vi.fn()
+    s.onSessionReady(ready)
+    const first = sess(freshU1(0))
+    s.setBackendSession(first)
+    expect(ready).toHaveBeenCalledTimes(1)
+    expect(ready).toHaveBeenCalledWith(first)
+
+    s.setBackendSession(sess(freshU1(1))) // same-user refresh — not a first arrival
+    expect(ready).toHaveBeenCalledTimes(1)
+
+    s.setBackendSession(null)
+    expect(ready).toHaveBeenCalledTimes(1)
+
+    const again = sess(freshU2())
+    s.setBackendSession(again) // first relay after sign-out
+    expect(ready).toHaveBeenCalledTimes(2)
+    expect(ready).toHaveBeenLastCalledWith(again)
+  })
+
+  it('a throwing ready listener does not block the others', async () => {
+    const s = await freshSession()
+    const second = vi.fn()
+    s.onSessionReady(() => {
+      throw new Error('boom')
+    })
+    s.onSessionReady(second)
+    s.setBackendSession(sess(freshU1(0)))
+    expect(second).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('isSessionExpired', () => {
   it('is false with no session', async () => {
     const s = await freshSession()

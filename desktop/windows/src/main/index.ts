@@ -113,7 +113,7 @@ import {
   setTaskDeletionListener,
   startTaskBackgroundSync
 } from './tasks/taskSyncEngine'
-import { onSessionReset } from './assistants/core/session'
+import { onSessionReady, onSessionReset } from './assistants/core/session'
 import { removeFromIndex as removeTaskFromEmbeddingIndex } from './tasks/taskEmbeddingService'
 import { createGlowWindow, registerGlowIpc, destroyGlow } from './glow/glowWindow'
 import { maybeGenerateOnStartup as maybeGenerateAiProfileOnStartup } from './assistants/aiUserProfile/service'
@@ -1018,7 +1018,15 @@ app.whenReady().then(async () => {
   // RCA 2026-08: ~61-73 RPS from omi-windows). Ticks are session-gated no-ops
   // until the renderer relays a session. Window focus asks for a sync too — the
   // shared 5-min throttle caps it, so focus spam can't restore the storm.
+  //
+  // The first relay is a third trigger: MainViews mounts Tasks ~1.8s after the
+  // authed shell and the first listIncomplete can beat aiProfileSetSession, in
+  // which case that read's scheduleBackgroundSync no-ops and nothing else would
+  // pull until focus or the 5-min tick. onSessionReady closes that race.
   startTaskBackgroundSync()
+  onSessionReady(() => {
+    void scheduleBackgroundSync()
+  })
   app.on('browser-window-focus', () => {
     void scheduleBackgroundSync()
   })

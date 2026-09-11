@@ -222,6 +222,27 @@ describe('reads + throttled background sync (local-first)', () => {
     expect(h.syncTaskActionItems).not.toHaveBeenCalled()
   })
 
+  // Regression: MainViews can mount Tasks and call listIncomplete before the
+  // renderer relays a Firebase session. That read's scheduleBackgroundSync
+  // no-ops; it must NOT stamp lastSyncAt, or the real first pull (onSessionReady
+  // in index.ts, or the next read) would be throttled for 5 minutes and a fresh
+  // profile would stay empty.
+  it('a pre-session read does not consume the throttle; the first post-session sync runs now', async () => {
+    h.censusIncomplete = ['b1']
+    h.itemsById = { b1: backendItem({ id: 'b1' }) }
+    const { engine, session } = await freshEngine()
+    session.setBackendSession(null)
+
+    engine.listIncomplete()
+    await engine.scheduleBackgroundSync()
+    expect(h.netFetch).not.toHaveBeenCalled()
+
+    session.setBackendSession(SESSION)
+    await engine.scheduleBackgroundSync()
+    expect(censusCalls()).toHaveLength(2)
+    expect(h.syncTaskActionItems).toHaveBeenCalledTimes(1)
+  })
+
   // Regression: a sync that changes nothing MUST NOT emit `tasks:changed`. The
   // renderer re-reads on that event, and pre-fix every read kicked another sync —
   // an unconditional broadcast turns steady state into an unbounded polling loop.

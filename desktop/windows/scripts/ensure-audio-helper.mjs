@@ -45,8 +45,10 @@ try {
       '[ensure-audio-helper] WARNING: win-audio-helper.exe was NOT built.\n' +
       '  Feature DISABLED: A4 PTT system-audio mute/duck (push-to-talk will not\n' +
       "  mute or duck other apps' audio while you speak).\n" +
-      '  Likely cause: the .NET SDK is not installed on this machine.\n' +
-      '  To enable it: install the .NET SDK, then run: npm run build:audio-helper\n' +
+      '  Likely cause: no .NET 10 SDK, or NU1100 (nuget.org missing — fresh\n' +
+      '  Windows SDK installs often have zero package sources).\n' +
+      '  Fix: install the SDK, `dotnet nuget list source`, add nuget.org if empty,\n' +
+      '  then run: npm run build:audio-helper\n' +
       '========================================================================\n'
   )
 }
